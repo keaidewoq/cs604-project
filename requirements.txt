@@ -1,0 +1,11 @@
+# CUDA PyTorch is installed separately so pip does not replace it with the CPU wheel.
+# Desktop: see README "Local GPU". Colab already provides a CUDA build.
+timm
+transformers
+peft
+huggingface_hub
+hf_xet
+Pillow
+PyYAML
+tqdm
+numpy

@@ -1,0 +1,24 @@
+# Dataset is large (~45 GB, ~500k files). It lives outside iCloud and is
+# linked at data/ so this folder is not uploaded by iCloud Drive.
+# Leading slash keeps src/cs604/data/ (the loader code) in git.
+/data/
+
+# Training artifacts
+outputs/
+wandb/
+runs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Course brief is SMU Classification: Restricted. Keep it on this machine.
+CS604 project description.pdf
