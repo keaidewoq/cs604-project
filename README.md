@@ -4,6 +4,7 @@ Each person clones it, makes a branch for their work, and merges through a pull 
 
 Exact checkpoint: vit_base_patch16_224.augreg2_in21k_ft_in1k
 
+```text
 cs604-project/
 ├── README.md
 ├── .gitignore
@@ -17,3 +18,4 @@ cs604-project/
 ├── notebooks/
 │   └── run_on_colab.ipynb   # short setup and run commands
 └── results/                 # small CSV summaries and plots
+```
