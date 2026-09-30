@@ -1,6 +1,6 @@
 # Prototype baseline: agent handoff
 
-Updated: 2026-09-30. Read this together with `AGENTS.md` before continuing.
+Updated: 2026-10-01. Read this together with `AGENTS.md` before continuing.
 
 ## Where to work
 
@@ -10,11 +10,12 @@ Updated: 2026-09-30. Read this together with `AGENTS.md` before continuing.
 - Original checkout: `C:\Users\Van Le\cs604-project\cs604-group-project` (unchanged).
 - Dataset and outputs remain shared siblings: `cs604-course-data` and `cs604-outputs`.
 - Work on this worktree when switching between Codex, Claude Code, and Cursor.
-  The implementation and the head-screen write-up are on this branch.
-  The training run executed at `929f8f361007a3ba90e08a21d6cd2b7592f12c08`.
-  Use `git log -1` for the latest commit. Do not switch back to the original
-  checkout and assume these changes are present there. The branch has not been
-  merged or pushed.
+  The implementation, head-screen write-up, and rank-8 LoRA screen config
+  and write-up are on this branch. The LoRA training run recorded
+  `git_dirty: true` at `910b2ff4d3cfcf89485243550fd429277d50aa95`, because its
+  config was not committed before that run. Use `git log -1` for the latest
+  commit. Do not switch back to the original checkout and assume these changes
+  are present there. The branch has not been merged or pushed.
 - The app's managed-worktree tool could not recognize the nested repository;
   this is a normal Git worktree created with `git worktree add`.
 
@@ -29,6 +30,12 @@ The head-only screen is also **complete**. It remeasured that same start at
 **+1.958 percentage points** versus the 43.90% baseline. Output:
 `cs604-outputs/prototype-head-screen`. `best.pt` there is the trained checkpoint;
 `baseline.pt` is still the zero-update model. Do not rerun into that directory.
+
+The rank-8 LoRA screen is **complete**. Step zero was again 43.900%. After 6,250
+adapter updates the holdout scored **51.094%** (25,547 / 50,000): **+7.194
+percentage points** versus 43.90%, and above the head-only screen. Output:
+`cs604-outputs/prototype-lora-r8-fp32-screen`. `best.pt` there is the epoch-2
+checkpoint. Do not rerun into that directory.
 
 The first attempt, `prototype-validate`, scored 43.768% and correctly failed the
 unchanged 43.90% +/- 0.10 percentage-point gate. The original prototype script
@@ -129,6 +136,29 @@ about 8.22% of total model parameters and is a diagnostic baseline, not the fina
 under-5% adaptation method. The earlier validation checkpoints and
 `prototypes/class_prototypes.pt` were not modified.
 
+## Completed experiment: rank-8 LoRA screen
+
+Ran `configs/experiments/prototype_lora_r8_fp32_screen.yaml` on 2026-09-30.
+This is the prepared `prototype_lora_r8_screen.yaml` setup with
+`cosine_head_fp32: true` and a step-zero accuracy gate. The original YAML was
+left unchanged. Do not rerun into the new output directory.
+
+Measured result, from `cs604-outputs/prototype-lora-r8-fp32-screen`:
+
+- Step zero: 43.900% (21,950 / 50,000), gate passed, `accuracy_delta` 0.0.
+- Epoch 1: 50.508% (25,254 / 50,000).
+- Epoch 2: 51.094% (25,547 / 50,000), loss 2.8203868717956544.
+- Comparison with the 43.90% baseline: +7.194 percentage points.
+- Comparison with the head-only screen: 51.094% versus 45.858%.
+- Trainable parameters: 294,912 (0.3145%), classifier frozen.
+- `baseline.pt` remains step 0. `best.pt` and `last.pt` are step 6250.
+- Logged elapsed 7351.8314 s, peak allocated 2.1347 GiB, 6,250 optimizer steps.
+- Recorded commit `910b2ff4d3cfcf89485243550fd429277d50aa95`, dirty worktree.
+
+The frozen head is still the original 40-image prototype file. The optimizer
+saw ten images per class. `prototypes/class_prototypes.pt` and the earlier
+checkpoints were not modified.
+
 ## Verification
 
 ```powershell
@@ -152,6 +182,10 @@ under-5% adaptation method. The earlier validation checkpoints and
 - The head-only screen then remeasured 43.900% at step zero and finished at
   45.858% after 782 updates. Logged elapsed 1606.8395 s, peak allocated 1.1328 GiB.
   Those figures are copied from `cs604-outputs/prototype-head-screen`.
+- The rank-8 LoRA screen remeasured 43.900% at step zero, reached 50.508% after
+  epoch 1, and finished at 51.094% after epoch 2. Logged elapsed 7351.8314 s,
+  peak allocated 2.1347 GiB. Those figures are copied from
+  `cs604-outputs/prototype-lora-r8-fp32-screen`.
 
 After a real experiment, add the measured result and paths to `progress_log.md`
 and `EXPERIMENTS.md`, and update the experiment index. Do not infer scores from
@@ -160,11 +194,14 @@ configurations or from these unit tests.
 ## Starting a fresh agent chat
 
 Use the existing worktree on branch `prototype-baseline`. Read `AGENTS.md` and
-this handoff. The head-only screen has already been run and recorded. Do not start
-another GPU job in `cs604-outputs/prototype-head-screen`, and do not overwrite
+this handoff. The head-only screen and the rank-8 LoRA screen have both been
+run and recorded. Do not start another GPU job in
+`cs604-outputs/prototype-head-screen` or
+`cs604-outputs/prototype-lora-r8-fp32-screen`, and do not overwrite
 `prototype-validate-fp32-head` or the original prototypes. A later training run
 needs its own experiment YAML and output directory, and should start only when
-the user requests that run.
+the user requests that run. The prepared full-data LoRA finalist still omits
+`cosine_head_fp32: true`.
 
 Checkpoint files, raw run logs, and the generated experiment index remain local
 under `cs604-outputs` and ignored `outputs/`; Git stores the implementation,

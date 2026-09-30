@@ -2,6 +2,42 @@
 
 Newest session at the top. Each entry records what ran, which files went in and out, the result, and the decision. Training numbers still live in each output folder's `run.json`, `metrics.csv`, and `config.json`.
 
+## 2026-09-30 — rank-8 LoRA screen completed
+
+Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch
+`prototype-baseline`, recorded commit `910b2ff4d3cfcf89485243550fd429277d50aa95`
+(`git_dirty: true`; the new config was not committed before the run).
+
+**Run:** `configs/experiments/prototype_lora_r8_fp32_screen.yaml` through
+`scripts/train.py` and the CUDA virtualenv. It was the only GPU job.
+
+- Input: `C:\Users\Van Le\cs604-project\cs604-outputs\prototypes\class_prototypes.pt`
+  and the fixed 50,000-image internal holdout. The frozen cosine head stayed at
+  those 40-image prototypes, with float32 class scores. LoRA rank 8 on attention
+  `qkv` trained for two epochs on ten images per class (6,250 updates).
+- Output: `C:\Users\Van Le\cs604-project\cs604-outputs\prototype-lora-r8-fp32-screen`
+
+**Starting accuracy:** **43.900%**, or **21,950 / 50,000**, loss 3.501497850341797.
+`baseline.json` records `passed: true`, `accuracy_delta: 0.0`, and
+`optimizer_steps: 0`. `baseline.pt` is that step-zero checkpoint.
+
+**Final holdout:** **51.094%**, or **25,547 / 50,000**, loss 2.8203868717956544,
+at step 6250. Epoch 1 was **50.508%** (25,254 / 50,000). The second epoch added
+**0.586 percentage points**. Versus the 43.90% baseline this is **+7.194
+percentage points** (3,597 additional correct images). `run.json` status is
+`completed`, `best_internal_accuracy` is 0.51094, and `optimizer_steps` is 6250.
+`best.pt` and `last.pt` both store step 6250. Logged elapsed time is
+**7351.8314 s** (2h 2m 32s), including the initial evaluation. Peak allocated
+memory is **2.1347 GiB**. GPU-hours 2.0421754; normalized 48-GiB hours 0.6773215.
+Trainable parameters: 294,912 (0.3145%), all in the LoRA adapters.
+
+Left unchanged: `prototypes/class_prototypes.pt`, `prototype-validate-fp32-head`,
+and `prototype-head-screen`. No leaderboard file was written.
+
+Decision: frozen-head LoRA rank 8 beats both the untouched prototypes and the
+head-only screen, and it stays under 5% of parameters. Epoch 2's gain was much
+smaller than epoch 1's. Do not rerun this config into the same output directory.
+
 ## 2026-09-30 — head-only screen completed
 
 Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch
