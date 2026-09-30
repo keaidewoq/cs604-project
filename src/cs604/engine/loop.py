@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import random
+import subprocess
 import time
 from pathlib import Path
 
@@ -16,8 +18,18 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
-from cs604.data.dataset import CS604ImageDataset
-from cs604.models.build import build_vit, parameter_report
+from cs604.data.dataset import (
+    CS604ImageDataset,
+    load_split_index,
+    stratified_split,
+    write_split_index,
+)
+from cs604.models.build import (
+    apply_class_prototypes,
+    build_from_config,
+    build_vit,
+    parameter_report,
+)
 
 
 class SyntheticImages(Dataset):
@@ -83,7 +95,7 @@ def _save(path: Path, model, optimizer, step: int, cfg: dict) -> None:
     )
 
 
-def run_training(cfg: dict) -> Path:
+def _run_training_legacy(cfg: dict) -> Path:
     if not torch.cuda.is_available():
         raise SystemExit(
             "CUDA is not available. On this desktop, use the cu130 virtualenv "
@@ -229,3 +241,363 @@ def run_training(cfg: dict) -> Path:
     metrics.close()
     print(f"saved {output_dir / 'last.pt'} ({hardware['elapsed_sec']:.1f}s)")
     return output_dir / "last.pt"
+
+
+def _git_metadata() -> dict[str, str | bool]:
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain"], text=True, stderr=subprocess.DEVNULL
+        )
+        return {"git_commit": commit, "git_dirty": bool(status.strip())}
+    except (OSError, subprocess.CalledProcessError):
+        return {"git_commit": "unknown", "git_dirty": True}
+
+
+def _make_datasets(cfg: dict, train_transform, eval_transform):
+    if cfg.get("synthetic"):
+        train = SyntheticImages(
+            int(cfg.get("limit_samples") or 64),
+            int(cfg["num_classes"]),
+            int(cfg["image_size"]),
+        )
+        return train, None
+
+    all_samples = load_split_index(Path(cfg["data_root"]) / "train.txt")
+    train_samples, val_samples = stratified_split(
+        all_samples,
+        val_per_class=int(cfg.get("val_per_class", 5)),
+        seed=int(cfg.get("split_seed", 0)),
+        train_per_class=(
+            None if cfg.get("train_per_class") is None else int(cfg["train_per_class"])
+        ),
+    )
+    split_dir = Path(cfg["output_dir"]) / "splits"
+    write_split_index(split_dir / "internal_train.txt", train_samples)
+    write_split_index(split_dir / "internal_val.txt", val_samples)
+    train = CS604ImageDataset(
+        cfg["data_root"], "train", transform=train_transform, samples=train_samples
+    )
+    val = CS604ImageDataset(
+        cfg["data_root"], "internal_val", transform=eval_transform, samples=val_samples
+    )
+    return train, val
+
+
+def _loader(dataset, cfg: dict, shuffle: bool, seed: int) -> DataLoader:
+    workers = int(cfg.get("num_workers", 0))
+    generator = torch.Generator().manual_seed(seed)
+    return DataLoader(
+        dataset,
+        batch_size=int(cfg.get("eval_batch_size" if not shuffle else "batch_size", cfg["batch_size"])),
+        shuffle=shuffle,
+        num_workers=workers,
+        pin_memory=True,
+        persistent_workers=workers > 0,
+        generator=generator,
+    )
+
+
+@torch.inference_mode()
+def evaluate(model, loader: DataLoader, device: torch.device, amp_dtype) -> dict[str, float]:
+    model.eval()
+    total_loss = 0.0
+    correct = 0
+    count = 0
+    started = time.perf_counter()
+    for images, labels, _paths in loader:
+        images = images.to(device, non_blocking=True)
+        labels = labels.to(device, non_blocking=True)
+        with torch.autocast("cuda", dtype=amp_dtype, enabled=amp_dtype is not None):
+            logits = model(images)
+            loss = F.cross_entropy(logits, labels)
+        total_loss += float(loss) * images.size(0)
+        correct += int((logits.argmax(dim=1) == labels).sum())
+        count += images.size(0)
+    elapsed = time.perf_counter() - started
+    model.train()
+    return {
+        "loss": total_loss / max(1, count),
+        "accuracy": correct / max(1, count),
+        "images_per_sec": count / max(elapsed, 1e-9),
+        "elapsed_sec": elapsed,
+    }
+
+
+def _save_training_checkpoint(
+    path: Path,
+    model,
+    optimizer,
+    scheduler,
+    cfg: dict,
+    step: int,
+    epoch: int,
+    next_batch: int,
+    best_accuracy: float,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "scheduler": scheduler.state_dict(),
+            "config": cfg,
+            "step": step,
+            "epoch": epoch,
+            "next_batch": next_batch,
+            "best_accuracy": best_accuracy,
+        },
+        path,
+    )
+
+
+def _check_architecture_compatibility(current: dict, saved: dict) -> None:
+    keys = (
+        "timm_checkpoint",
+        "num_classes",
+        "mode",
+        "head_type",
+        "last_blocks",
+        "lora_rank",
+        "lora_alpha",
+    )
+    mismatches = [
+        key for key in keys
+        if current.get(key) != saved.get(key)
+        and not (key == "mode" and current.get(key, "full") == saved.get(key, "full"))
+    ]
+    if mismatches:
+        raise ValueError(
+            "Checkpoint architecture does not match the current config: "
+            + ", ".join(mismatches)
+        )
+
+
+def run_training(cfg: dict) -> Path:
+    """Train any configured adaptation mode and evaluate a fixed holdout."""
+
+    if not torch.cuda.is_available():
+        raise SystemExit("CUDA is required. Select a GPU runtime or use the CUDA virtualenv.")
+    _seed(int(cfg.get("seed", 0)))
+    device = torch.device("cuda")
+    torch.backends.cudnn.benchmark = True
+    output_dir = Path(cfg["output_dir"])
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    model = build_from_config(cfg).to(device)
+    if cfg.get("prototype_file") and not cfg.get("resume"):
+        prototype_blob = torch.load(cfg["prototype_file"], map_location="cpu", weights_only=False)
+        prototypes = prototype_blob["prototypes"] if isinstance(prototype_blob, dict) else prototype_blob
+        apply_class_prototypes(model, prototypes)
+        print(f"initialized classifier from {cfg['prototype_file']}")
+    if cfg.get("init_checkpoint") and not cfg.get("resume"):
+        initial = torch.load(cfg["init_checkpoint"], map_location="cpu", weights_only=False)
+        _check_architecture_compatibility(cfg, initial.get("config", {}))
+        model.load_state_dict(initial["model"])
+    report = parameter_report(model)
+    trainable = [parameter for parameter in model.parameters() if parameter.requires_grad]
+    if not trainable:
+        raise ValueError("The selected mode has no trainable parameters")
+
+    from timm.data import create_transform, resolve_model_data_config
+
+    data_cfg = resolve_model_data_config(model)
+    train_kwargs = {"is_training": True}
+    for key in ("hflip", "color_jitter", "auto_augment", "re_prob"):
+        if key in cfg:
+            train_kwargs[key] = cfg[key]
+    train_transform = None if cfg.get("synthetic") else create_transform(
+        **data_cfg, **train_kwargs
+    )
+    eval_transform = None if cfg.get("synthetic") else create_transform(
+        **data_cfg, is_training=False
+    )
+    train_dataset, val_dataset = _make_datasets(cfg, train_transform, eval_transform)
+
+    optimizer = torch.optim.AdamW(
+        trainable,
+        lr=float(cfg["lr"]),
+        weight_decay=float(cfg.get("weight_decay", 0.05)),
+    )
+    grad_accum = max(1, int(cfg.get("grad_accum", 1)))
+    epochs = int(cfg.get("epochs", 1))
+    batches_per_epoch = math.ceil(len(train_dataset) / int(cfg["batch_size"]))
+    steps_per_epoch = math.ceil(batches_per_epoch / grad_accum)
+    max_steps = None if cfg.get("max_steps") is None else int(cfg["max_steps"])
+    total_steps = max_steps or steps_per_epoch * epochs
+    warmup_steps = int(cfg.get("warmup_steps", max(1, round(total_steps * 0.05))))
+
+    def lr_factor(step: int) -> float:
+        if step < warmup_steps:
+            return max(1e-3, (step + 1) / max(1, warmup_steps))
+        progress = (step - warmup_steps) / max(1, total_steps - warmup_steps)
+        return 0.5 * (1.0 + math.cos(math.pi * min(1.0, progress)))
+
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_factor)
+    start_epoch = 0
+    resume_batch = 0
+    step = 0
+    best_accuracy = -1.0
+    if cfg.get("resume"):
+        checkpoint = torch.load(cfg["resume"], map_location="cpu", weights_only=False)
+        _check_architecture_compatibility(cfg, checkpoint.get("config", {}))
+        model.load_state_dict(checkpoint["model"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        if "scheduler" in checkpoint:
+            scheduler.load_state_dict(checkpoint["scheduler"])
+        step = int(checkpoint.get("step", 0))
+        start_epoch = int(checkpoint.get("epoch", 0))
+        resume_batch = int(checkpoint.get("next_batch", 0))
+        best_accuracy = float(checkpoint.get("best_accuracy", -1.0))
+
+    precision = str(cfg.get("precision", "bf16"))
+    amp_dtype = torch.bfloat16 if precision == "bf16" else (
+        torch.float16 if precision == "fp16" else None
+    )
+    props = torch.cuda.get_device_properties(0)
+    run_info = {
+        **_git_metadata(),
+        "device": torch.cuda.get_device_name(0),
+        "vram_gb": round(props.total_memory / 1024**3, 2),
+        "precision": precision,
+        "mode": cfg.get("mode", "full"),
+        "batch_size": int(cfg["batch_size"]),
+        "grad_accum": grad_accum,
+        "effective_batch_size": int(cfg["batch_size"]) * grad_accum,
+        **report,
+    }
+    (output_dir / "run.json").write_text(json.dumps(run_info, indent=2), encoding="utf-8")
+    (output_dir / "config.json").write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+    print(
+        f"device={run_info['device']} mode={run_info['mode']} "
+        f"trainable={report['trainable_params']:,} ({report['trainable_pct']:.3f}%)"
+    )
+
+    metrics_path = output_dir / "metrics.csv"
+    append = step > 0 and metrics_path.is_file()
+    metrics_file = metrics_path.open("a" if append else "w", newline="", encoding="utf-8")
+    fields = [
+        "phase", "epoch", "step", "loss", "accuracy", "lr",
+        "images_per_sec", "max_mem_gb", "elapsed_sec",
+    ]
+    writer = csv.DictWriter(metrics_file, fieldnames=fields)
+    if not append:
+        writer.writeheader()
+
+    started = time.perf_counter()
+    log_started = started
+    log_images = 0
+    log_loss = 0.0
+    log_updates = 0
+    accumulated_loss = 0.0
+    accumulated_batches = 0
+    log_every = int(cfg.get("log_every", 20))
+    ckpt_every = int(cfg.get("ckpt_every", 100))
+    label_smoothing = float(cfg.get("label_smoothing", 0.0))
+    model.train()
+    optimizer.zero_grad(set_to_none=True)
+    stopped = False
+
+    for epoch in range(start_epoch, epochs):
+        train_loader = _loader(train_dataset, cfg, True, int(cfg.get("seed", 0)) + epoch)
+        for batch_index, (images, labels, _paths) in enumerate(train_loader):
+            if epoch == start_epoch and batch_index < resume_batch:
+                continue
+            images = images.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            with torch.autocast("cuda", dtype=amp_dtype, enabled=amp_dtype is not None):
+                loss = F.cross_entropy(
+                    model(images), labels, label_smoothing=label_smoothing
+                )
+            (loss / grad_accum).backward()
+            accumulated_loss += float(loss.detach())
+            accumulated_batches += 1
+            log_images += images.size(0)
+            is_update = (batch_index + 1) % grad_accum == 0 or batch_index + 1 == len(train_loader)
+            if not is_update:
+                continue
+            if cfg.get("clip_grad_norm") is not None:
+                torch.nn.utils.clip_grad_norm_(trainable, float(cfg["clip_grad_norm"]))
+            optimizer.step()
+            optimizer.zero_grad(set_to_none=True)
+            scheduler.step()
+            step += 1
+            log_loss += accumulated_loss / max(1, accumulated_batches)
+            log_updates += 1
+            accumulated_loss = 0.0
+            accumulated_batches = 0
+            done = max_steps is not None and step >= max_steps
+            if step % log_every == 0 or done:
+                now = time.perf_counter()
+                row = {
+                    "phase": "train", "epoch": epoch + 1, "step": step,
+                    "loss": log_loss / max(1, log_updates), "accuracy": "",
+                    "lr": optimizer.param_groups[0]["lr"],
+                    "images_per_sec": log_images / max(now - log_started, 1e-9),
+                    "max_mem_gb": torch.cuda.max_memory_allocated() / 1024**3,
+                    "elapsed_sec": now - started,
+                }
+                writer.writerow(row)
+                metrics_file.flush()
+                print(
+                    f"step {step} loss {row['loss']:.4f} "
+                    f"{row['images_per_sec']:.1f} img/s"
+                )
+                log_started, log_images, log_loss, log_updates = now, 0, 0.0, 0
+            if step % ckpt_every == 0:
+                _save_training_checkpoint(
+                    output_dir / "last.pt", model, optimizer, scheduler, cfg,
+                    step, epoch, batch_index + 1, best_accuracy,
+                )
+            if done:
+                stopped = True
+                break
+
+        if val_dataset is not None and bool(cfg.get("validate", True)):
+            val_loader = _loader(val_dataset, cfg, False, int(cfg.get("seed", 0)))
+            result = evaluate(model, val_loader, device, amp_dtype)
+            writer.writerow(
+                {
+                    "phase": "val", "epoch": epoch + 1, "step": step,
+                    "loss": result["loss"], "accuracy": result["accuracy"], "lr": "",
+                    "images_per_sec": result["images_per_sec"],
+                    "max_mem_gb": torch.cuda.max_memory_allocated() / 1024**3,
+                    "elapsed_sec": time.perf_counter() - started,
+                }
+            )
+            metrics_file.flush()
+            print(f"validation top1={100 * result['accuracy']:.2f}% loss={result['loss']:.4f}")
+            if result["accuracy"] > best_accuracy:
+                best_accuracy = result["accuracy"]
+                _save_training_checkpoint(
+                    output_dir / "best.pt", model, optimizer, scheduler, cfg,
+                    step, epoch + 1, 0, best_accuracy,
+                )
+
+        next_epoch = epoch if stopped else epoch + 1
+        next_batch = batch_index + 1 if stopped else 0
+        _save_training_checkpoint(
+            output_dir / "last.pt", model, optimizer, scheduler, cfg,
+            step, next_epoch, next_batch, best_accuracy,
+        )
+        resume_batch = 0
+        if stopped:
+            break
+
+    elapsed = time.perf_counter() - started
+    run_info.update(
+        {
+            "elapsed_sec": elapsed,
+            "gpu_hours": elapsed / 3600,
+            "vram_gb_hours": run_info["vram_gb"] * elapsed / 3600,
+            "normalized_48gb_hours": run_info["vram_gb"] * elapsed / (48 * 3600),
+            "optimizer_steps": step,
+            "best_internal_accuracy": None if best_accuracy < 0 else best_accuracy,
+            "max_mem_gb": torch.cuda.max_memory_allocated() / 1024**3,
+        }
+    )
+    (output_dir / "run.json").write_text(json.dumps(run_info, indent=2), encoding="utf-8")
+    metrics_file.close()
+    return output_dir / ("best.pt" if (output_dir / "best.pt").is_file() else "last.pt")

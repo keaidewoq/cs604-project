@@ -1,0 +1,34 @@
+# Under-5% method: frozen prototype cosine head plus attention LoRA.
+data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
+output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/prototype-lora-r8-screen"
+timm_checkpoint: "vit_base_patch16_224.augreg2_in21k_ft_in1k"
+num_classes: 10000
+image_size: 224
+mode: lora
+lora_rank: 8
+lora_alpha: 16
+lora_dropout: 0.05
+head_type: cosine
+train_head: false
+prototype_file: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/class_prototypes.pt"
+prototype_per_class: 10
+batch_size: 32
+eval_batch_size: 64
+grad_accum: 1
+num_workers: 4
+epochs: 2
+max_steps: null
+train_per_class: 10
+val_per_class: 5
+split_seed: 604
+validate: true
+lr: 0.0005
+weight_decay: 0.01
+label_smoothing: 0.0
+precision: bf16
+grad_checkpointing: false
+log_every: 100
+ckpt_every: 1000
+seed: 0
+synthetic: false
+resume: null

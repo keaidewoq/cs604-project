@@ -1,5 +1,5 @@
-# Dataset is large (~45 GB, ~500k files). It lives outside iCloud and is
-# linked at data/ so this folder is not uploaded by iCloud Drive.
+# Dataset is large (~45 GB, ~500k files). It lives in the sibling folder
+# cs604-course-data and is linked at data/.
 # Leading slash keeps src/cs604/data/ (the loader code) in git.
 /data/
 

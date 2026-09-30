@@ -2,7 +2,7 @@
 # Foundation model: IN21K -> IN1K fine-tuned ViT-B/16.
 # Training budget: 2 hours on 48 GB VRAM (or equivalent, e.g. 4 hours on 24 GB).
 
-data_root: "C:/Users/Van Le/datasets/cs604-course-data"
+data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
 num_classes: 10000
 image_size: 224
 

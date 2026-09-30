@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from cs604.data.dataset import load_split_index  # noqa: E402
 
-DEFAULT_DIR = Path(r"C:\Users\Van Le\datasets\cs604-course-data")
+DEFAULT_DIR = Path(r"C:\Users\Van Le\cs604-project\cs604-course-data")
 EXPECTED = {
     "train": {"samples": 450_000, "labeled": True, "per_class": 45},
     "val": {"samples": 50_000, "labeled": False, "per_class": None},

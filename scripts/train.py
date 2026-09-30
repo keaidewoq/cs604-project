@@ -32,18 +32,40 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--max-steps", type=int)
     parser.add_argument("--limit-samples", type=int)
+    parser.add_argument("--train-per-class", type=int)
     parser.add_argument("--batch-size", type=int)
+    parser.add_argument("--mode", choices=("full", "head", "last_blocks", "lora"))
     parser.add_argument("--synthetic", action="store_true")
+    parser.add_argument("--no-validate", action="store_true")
     parser.add_argument("--resume", type=Path)
+    parser.add_argument("--init-checkpoint", type=Path)
+    parser.add_argument("--prototype-file", type=Path)
     args = parser.parse_args()
 
     cfg = load_config(args.config)
-    for key in ("data_root", "output_dir", "max_steps", "limit_samples", "batch_size", "resume"):
+    for key in (
+        "data_root",
+        "output_dir",
+        "max_steps",
+        "limit_samples",
+        "train_per_class",
+        "batch_size",
+        "mode",
+        "resume",
+        "init_checkpoint",
+        "prototype_file",
+    ):
         value = getattr(args, key)
         if value is not None:
-            cfg[key] = str(value) if key in {"data_root", "output_dir", "resume"} else value
+            cfg[key] = (
+                str(value)
+                if key in {"data_root", "output_dir", "resume", "init_checkpoint", "prototype_file"}
+                else value
+            )
     if args.synthetic:
         cfg["synthetic"] = True
+    if args.no_validate:
+        cfg["validate"] = False
     run_training(cfg)
 
 

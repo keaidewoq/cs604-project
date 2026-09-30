@@ -1,0 +1,30 @@
+# Selected-layer control for screening: final two transformer blocks plus head.
+data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
+output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/last2-screen"
+timm_checkpoint: "vit_base_patch16_224.augreg2_in21k_ft_in1k"
+num_classes: 10000
+image_size: 224
+mode: last_blocks
+last_blocks: 2
+head_type: linear
+train_head: true
+batch_size: 16
+eval_batch_size: 64
+grad_accum: 2
+num_workers: 4
+epochs: 2
+max_steps: null
+train_per_class: 10
+val_per_class: 5
+split_seed: 604
+validate: true
+lr: 0.0001
+weight_decay: 0.05
+label_smoothing: 0.1
+precision: bf16
+grad_checkpointing: true
+log_every: 100
+ckpt_every: 1000
+seed: 0
+synthetic: false
+resume: null

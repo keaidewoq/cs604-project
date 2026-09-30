@@ -1,8 +1,8 @@
 """Download doem1997/cs604-course-data and extract the image archives.
 
-The project folder sits in iCloud Drive, so the default location is a local
-folder outside that tree. Re-running this script resumes an incomplete download
-and skips archives that were already extracted.
+The default location is the sibling folder next to this repository.
+Re-running this script resumes an incomplete download and skips archives
+that were already extracted.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 REPO_ID = "doem1997/cs604-course-data"
-DEFAULT_DIR = Path(r"C:\Users\Van Le\datasets\cs604-course-data")
+DEFAULT_DIR = Path(r"C:\Users\Van Le\cs604-project\cs604-course-data")
 ARCHIVES = ("train.tar.gz", "val.tar.gz")
 
 
