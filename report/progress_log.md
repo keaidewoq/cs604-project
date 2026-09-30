@@ -2,6 +2,46 @@
 
 Newest session at the top. Each entry records what ran, which files went in and out, the result, and the decision. Training numbers still live in each output folder's `run.json`, `metrics.csv`, and `config.json`.
 
+## 2026-09-30 — head-only screen completed
+
+Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch
+`prototype-baseline`, commit `929f8f361007a3ba90e08a21d6cd2b7592f12c08`
+(`git_dirty: false`).
+
+**Run:** `configs/experiments/prototype_head_screen.yaml` through
+`scripts/train.py` and the CUDA virtualenv. When this session checked the GPU,
+that command was already the only training process, so no second job was started.
+
+- Input: `C:\Users\Van Le\cs604-project\cs604-outputs\prototype-validate-fp32-head\best.pt`,
+  the original prototypes, and the fixed 50,000-image internal holdout.
+  The optimizer saw five training images per class for one epoch (782 updates).
+  The backbone stayed frozen and class scores stayed in float32.
+- Output: `C:\Users\Van Le\cs604-project\cs604-outputs\prototype-head-screen`
+
+**Starting accuracy:** **43.900%**, or **21,950 / 50,000**, loss 3.501497850265503.
+`baseline.json` records `passed: true`, `accuracy_delta: 0.0`, and
+`optimizer_steps: 0`. This matches the 43.90% prototype baseline before any
+head update. `baseline.pt` is that step-zero checkpoint and was not rewritten
+after 21:27:49.
+
+**Final holdout:** **45.858%**, or **22,929 / 50,000**, loss 2.6540017303466796,
+at step 782. That is **+1.958 percentage points** versus 43.90% (979 additional
+correct images). `run.json` status is `completed`, `best_internal_accuracy` is
+0.45858, and `optimizer_steps` is 782. Because the trained score is strictly
+higher, `best.pt` and `last.pt` both store step 782. Logged elapsed time is
+**1606.8395 s** (26m 47s), including the initial evaluation. Peak allocated
+memory is **1.1328 GiB**. GPU-hours 0.4463443; normalized 48-GiB hours 0.1480375.
+
+Left unchanged: `prototype-validate-fp32-head/best.pt` (SHA-256 still
+`57214311e11c71b21bc79e92f629a8a01d23d5aa53c8187ec6be9d632159e1b2`), that run's
+`baseline.pt`, the failed `prototype-validate` checkpoint, and
+`prototypes/class_prototypes.pt`. No leaderboard file was written.
+
+Decision: one epoch of head-only training improves the fixed holdout. It remains
+a diagnostic screen. Initialization used 40 labeled images per class, and the
+trainable head is 8.2158% of the model, above the under-5% adaptation target.
+Do not rerun this config into the same output directory.
+
 ## 2026-09-30 — starting-point validation completed
 
 Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch

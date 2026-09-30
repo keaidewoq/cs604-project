@@ -10,9 +10,11 @@ Updated: 2026-09-30. Read this together with `AGENTS.md` before continuing.
 - Original checkout: `C:\Users\Van Le\cs604-project\cs604-group-project` (unchanged).
 - Dataset and outputs remain shared siblings: `cs604-course-data` and `cs604-outputs`.
 - Work on this worktree when switching between Codex, Claude Code, and Cursor.
-  The implementation and results documentation are committed on this branch;
-  use `git log -1` for the commit ID. Do not switch back to the original checkout
-  and assume these changes are present there. The branch has not been merged or pushed.
+  The implementation and the head-screen write-up are on this branch.
+  The training run executed at `929f8f361007a3ba90e08a21d6cd2b7592f12c08`.
+  Use `git log -1` for the latest commit. Do not switch back to the original
+  checkout and assume these changes are present there. The branch has not been
+  merged or pushed.
 - The app's managed-worktree tool could not recognize the nested repository;
   this is a normal Git worktree created with `git worktree add`.
 
@@ -20,8 +22,13 @@ Updated: 2026-09-30. Read this together with `AGENTS.md` before continuing.
 
 Evaluation-only validation is **complete**: 43.900% (21,950 / 50,000), with zero
 optimizer updates. The validated checkpoint is
-`cs604-outputs/prototype-validate-fp32-head/best.pt`. The subsequent head-only
-screen is prepared and points to that checkpoint, but has **not** been run.
+`cs604-outputs/prototype-validate-fp32-head/best.pt`.
+
+The head-only screen is also **complete**. It remeasured that same start at
+43.900%, then scored **45.858%** (22,929 / 50,000) after 782 classifier updates:
+**+1.958 percentage points** versus the 43.90% baseline. Output:
+`cs604-outputs/prototype-head-screen`. `best.pt` there is the trained checkpoint;
+`baseline.pt` is still the zero-update model. Do not rerun into that directory.
 
 The first attempt, `prototype-validate`, scored 43.768% and correctly failed the
 unchanged 43.90% +/- 0.10 percentage-point gate. The original prototype script
@@ -85,32 +92,42 @@ Check image transforms, normalization, source weights, precision, and the split.
 Use a new output directory in a separate experiment YAML for a rerun; preserve the
 failed run for diagnosis. Never delete or overwrite the original prototypes.
 
-## Subsequent experiment: small head-only screen
+## Completed experiment: small head-only screen
 
-This is a separate real training run, not automatically started by validation:
+Ran `configs/experiments/prototype_head_screen.yaml` on 2026-09-30. The overwrite
+guard will reject a fresh invocation into the same output directory. Do not rerun
+it. An interrupted copy would have been resumed with `--resume` pointing at that
+run's `last.pt`; this run finished, so it does not need a resume.
 
 ```powershell
 Set-Location 'C:\Users\Van Le\cs604-project\cs604-prototype-baseline'
 & 'C:\Users\Van Le\.venvs\cs604\Scripts\python.exe' scripts/train.py --config configs/experiments/prototype_head_screen.yaml
 ```
 
-It loads the validated `prototype-validate-fp32-head/best.pt`, evaluates step zero again,
-freezes the backbone, and trains the cosine classifier on five images per class.
-One epoch / 50,000 training images / batch 64 gives 782 optimizer updates.
-LR is 0.001 with the existing warmup/cosine schedule; weight decay and label
-smoothing are zero. It uses the same 50,000-image holdout before and after training
-and sets `cosine_head_fp32: true` to retain the validated scoring behavior.
+It loaded `prototype-validate-fp32-head/best.pt`, evaluated step zero again,
+froze the backbone, and trained the cosine classifier on five images per class.
+One epoch / 50,000 training images / batch 64 gave 782 optimizer updates.
+LR was 0.001 with the existing warmup/cosine schedule; weight decay and label
+smoothing were zero. It used the same 50,000-image holdout before and after training
+and set `cosine_head_fp32: true`.
 
-Output: `cs604-outputs/prototype-head-screen`. `best.pt` may legitimately remain
-the zero-update model if training does not improve it; `last.pt` is the trained
-model. Compare the actual recorded initial accuracy with final validation accuracy.
-Resume an interrupted screen in its original output directory with `--resume`
-pointing to its `last.pt`; do not resume the evaluation-only run.
+Output: `cs604-outputs/prototype-head-screen`.
+
+Measured result, from that folder's `run.json`, `baseline.json`, and `metrics.csv`:
+
+- Step zero: 43.900% (21,950 / 50,000), gate passed, `accuracy_delta` 0.0.
+- After training: 45.858% (22,929 / 50,000), loss 2.6540017303466796.
+- Comparison with the 43.90% baseline: +1.958 percentage points.
+- `baseline.pt` remains step 0. `best.pt` and `last.pt` are step 782 because the
+  trained score was strictly better.
+- Logged elapsed 1606.8395 s, peak allocated 1.1328 GiB, 782 optimizer steps.
+- Commit `929f8f361007a3ba90e08a21d6cd2b7592f12c08`, clean worktree.
 
 This is a small optimization screen, **not a five-shot learning result**: its
 prototype initialization already used 40 labeled images per class. The head has
 about 8.22% of total model parameters and is a diagnostic baseline, not the final
-under-5% adaptation method.
+under-5% adaptation method. The earlier validation checkpoints and
+`prototypes/class_prototypes.pt` were not modified.
 
 ## Verification
 
@@ -132,6 +149,9 @@ under-5% adaptation method.
   with 1.0353 GiB peak allocated GPU memory. The logged duration starts after model
   and data setup. Both attempts together used 708.44 logged seconds; initialization
   remains separately accounted for in the original prototype-building run.
+- The head-only screen then remeasured 43.900% at step zero and finished at
+  45.858% after 782 updates. Logged elapsed 1606.8395 s, peak allocated 1.1328 GiB.
+  Those figures are copied from `cs604-outputs/prototype-head-screen`.
 
 After a real experiment, add the measured result and paths to `progress_log.md`
 and `EXPERIMENTS.md`, and update the experiment index. Do not infer scores from
@@ -140,9 +160,11 @@ configurations or from these unit tests.
 ## Starting a fresh agent chat
 
 Use the existing worktree on branch `prototype-baseline`. Read `AGENTS.md` and
-this handoff. The next task is to run `configs/experiments/prototype_head_screen.yaml`,
-check the initial and final holdout scores, retain the best checkpoint, and record
-the measured result. Start that training only when the user requests it.
+this handoff. The head-only screen has already been run and recorded. Do not start
+another GPU job in `cs604-outputs/prototype-head-screen`, and do not overwrite
+`prototype-validate-fp32-head` or the original prototypes. A later training run
+needs its own experiment YAML and output directory, and should start only when
+the user requests that run.
 
 Checkpoint files, raw run logs, and the generated experiment index remain local
 under `cs604-outputs` and ignored `outputs/`; Git stores the implementation,
