@@ -34,15 +34,25 @@ class LoRALinear(nn.Module):
 class CosineClassifier(nn.Module):
     """Cosine-similarity head suitable for class-prototype initialization."""
 
-    def __init__(self, in_features: int, out_features: int, scale: float = 20.0):
+    def __init__(self, in_features: int, out_features: int, scale: float = 20.0, force_fp32: bool = False):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
+        self.force_fp32 = force_fp32
         self.weight = nn.Parameter(torch.empty(out_features, in_features))
         self.log_scale = nn.Parameter(torch.tensor(math.log(scale)))
         nn.init.trunc_normal_(self.weight, std=0.02)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        if self.force_fp32:
+            # Match build_prototypes.py: keep backbone AMP, but normalize and
+            # compare features outside autocast so nearby class scores don't tie.
+            with torch.autocast(device_type=inputs.device.type, enabled=False):
+                scale = self.log_scale.float().exp().clamp(max=100.0)
+                return scale * F.linear(
+                    F.normalize(inputs.float(), dim=-1),
+                    F.normalize(self.weight.float(), dim=-1),
+                )
         scale = self.log_scale.exp().clamp(max=100.0)
         return scale * F.linear(F.normalize(inputs, dim=-1), F.normalize(self.weight, dim=-1))
 
@@ -78,13 +88,14 @@ def build_vit(
     lora_rank: int = 8,
     lora_alpha: float = 16.0,
     lora_dropout: float = 0.0,
+    cosine_head_fp32: bool = False,
 ) -> nn.Module:
     model = timm.create_model(checkpoint, pretrained=True, num_classes=num_classes)
     if head_type == "cosine":
         old_head = _classifier(model)
         if not isinstance(old_head, nn.Linear):
             raise TypeError("Cosine head replacement expects a linear timm classifier")
-        model.head = CosineClassifier(old_head.in_features, num_classes)
+        model.head = CosineClassifier(old_head.in_features, num_classes, force_fp32=cosine_head_fp32)
     elif head_type != "linear":
         raise ValueError(f"Unknown head_type: {head_type}")
 
@@ -149,6 +160,7 @@ def build_from_config(cfg: dict) -> nn.Module:
         lora_rank=int(cfg.get("lora_rank", 8)),
         lora_alpha=float(cfg.get("lora_alpha", 16.0)),
         lora_dropout=float(cfg.get("lora_dropout", 0.0)),
+        cosine_head_fp32=bool(cfg.get("cosine_head_fp32", False)),
     )
 
 

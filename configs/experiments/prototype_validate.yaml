@@ -1,0 +1,35 @@
+# First step: preserve the prototype model and reproduce its held-out accuracy.
+# No optimizer updates. Existing run artifacts in output_dir are never overwritten.
+data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
+output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/prototype-validate"
+timm_checkpoint: "vit_base_patch16_224.augreg2_in21k_ft_in1k"
+num_classes: 10000
+image_size: 224
+mode: head
+head_type: cosine
+train_head: true
+prototype_file: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/class_prototypes.pt"
+evaluate_only: true
+evaluate_before_training: true
+expected_initial_accuracy: 0.439
+# Absolute fraction: 0.001 means 0.10 percentage points (50 / 50,000 images).
+# Allows small numerical differences between prototype scoring and bf16 cosine logits.
+initial_accuracy_tolerance: 0.001
+expected_initial_samples: 50000
+baseline_reference_split: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/splits/internal_val.txt"
+train_per_class: 5
+val_per_class: 5
+split_seed: 604
+validate: true
+batch_size: 64
+eval_batch_size: 128
+grad_accum: 1
+num_workers: 4
+epochs: 1
+lr: 0.001
+weight_decay: 0.0
+precision: bf16
+grad_checkpointing: false
+seed: 0
+synthetic: false
+resume: null

@@ -30,6 +30,13 @@ from cs604.models.build import (
     build_vit,
     parameter_report,
 )
+from cs604.engine.baseline import (
+    assess_initial_accuracy,
+    baseline_provenance,
+    baseline_requested,
+    check_prototype_split,
+    validate_baseline_setup,
+)
 
 
 class SyntheticImages(Dataset):
@@ -244,14 +251,25 @@ def _run_training_legacy(cfg: dict) -> Path:
 
 
 def _git_metadata() -> dict[str, str | bool]:
+    # Read the checkout containing this code, including when another user account
+    # created its worktree. Trust only this explicit path for these read-only calls;
+    # do not change the user's global safe.directory configuration.
+    repo_dir = Path(__file__).resolve().parents[3]
+    git = ["git", "-c", f"safe.directory={repo_dir.as_posix()}", "-C", str(repo_dir)]
     try:
         commit = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL
+            [*git, "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL
         ).strip()
         status = subprocess.check_output(
-            ["git", "status", "--porcelain"], text=True, stderr=subprocess.DEVNULL
+            [*git, "status", "--porcelain"], text=True, stderr=subprocess.DEVNULL
         )
-        return {"git_commit": commit, "git_dirty": bool(status.strip())}
+        branch = subprocess.check_output(
+            [*git, "rev-parse", "--abbrev-ref", "HEAD"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
+        return {
+            "git_commit": commit, "git_dirty": bool(status.strip()),
+            "git_branch": branch, "git_worktree": str(repo_dir),
+        }
     except (OSError, subprocess.CalledProcessError):
         return {"git_commit": "unknown", "git_dirty": True}
 
@@ -307,7 +325,7 @@ def evaluate(model, loader: DataLoader, device: torch.device, amp_dtype) -> dict
     correct = 0
     count = 0
     started = time.perf_counter()
-    for images, labels, _paths in loader:
+    for batch_index, (images, labels, _paths) in enumerate(loader, start=1):
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
         with torch.autocast("cuda", dtype=amp_dtype, enabled=amp_dtype is not None):
@@ -316,6 +334,8 @@ def evaluate(model, loader: DataLoader, device: torch.device, amp_dtype) -> dict
         total_loss += float(loss) * images.size(0)
         correct += int((logits.argmax(dim=1) == labels).sum())
         count += images.size(0)
+        if batch_index % 50 == 0 or batch_index == len(loader):
+            print(f"evaluated {count}/{len(loader.dataset)} images", flush=True)
     elapsed = time.perf_counter() - started
     model.train()
     return {
@@ -354,6 +374,8 @@ def _save_training_checkpoint(
 
 
 def _check_architecture_compatibility(current: dict, saved: dict) -> None:
+    if bool(current.get("cosine_head_fp32", False)) != bool(saved.get("cosine_head_fp32", False)):
+        raise ValueError("Checkpoint cosine_head_fp32 does not match the current config")
     keys = (
         "timm_checkpoint",
         "num_classes",
@@ -378,17 +400,20 @@ def _check_architecture_compatibility(current: dict, saved: dict) -> None:
 def run_training(cfg: dict) -> Path:
     """Train any configured adaptation mode and evaluate a fixed holdout."""
 
+    output_dir = Path(cfg["output_dir"])
+    validate_baseline_setup(cfg, output_dir)
+    evaluate_only = bool(cfg.get("evaluate_only", False))
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is required. Select a GPU runtime or use the CUDA virtualenv.")
     _seed(int(cfg.get("seed", 0)))
     device = torch.device("cuda")
     torch.backends.cudnn.benchmark = True
-    output_dir = Path(cfg["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
 
     model = build_from_config(cfg).to(device)
     if cfg.get("prototype_file") and not cfg.get("resume"):
         prototype_blob = torch.load(cfg["prototype_file"], map_location="cpu", weights_only=False)
+        check_prototype_split(cfg, prototype_blob)
         prototypes = prototype_blob["prototypes"] if isinstance(prototype_blob, dict) else prototype_blob
         apply_class_prototypes(model, prototypes)
         print(f"initialized classifier from {cfg['prototype_file']}")
@@ -466,6 +491,7 @@ def run_training(cfg: dict) -> Path:
         "batch_size": int(cfg["batch_size"]),
         "grad_accum": grad_accum,
         "effective_batch_size": int(cfg["batch_size"]) * grad_accum,
+        "evaluate_only": evaluate_only,
         **report,
     }
     (output_dir / "run.json").write_text(json.dumps(run_info, indent=2), encoding="utf-8")
@@ -476,7 +502,7 @@ def run_training(cfg: dict) -> Path:
     )
 
     metrics_path = output_dir / "metrics.csv"
-    append = step > 0 and metrics_path.is_file()
+    append = bool(cfg.get("resume")) and metrics_path.is_file()
     metrics_file = metrics_path.open("a" if append else "w", newline="", encoding="utf-8")
     fields = [
         "phase", "epoch", "step", "loss", "accuracy", "lr",
@@ -487,7 +513,85 @@ def run_training(cfg: dict) -> Path:
         writer.writeheader()
 
     started = time.perf_counter()
-    log_started = started
+
+    def finish_run(status: str) -> None:
+        elapsed = time.perf_counter() - started
+        run_info.update(
+            {
+                "status": status,
+                "elapsed_sec": elapsed,
+                "gpu_hours": elapsed / 3600,
+                "vram_gb_hours": run_info["vram_gb"] * elapsed / 3600,
+                "normalized_48gb_hours": run_info["vram_gb"] * elapsed / (48 * 3600),
+                "optimizer_steps": step,
+                "best_internal_accuracy": None if best_accuracy < 0 else best_accuracy,
+                "max_mem_gb": torch.cuda.max_memory_allocated() / 1024**3,
+            }
+        )
+        (output_dir / "run.json").write_text(json.dumps(run_info, indent=2), encoding="utf-8")
+        metrics_file.close()
+
+    if baseline_requested(cfg) and not cfg.get("resume"):
+        try:
+            if val_dataset is None:
+                raise ValueError("Initial validation requires an internal holdout")
+            provenance = baseline_provenance(
+                cfg, output_dir / "splits" / "internal_val.txt", len(val_dataset)
+            )
+            # A normal prediction-compatible checkpoint, preserved even if evaluation fails.
+            _save_training_checkpoint(
+                output_dir / "baseline.pt", model, optimizer, scheduler, cfg,
+                0, 0, 0, best_accuracy,
+            )
+            val_loader = _loader(val_dataset, cfg, False, int(cfg.get("seed", 0)))
+            result = evaluate(model, val_loader, device, amp_dtype)
+            baseline = {
+                **provenance, **result, **assess_initial_accuracy(result["accuracy"], cfg),
+                "optimizer_steps": 0,
+            }
+            (output_dir / "baseline.json").write_text(json.dumps(baseline, indent=2), encoding="utf-8")
+            run_info["initial_internal_accuracy"] = result["accuracy"]
+            writer.writerow(
+                {
+                    "phase": "initial_val", "epoch": 0, "step": 0,
+                    "loss": result["loss"], "accuracy": result["accuracy"], "lr": "",
+                    "images_per_sec": result["images_per_sec"],
+                    "max_mem_gb": torch.cuda.max_memory_allocated() / 1024**3,
+                    "elapsed_sec": time.perf_counter() - started,
+                }
+            )
+            metrics_file.flush()
+            print(f"initial validation top1={100 * result['accuracy']:.2f}% (0 optimizer updates)")
+            if not baseline["passed"]:
+                raise ValueError(
+                    "Initial accuracy check failed: "
+                    f"actual={result['accuracy']}, expected={baseline['expected_initial_accuracy']}, "
+                    f"tolerance={baseline['initial_accuracy_tolerance']}. "
+                    "No training started; inspect baseline.json and baseline.pt."
+                )
+            best_accuracy = result["accuracy"]
+            for name in ("baseline.pt", "best.pt"):
+                _save_training_checkpoint(
+                    output_dir / name, model, optimizer, scheduler, cfg,
+                    0, 0, 0, best_accuracy,
+                )
+        except Exception as error:
+            run_info["error"] = str(error)
+            finish_run("initial_validation_failed")
+            raise
+    elif baseline_requested(cfg):
+        baseline = json.loads((output_dir / "baseline.json").read_text(encoding="utf-8"))
+        run_info["initial_internal_accuracy"] = baseline["initial_internal_accuracy"]
+        # Resuming an earlier checkpoint must not lower the existing best-model threshold.
+        saved_best = torch.load(output_dir / "best.pt", map_location="cpu", weights_only=False)
+        best_accuracy = max(best_accuracy, float(saved_best["best_accuracy"]))
+
+    if evaluate_only:
+        finish_run("evaluated")
+        return output_dir / "baseline.pt"
+
+    # Keep initialization/evaluation time out of the first training throughput window.
+    log_started = time.perf_counter()
     log_images = 0
     log_loss = 0.0
     log_updates = 0
@@ -586,18 +690,5 @@ def run_training(cfg: dict) -> Path:
         if stopped:
             break
 
-    elapsed = time.perf_counter() - started
-    run_info.update(
-        {
-            "elapsed_sec": elapsed,
-            "gpu_hours": elapsed / 3600,
-            "vram_gb_hours": run_info["vram_gb"] * elapsed / 3600,
-            "normalized_48gb_hours": run_info["vram_gb"] * elapsed / (48 * 3600),
-            "optimizer_steps": step,
-            "best_internal_accuracy": None if best_accuracy < 0 else best_accuracy,
-            "max_mem_gb": torch.cuda.max_memory_allocated() / 1024**3,
-        }
-    )
-    (output_dir / "run.json").write_text(json.dumps(run_info, indent=2), encoding="utf-8")
-    metrics_file.close()
+    finish_run("completed")
     return output_dir / ("best.pt" if (output_dir / "best.pt").is_file() else "last.pt")

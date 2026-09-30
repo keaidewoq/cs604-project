@@ -2,6 +2,60 @@
 
 Newest session at the top. Each entry records what ran, which files went in and out, the result, and the decision. Training numbers still live in each output folder's `run.json`, `metrics.csv`, and `config.json`.
 
+## 2026-09-30 — starting-point validation completed
+
+Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch
+`prototype-baseline`, base commit `010cf39aa28aef6987cdadaa15450e467b33f735`
+with uncommitted implementation changes (`git_dirty: true`).
+
+**First evaluation:** `configs/experiments/prototype_validate.yaml`, using the
+existing prototypes and the exact original 50,000-image internal holdout.
+Output: `C:\Users\Van Le\cs604-project\cs604-outputs\prototype-validate`.
+Top-1 **43.768%**, zero optimizer updates, 356.51 logged seconds. The check failed
+because the score differed from 43.90% by 0.132 percentage points, outside the
+predeclared 0.10-point tolerance. The diagnostic checkpoint and logs were preserved;
+no `best.pt` was created.
+
+**Correction and second evaluation:** `configs/experiments/prototype_validate_fp32_head.yaml`.
+The original prototype script uses float32 normalization and similarity scoring,
+whereas the cosine classifier previously scored inside bf16 autocast. Added an
+explicit `cosine_head_fp32` option that keeps only the final scoring in float32.
+The backbone remains bf16; model weights, split, prototypes, and tolerance are unchanged.
+
+Output: `C:\Users\Van Le\cs604-project\cs604-outputs\prototype-validate-fp32-head`.
+Result: **43.900%**, or **21,950 / 50,000 correct**, with **zero optimizer updates**.
+The accuracy gate passed. Logged run time: **351.93 seconds** (5m 52s), peak
+allocated memory **1.0353 GiB**. Evaluation throughput: **142.62 images/second**.
+This reproduces the original internal score; it is not a leaderboard result.
+
+Saved `baseline.pt`, `best.pt`, `baseline.json`, `run.json`, `config.json`, and
+`metrics.csv`. See `checkpoint_audit.json` for the post-run checkpoint checks.
+Both attempts used the same prototype-file and holdout SHA-256 hashes.
+
+Verification after the correction: **15 unit tests** and the **five-step synthetic
+GPU smoke test** passed. The original failed evaluation is retained for diagnosis.
+
+Decision: starting-point preservation and validation are complete. The prepared
+head-only screen now loads `prototype-validate-fp32-head/best.pt` and retains
+`cosine_head_fp32: true`. **The head-only training screen has not been started.**
+
+## 2026-09-30 — prototype starting-point protection (implementation)
+
+Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch
+`prototype-baseline`. The original checkout is unchanged. See `HANDOFF.md` for
+commands and cross-agent continuation instructions.
+
+Added evaluation-only `configs/experiments/prototype_validate.yaml` and the separate
+`prototype_head_screen.yaml`. The pipeline saves `baseline.pt` before updates,
+checks the original holdout and starting accuracy, and includes step zero in
+best-checkpoint selection. Fresh protected runs cannot overwrite existing results.
+
+Verification: 13 unit tests passed using tiny CPU models and mocked evaluation
+scores. The five-step synthetic GPU smoke test passed on the RTX 5080 Laptop GPU,
+writing to `C:\Users\Van Le\cs604-project\cs604-outputs\smoke-prototype-baseline`.
+No real-data validation or training was launched, so **43.90% has not yet been
+remeasured** by the new experiment.
+
 ## 2026-09-29 — pipeline, full fine-tune, prototypes
 
 ### What changed

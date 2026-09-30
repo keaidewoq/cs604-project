@@ -69,6 +69,10 @@ One line per image, `image_path class_id`, with `class_id` in `[0, 9999]`. Name 
 
 ## Experiment workflow
 
+For the current prototype-validation implementation, active worktree, and exact
+next-run commands, read [`report/HANDOFF.md`](report/HANDOFF.md). This is the shared
+handoff for Codex, Claude Code, and Cursor; use one agent and one GPU job at a time.
+
 Use one YAML file per experiment under `configs/experiments/`. Every run saves
 its resolved config, Git commit, hardware, parameter counts, timing, metrics,
 and resumable checkpoints.
