@@ -119,6 +119,20 @@ Promote an idea to Colab only when its screen beats the current best screen.
 The Colab VM (RTX PRO 6000, 95 GB) trains one epoch over all 40 images per
 class in about 7 minutes. Staging the data takes 20–40 minutes, once per runtime.
 
+**Compute units:**
+- Colab bills every minute a runtime is connected, at a rate set by the GPU
+  type, whether or not anything is running.
+- On 2026-10-01 the whole monthly allowance (100 units) went in one day. About
+  5 hours were spent connected on the RTX PRO 6000, mostly debugging data
+  staging; training itself was 7 minutes.
+- Before connecting, read the rate under Colab's RAM/disk indicator → View resources.
+- A LoRA or head run needs only about 2 GB of GPU memory, so the cheapest GPU
+  that finishes in acceptable time is the right choice.
+- Never debug on a GPU runtime. Debug on the laptop.
+- Queue several experiments per session, so one data staging covers all of them.
+- Check colab.research.google.com → Runtime → Manage sessions for forgotten
+  runtimes. Closing Cursor does not end one.
+
 1. **Write the full-run config.** Copy the screen config to
    `configs/experiments/<EXPERIMENT>.yaml` under the full-run name, for example
    `..._40`. Change:
@@ -163,16 +177,29 @@ class in about 7 minutes. Staging the data takes 20–40 minutes, once per runti
 | Stage data | streams `train.tar.gz` into `/content`; fetches `train.txt` | `data ok ... train.txt lines: 450000` |
 | Debug cells (if present) | disk and HF access checks | only if stage data fails |
 | Checkpoint smoke | 4 synthetic steps, corrupts a checkpoint, resumes | `colab checkpoint smoke passed` |
-| Training | set `EXPERIMENT = "<EXPERIMENT>"`, then run | `step ... img/s` lines, `validation top1=...`, `artifacts ...` |
+| Training | set `EXPERIMENTS = ["<EXPERIMENT>", ...]`, then run | `===== <name> =====` blocks with `step ... img/s` and `validation top1=...`, a `summary`, then the runtime ends |
+| Disconnect (last cell) | ends the runtime now | use it whenever you stop working without auto-disconnect |
 
    - **Stage data** reuses images already on the VM. If it stops on low disk,
      run the debug disk cell. Cursor doesn't show `!` shell output, so use
      `subprocess.run(..., capture_output=True)` and print the result. Free
      space with Runtime → Disconnect and delete runtime, or delete
      `/content/cs604-course-data`, then re-run.
-   - **Training** stops if the config isn't in the checkout or the output
-     folder already holds a run. To continue an interrupted run, set
-     `RESUME` to the newest good `checkpoints/resume_step_*.pt` path on Drive.
+   - **Training** runs every name in `EXPERIMENTS` back to back on the staged
+     data.
+     - Before anything trains, it checks every config is in the checkout and
+       no output folder already holds a run. If a check fails, fix it and
+       re-run the cell; the runtime stays connected.
+     - A failed experiment doesn't stop the others.
+     - Each run's console log is saved as `train.log` in its Drive folder.
+   - **Auto-disconnect:** with `AUTO_DISCONNECT = True` (the default), the cell
+     ends the runtime once training has run, even if a run failed, so it stops
+     using units.
+     - It does not disconnect after a check failure or a manual interrupt.
+       Then it prints a reminder; run the Disconnect cell when you're done.
+   - **Resume** an interrupted run with
+     `RESUME = {"<name>": ".../checkpoints/resume_step_XXXXXX.pt"}`, using the
+     newest good checkpoint on Drive.
 6. **If the runtime disconnects:** `/content` is wiped but Drive is not.
    Re-run from the top. Stage data downloads again, and training resumes
    with `RESUME`.
