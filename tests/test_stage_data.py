@@ -41,6 +41,28 @@ class StageDataLayoutTests(unittest.TestCase):
             self.assertFalse(stage_data.archive_layout_ok(root, "train.tar.gz"))
 
 
+class StreamSpaceTests(unittest.TestCase):
+    def test_low_space_fails_before_download(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(SystemExit) as caught:
+                stage_data.check_stream_space(Path(tmp), min_free_gib=1e9)
+            self.assertIn("free", str(caught.exception))
+
+    def test_enough_space_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            stage_data.check_stream_space(Path(tmp), min_free_gib=0.0)
+
+    def test_partial_extract_removed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "train" / "0").mkdir(parents=True)
+            (root / "train.txt").write_text("a\n", encoding="utf-8")
+            (root / ".cache" / "huggingface").mkdir(parents=True)
+            (root / "keep.txt").write_text("x", encoding="utf-8")
+            stage_data.remove_partial_extract(root, "train.tar.gz")
+            self.assertEqual(sorted(p.name for p in root.iterdir()), ["keep.txt"])
+
+
 class PipeIntoTarTests(unittest.TestCase):
     def _make_archive(self, root: Path) -> Path:
         src = root / "src"

@@ -25,6 +25,8 @@ MIN_LOCAL_FREE_GIB_TRAIN = 35.0
 STREAM_CHUNK_BYTES = 8 * 1024**2
 STREAM_REPORT_BYTES = 2 * 1024**3
 STREAM_ATTEMPTS = 3
+# Extracted train/ is ~40 GiB (JPEGs barely compress); keep headroom for checkpoint staging.
+MIN_LOCAL_FREE_GIB_STREAM = 50.0
 
 ARCHIVE_CHECKS: dict[str, tuple[tuple[str, ...], int | None]] = {
     "train.tar.gz": (("train.txt", "train"), TRAIN_TXT_MIN_LINES),
@@ -221,6 +223,30 @@ def pipe_into_tar(source_cmd: list[str], local_dir: Path, *, source_input: bytes
     print(f"  streamed {copied / 1024**3:.1f} GiB total", flush=True)
 
 
+def remove_partial_extract(local_dir: Path, archive_name: str) -> None:
+    """Drop an unverified extract and HF download cache left by a failed attempt."""
+    required, _ = ARCHIVE_CHECKS.get(archive_name, ((), None))
+    for path in [local_dir / entry for entry in required] + [local_dir / ".cache"]:
+        if path.is_dir():
+            print(f"removing partial {path}", flush=True)
+            shutil.rmtree(path)
+        elif path.is_file():
+            print(f"removing partial {path}", flush=True)
+            path.unlink()
+
+
+def check_stream_space(local_dir: Path, min_free_gib: float = MIN_LOCAL_FREE_GIB_STREAM) -> None:
+    """Fail before downloading, not after tar fills the disk 40 GiB in."""
+    local_dir.mkdir(parents=True, exist_ok=True)
+    free = report_disk(local_dir, label="VM")
+    if free < min_free_gib:
+        raise SystemExit(
+            f"Only {free:.1f} GiB free on {local_dir}; streaming train needs ~{min_free_gib:.0f}+ GiB. "
+            f"Leftovers from earlier attempts are the usual cause: delete {local_dir} "
+            "(shutil.rmtree) or use Runtime > Disconnect and delete runtime, then re-run."
+        )
+
+
 def _stream_from_hub(name: str, local_dir: Path) -> None:
     """Download straight into tar so the .tar.gz never lands on disk."""
     from huggingface_hub import hf_hub_url
@@ -233,6 +259,8 @@ def _stream_from_hub(name: str, local_dir: Path) -> None:
 
     marker = extract_marker(local_dir, name)
     marker.unlink(missing_ok=True)
+    remove_partial_extract(local_dir, name)
+    check_stream_space(local_dir)
     for attempt in range(1, STREAM_ATTEMPTS + 1):
         print(f"streaming {name} from {REPO_ID} into {local_dir} (attempt {attempt})", flush=True)
         try:
