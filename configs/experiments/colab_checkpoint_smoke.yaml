@@ -14,7 +14,7 @@ train_head: false
 batch_size: 4
 eval_batch_size: 8
 grad_accum: 1
-num_workers: 2
+num_workers: 0
 epochs: 1
 max_steps: 4
 limit_samples: 64
@@ -30,6 +30,6 @@ grad_checkpointing: true
 log_every: 1
 ckpt_every: 2
 seed: 0
-synthetic: false
+synthetic: true
 evaluate_before_training: false
 resume: null
