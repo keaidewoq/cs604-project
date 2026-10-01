@@ -26,8 +26,6 @@ for its full Colab run.
 5. Predict and submit (section 4).
 6. Record the CodaBench result (section 5).
 
----
-
 ## 0. Terminal and virtual environment
 
 The plain `python` on this laptop is CPU-only. Always use the CUDA virtualenv
@@ -66,8 +64,6 @@ folder is the repo root. Without activation, replace `python` with
 (`cs604-prototype-baseline`), which is the branch Colab checks out. Run
 `git status` before you start; commit or discard leftovers so `run.json`
 records `git_dirty: false`.
-
----
 
 ## 1. Screen an idea on the laptop
 
@@ -118,8 +114,6 @@ change the holdout or replace it with a random subset.
 
 Promote an idea to Colab only when its screen beats the current best screen.
 
----
-
 ## 2. Full training on Colab
 
 The Colab VM (RTX PRO 6000, 95 GB) trains one epoch over all 40 images per
@@ -157,19 +151,19 @@ class in about 7 minutes. Staging the data takes 20–40 minutes, once per runti
 4. **Open `notebooks/colab_train.ipynb` in Cursor.** Use Select Kernel → Colab
    → GPU, signed in as `thv.le.2025@mitb.smu.edu.sg`. Reload the notebook
    if it changed in git.
-5. **Run the cells in order:**
+5. **Run the cells in order** (table below), then read the notes after it.
 
-   | Cell | What it does | Expect |
-   | --- | --- | --- |
-   | GPU check | `nvidia-smi`; defines `run_logged` | GPU listed. Re-run it after any kernel restart. |
-   | Mount Drive | mounts `/content/drive` | "Mounted" or "already mounted" |
-   | GitHub token | reads `cs604/secrets/github_token.txt` | "GitHub token ready" |
-   | Checkout | clones or fetches `prototype-baseline` tip; installs requirements | `code ready ... commit <sha>`: your latest push |
-   | Inputs | copies `class_prototypes.pt` and `internal_val.txt` from Drive and checks their hashes | both "ok" |
-   | Stage data | streams `train.tar.gz` into `/content`; fetches `train.txt` | `data ok ... train.txt lines: 450000` |
-   | Debug cells (if present) | disk and HF access checks | only if stage data fails |
-   | Checkpoint smoke | 4 synthetic steps, corrupts a checkpoint, resumes | `colab checkpoint smoke passed` |
-   | Training | set `EXPERIMENT = "<EXPERIMENT>"`, then run | `step ... img/s` lines, `validation top1=...`, `artifacts ...` |
+| Cell | What it does | Expect |
+| --- | --- | --- |
+| GPU check | `nvidia-smi`; defines `run_logged` | GPU listed. Re-run it after any kernel restart. |
+| Mount Drive | mounts `/content/drive` | "Mounted" or "already mounted" |
+| GitHub token | reads `cs604/secrets/github_token.txt` | "GitHub token ready" |
+| Checkout | clones or fetches `prototype-baseline` tip; installs requirements | `code ready ... commit <sha>`: your latest push |
+| Inputs | copies `class_prototypes.pt` and `internal_val.txt` from Drive and checks their hashes | both "ok" |
+| Stage data | streams `train.tar.gz` into `/content`; fetches `train.txt` | `data ok ... train.txt lines: 450000` |
+| Debug cells (if present) | disk and HF access checks | only if stage data fails |
+| Checkpoint smoke | 4 synthetic steps, corrupts a checkpoint, resumes | `colab checkpoint smoke passed` |
+| Training | set `EXPERIMENT = "<EXPERIMENT>"`, then run | `step ... img/s` lines, `validation top1=...`, `artifacts ...` |
 
    - **Stage data** reuses images already on the VM. If it stops on low disk,
      run the debug disk cell. Cursor doesn't show `!` shell output, so use
@@ -183,8 +177,6 @@ class in about 7 minutes. Staging the data takes 20–40 minutes, once per runti
    Re-run from the top. Stage data downloads again, and training resumes
    with `RESUME`.
 7. Delete `My Drive/cs604/outputs/colab-checkpoint-smoke` once it has passed.
-
----
 
 ## 3. Copy the run to the laptop
 
@@ -207,8 +199,6 @@ python scripts/sync_run.py <EXPERIMENT> --prune-drive
 
 Use another Drive location with `--drive-root` or the `CS604_DRIVE_OUTPUTS`
 environment variable.
-
----
 
 ## 4. Predict and make the CodaBench file
 
@@ -233,8 +223,6 @@ python scripts/predict.py --checkpoint "C:/Users/Van Le/cs604-project/cs604-outp
   laptop's.
 - Do not edit the `.txt` or `.zip` after this step. Recording the submission
   checks their hashes.
-
----
 
 ## 5. Submit and record the CodaBench result
 
@@ -264,8 +252,6 @@ python scripts/predict.py --checkpoint "C:/Users/Van Le/cs604-project/cs604-outp
    saying what ran, the result, and the decision. Update `report/EXPERIMENTS.md`
    for runs that go in the report. Copy numbers from `run.json`,
    `metrics.csv`, `.inference.json`, and `leaderboard.json`; never from memory.
-
----
 
 ## What lives where
 
