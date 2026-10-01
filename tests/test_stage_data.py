@@ -60,7 +60,40 @@ class StreamSpaceTests(unittest.TestCase):
             (root / ".cache" / "huggingface").mkdir(parents=True)
             (root / "keep.txt").write_text("x", encoding="utf-8")
             stage_data.remove_partial_extract(root, "train.tar.gz")
-            self.assertEqual(sorted(p.name for p in root.iterdir()), ["keep.txt"])
+            self.assertEqual(sorted(p.name for p in root.iterdir()), ["keep.txt", "train.txt"])
+
+
+class ListFileTests(unittest.TestCase):
+    def _write_split(self, root: Path, lines: int) -> None:
+        (root / "train" / "class_0000").mkdir(parents=True)
+        rows = []
+        for index in range(lines):
+            rel = f"train/class_0000/{index}.jpg"
+            (root / rel).write_bytes(b"jpeg")
+            rows.append(f"{rel} 0\n")
+        (root / "train.txt").write_text("".join(rows), encoding="utf-8")
+
+    def test_images_match_list(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            old_min = stage_data.ARCHIVE_CHECKS["train.tar.gz"]
+            stage_data.ARCHIVE_CHECKS["train.tar.gz"] = (old_min[0], 3)
+            try:
+                self._write_split(root, 3)
+                self.assertTrue(stage_data.images_match_list(root, "train.tar.gz"))
+                (root / "train" / "class_0000" / "2.jpg").write_bytes(b"")
+                self.assertFalse(stage_data.images_match_list(root, "train.tar.gz"))
+                (root / "train" / "class_0000" / "2.jpg").unlink()
+                self.assertFalse(stage_data.images_match_list(root, "train.tar.gz"))
+            finally:
+                stage_data.ARCHIVE_CHECKS["train.tar.gz"] = old_min
+
+    def test_ensure_list_file_keeps_full_list(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "train.txt").write_text("x 0\n" * stage_data.TRAIN_TXT_MIN_LINES, encoding="utf-8")
+            stage_data.ensure_list_file("train.tar.gz", root)  # no download attempted
+            self.assertEqual(stage_data.count_lines(root / "train.txt"), stage_data.TRAIN_TXT_MIN_LINES)
 
 
 class PipeIntoTarTests(unittest.TestCase):

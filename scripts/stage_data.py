@@ -223,10 +223,50 @@ def pipe_into_tar(source_cmd: list[str], local_dir: Path, *, source_input: bytes
     print(f"  streamed {copied / 1024**3:.1f} GiB total", flush=True)
 
 
+def list_file_name(archive_name: str) -> str | None:
+    required, _ = ARCHIVE_CHECKS.get(archive_name, ((), None))
+    return next((entry for entry in required if entry.endswith(".txt")), None)
+
+
+def ensure_list_file(archive_name: str, local_dir: Path) -> None:
+    """Fetch train.txt / val.txt: they sit beside the archives on the Hub, not inside them."""
+    name = list_file_name(archive_name)
+    if name is None:
+        return
+    _, min_lines = ARCHIVE_CHECKS[archive_name]
+    path = local_dir / name
+    if path.is_file() and (min_lines is None or count_lines(path) >= min_lines):
+        return
+    path.unlink(missing_ok=True)
+    _download_from_hub(name, local_dir)
+    print(f"{name}: {count_lines(path)} lines", flush=True)
+
+
+def images_match_list(local_dir: Path, archive_name: str) -> bool:
+    """True when every image named in the list file exists and is non-empty."""
+    name = list_file_name(archive_name)
+    if name is None or not archive_layout_ok(local_dir, archive_name):
+        return False
+    with (local_dir / name).open(encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            parts = line.split()
+            if not parts:
+                continue
+            image = local_dir / parts[0]
+            try:
+                if image.stat().st_size == 0:
+                    return False
+            except OSError:
+                return False
+    return True
+
+
 def remove_partial_extract(local_dir: Path, archive_name: str) -> None:
     """Drop an unverified extract and HF download cache left by a failed attempt."""
     required, _ = ARCHIVE_CHECKS.get(archive_name, ((), None))
-    for path in [local_dir / entry for entry in required] + [local_dir / ".cache"]:
+    # The .txt list is a separate repo file, not part of the extract; keep it.
+    trees = [local_dir / entry for entry in required if not entry.endswith(".txt")]
+    for path in trees + [local_dir / ".cache"]:
         if path.is_dir():
             print(f"removing partial {path}", flush=True)
             shutil.rmtree(path)
@@ -357,9 +397,14 @@ def main(argv: list[str] | None = None) -> None:
     prefer_drive = archive_drive_dir is not None
     archives = ("train.tar.gz",) if args.train_only else ALL_ARCHIVES
     for name in archives:
+        ensure_list_file(name, args.local_dir)
         if args.stream and not (args.local_dir / name).is_file():
-            if extract_marker(args.local_dir, name).is_file() and archive_layout_ok(args.local_dir, name):
+            marker = extract_marker(args.local_dir, name)
+            if marker.is_file() and archive_layout_ok(args.local_dir, name):
                 print(f"already extracted: {name}", flush=True)
+            elif images_match_list(args.local_dir, name):
+                print(f"found complete extract of {name} from an earlier run; skipping download", flush=True)
+                marker.write_text("ok\n", encoding="utf-8")
             else:
                 _stream_from_hub(name, args.local_dir)
             continue
