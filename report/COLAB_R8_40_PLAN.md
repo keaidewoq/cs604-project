@@ -26,32 +26,42 @@ alone.
 
 ## 1. Prepare and pin the inputs
 
-1. Add one new YAML under `configs/experiments/` and give it a new Drive output
-   directory. Keep `mode: lora`, rank 8, alpha 16, dropout 0.05, `head_type:
-   cosine`, `train_head: false`, `cosine_head_fp32: true`, bf16, batch 32, seed 0,
+1. Add `configs/experiments/prototype_lora_r8_fp32_40.yaml`. Its Drive output
+   directory is `/content/drive/MyDrive/cs604/outputs/prototype-lora-r8-fp32-40`.
+   Keep `mode: lora`, rank 8, alpha 16, dropout 0.05, `head_type: cosine`,
+   `train_head: false`, `cosine_head_fp32: true`, bf16, batch 32, seed 0,
    split seed 604, `val_per_class: 5`, `train_per_class: null`, and one epoch.
    Keep the screen's LR 0.0005, weight decay 0.01, and label smoothing 0 unless
-   a separately documented decision changes them. Leave `max_steps: null` so
-   the intended run is one complete epoch. Use a Colab path for `prototype_file`
-   and `baseline_reference_split`; the notebook CLI only overrides `data_root`
-   and `output_dir`.
+   a separately documented decision changes them. Set `ckpt_every: 1000` in this
+   committed file. Leave `max_steps: null` so the intended run is one complete
+   epoch. The notebook CLI only overrides `data_root` and `output_dir`, so the
+   YAML itself must point `prototype_file` at
+   `/content/cs604-inputs/class_prototypes.pt` and `baseline_reference_split`
+   at `/content/cs604-inputs/internal_val.txt`.
 2. Require `evaluate_before_training: true`, expected initial accuracy 0.439,
    tolerance 0.001 (fractions, equal to 0.10 percentage points), and exactly
    50,000 initial validation samples. Preserve `validate: true`. Do not change
    the gate to accommodate an unexpected score.
 3. Store copies of `cs604-outputs/prototypes/class_prototypes.pt` and
-   `cs604-outputs/prototypes/splits/internal_val.txt` in a stable Drive input
-   directory. Record their SHA-256 hashes before upload and verify the Drive
-   copies. The original prototype hash recorded by the prior baseline is
+   `cs604-outputs/prototypes/splits/internal_val.txt` at
+   `/content/drive/MyDrive/cs604/inputs/`. Record their SHA-256 hashes before
+   upload and verify the Drive copies. These hashes were checked against the
+   local files on 2026-10-01. The prototype hash is
    `c4c90ef9443c1430c519c4496829117563e21c796037f764a89c5ab1ea11b68f`;
    the holdout hash is
    `19a10c37a775559f4eee516215ad10c4b906ee50d66f7cbd95bc5ec88f2f2f69`.
-   Copy these inputs from Drive to `/content` at the start of each Colab session
-   and verify the copies there too. Do not rebuild or overwrite the originals.
-4. Commit the config, notebook, and checkpoint-recovery implementation on
-   `prototype-baseline`, then push that branch to the repository used by Colab.
+   At the start of each Colab session, copy those Drive files to
+   `/content/cs604-inputs/` and verify the copies there too. Do not rebuild or
+   overwrite the originals.
+4. Run the local unit tests after the checkpoint-save change, including a case
+   where a truncated newest copy fails to load and resume is pointed at the
+   preceding valid file. The code does not choose that fallback by itself.
+   Then commit the config, notebook, and checkpoint-recovery implementation on
+   `prototype-baseline`, and push that branch to the repository used by Colab.
    Pin the notebook's `COMMIT` to the resulting full SHA, not `main` or the
-   earlier `f6c5e3c`. Verify the checkout's HEAD and clean state in Colab.
+   earlier `f6c5e3c`. Do not change `ckpt_every` or the training hyperparameters
+   after that pin; a preflight that needs a different interval requires a new
+   commit and a new pin. Verify the checkout's HEAD and clean state in Colab.
    Do not commit checkpoints, archives, or predictions.
 
 ## 2. Make checkpoints survive a Colab interruption
@@ -68,9 +78,9 @@ and test this protocol before the real run:
    before marking it usable. Keep at least the previous verified checkpoint;
    never rely on a rename within the Drive mount or delete the old copy before
    the new one has passed read-back. A partial new copy must be ignored on
-   recovery. Retain a usable `last.pt` for the normal interface, but preserve
-   the numbered copies as its fallback. The `--resume` argument may point
-   directly to a verified numbered checkpoint.
+   recovery. Also copy a verified checkpoint to `last.pt` for the normal
+   interface. If that copy is damaged, resume by passing the preceding numbered
+   file explicitly; do not add a scanner that guesses which file to load.
 3. Protect `baseline.pt` and `best.pt` the same way, including the final
    replacement of the step-zero `best.pt`. Keep a verified versioned copy of
    each. The baseline files are required for a protected resume. The model
@@ -79,15 +89,16 @@ and test this protocol before the real run:
    directory for diagnosis.
 4. Keep `metrics.csv`, `run.json`, resolved `config.json`, and checkpoint hashes
    in Drive. Checkpoint writes should not silently succeed only on `/content`.
-   Use a periodic interval that bounds lost work without excessive Drive I/O;
-   500-1,000 updates is a starting range, to be checked in the Colab preflight.
+   The real run saves every 1,000 updates. The Colab smoke may use a shorter
+   interval in its own output directory.
 
 Before the long run, perform a short Colab write/read-back and interrupted-resume
 test in a separate smoke directory. Verify that model, optimizer, scheduler,
-step, and next-batch state restore, that the same output directory is used, and
-that an intentionally incomplete newest copy falls back to the preceding valid
-checkpoint. The code resumes the seeded batch order but does not save every RNG
-state; a resumed run need not be bit-for-bit identical to an uninterrupted run.
+step, and next-batch state restore and that the same output directory is used.
+Damage the newest Drive copy and confirm that `--resume` of the preceding
+verified file continues the run. The code resumes the seeded batch order but
+does not save every RNG state; a resumed run need not be bit-for-bit identical
+to an uninterrupted run.
 
 ## 3. Colab preflight and one real run
 
@@ -96,8 +107,12 @@ state; a resumed run need not be bit-for-bit identical to an uninterrupted run.
    Confirm CUDA PyTorch, dependencies, enough `/content` space for the staged
    archives and extracted images, enough Drive space for checkpoints, and the
    expected 400,000/50,000 split counts. `scripts/stage_data.py` stages the
-   train and official val archives; training must read images from `/content`,
-   never from the Drive image tree.
+   train and official val archives. Training reads only the train archive from
+   `/content`, never from the Drive image tree. Official `val` images are not
+   used by this training run; if `/content` cannot hold both archives, stage
+   the train archive alone and leave official validation prediction to the
+   laptop. The 12,500-update expectation holds only when the training split is
+   exactly 400,000 images.
 2. Confirm the pinned commit, source hashes, new empty output directory, and
    that this is the only GPU training job. Launch `scripts/train.py` with the
    new YAML, `/content/cs604-course-data` as data root, and the unique Drive
@@ -110,14 +125,17 @@ state; a resumed run need not be bit-for-bit identical to an uninterrupted run.
    During the single epoch `best.pt` remains the zero-update model until final
    holdout evaluation; use a verified `last.pt` or numbered resume copy if the
    session ends early. On a new runtime, restage inputs, check the same pinned
-   commit and config, verify the selected checkpoint, and resume in the *same*
-   output directory with `--resume <verified checkpoint>`. Do not delete the
-   partial run or start a new one over its files. If the latest copy is damaged,
-   use the preceding verified checkpoint.
-5. After completion, require `run.json` status `completed`, 12,500 optimizer
-   updates, an initial and final validation row in `metrics.csv`, reloadable
-   `baseline.pt`, `best.pt`, and `last.pt`, and a recorded final accuracy and
-   loss. Confirm whether `best.pt` is step zero or the trained model; only a
+   commit and config, and verify the selected checkpoint. Before launching
+   resume, copy the current `run.json` aside: the process overwrites it as soon
+   as it starts, and `metrics.csv` elapsed times restart even though new rows
+   are appended. Resume in the *same* output directory with
+   `--resume <verified checkpoint>`. Do not delete the partial run or start a
+   new one over its files. If the latest copy is damaged, pass the preceding
+   verified checkpoint to `--resume`.
+5. After completion, require `run.json` status `completed` and 12,500 optimizer
+   updates when the training split has 400,000 images. Also require an initial
+   and a final validation row in `metrics.csv`, reloadable `baseline.pt`,
+   `best.pt`, and `last.pt`, and a recorded final accuracy and loss. Confirm whether `best.pt` is step zero or the trained model; only a
    strictly better internal score should replace step zero. Record GPU name,
    logged elapsed time, peak VRAM, and normalized 48-GiB hours. If a run resumes,
    preserve each session's elapsed time before `run.json` is rewritten; its final
