@@ -1,7 +1,7 @@
 """Copy finished Colab runs from Google Drive into cs604-outputs and verify them.
 
 Google Drive for desktop shows My Drive as a local folder, so the Colab output
-folder ``My Drive/cs604/outputs/<run>`` is readable here (default ``G:/My Drive``;
+folder ``My Drive/cs604/outputs/<run>`` is readable here (default ``H:/My Drive``;
 override with --drive-root or the CS604_DRIVE_OUTPUTS environment variable).
 
 Every file except the numbered ``checkpoints/*_step_*.pt`` copies is copied and
@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from cs604.engine.checkpoint_io import sha256_file  # noqa: E402
 
-DEFAULT_DRIVE = Path(os.environ.get("CS604_DRIVE_OUTPUTS", "G:/My Drive/cs604/outputs"))
+DEFAULT_DRIVE = Path(os.environ.get("CS604_DRIVE_OUTPUTS", "H:/My Drive/cs604/outputs"))
 DEFAULT_LOCAL = ROOT.parent / "cs604-outputs"
 FINISHED = ("completed", "evaluated")
 SKIP_DIRS = ("checkpoints",)
