@@ -22,6 +22,10 @@ VAL_TXT_MIN_LINES = 40_000
 # Rough lower bound: compressed train tar + extracted images on /content during extract.
 MIN_LOCAL_FREE_GIB_TRAIN = 35.0
 
+STREAM_CHUNK_BYTES = 8 * 1024**2
+STREAM_REPORT_BYTES = 2 * 1024**3
+STREAM_ATTEMPTS = 3
+
 ARCHIVE_CHECKS: dict[str, tuple[tuple[str, ...], int | None]] = {
     "train.tar.gz": (("train.txt", "train"), TRAIN_TXT_MIN_LINES),
     "val.tar.gz": (("val.txt", "val"), VAL_TXT_MIN_LINES),
@@ -169,15 +173,81 @@ def _extract(archive: Path, local_dir: Path) -> None:
             f"tar failed for {archive.name} (exit {error.returncode}). "
             f"Free space now {free:.1f} GiB — need ~{MIN_LOCAL_FREE_GIB_TRAIN:.0f}+ GiB on /content for train."
         ) from error
-    if not archive_layout_ok(local_dir, archive.name):
+    _finish_extract(local_dir, archive.name)
+
+
+def _finish_extract(local_dir: Path, archive_name: str) -> None:
+    marker = extract_marker(local_dir, archive_name)
+    if not archive_layout_ok(local_dir, archive_name):
         marker.unlink(missing_ok=True)
-        list_path = local_dir / "train.txt" if archive.name == "train.tar.gz" else local_dir / "val.txt"
+        list_path = local_dir / "train.txt" if archive_name == "train.tar.gz" else local_dir / "val.txt"
         lines = count_lines(list_path) if list_path.is_file() else 0
         raise SystemExit(
-            f"After extracting {archive.name}, layout check failed under {local_dir}. "
+            f"After extracting {archive_name}, layout check failed under {local_dir}. "
             f"train.txt/val.txt lines seen: {lines}. Archive may be corrupt or disk full."
         )
     marker.write_text("ok\n", encoding="utf-8")
+
+
+def pipe_into_tar(source_cmd: list[str], local_dir: Path, *, source_input: bytes = b"") -> None:
+    """Run ``source_cmd`` and feed its stdout to ``tar -xz`` without touching disk."""
+    local_dir.mkdir(parents=True, exist_ok=True)
+    source = subprocess.Popen(source_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    tar = subprocess.Popen(["tar", "-xzf", "-", "-C", str(local_dir)], stdin=subprocess.PIPE)
+    assert source.stdin is not None and source.stdout is not None and tar.stdin is not None
+    source.stdin.write(source_input)
+    source.stdin.close()
+    copied = 0
+    next_report = STREAM_REPORT_BYTES
+    try:
+        while chunk := source.stdout.read(STREAM_CHUNK_BYTES):
+            tar.stdin.write(chunk)
+            copied += len(chunk)
+            if copied >= next_report:
+                print(f"  streamed {copied / 1024**3:.1f} GiB", flush=True)
+                next_report += STREAM_REPORT_BYTES
+    except BrokenPipeError:
+        pass  # tar exited early; its return code below says why
+    finally:
+        tar.stdin.close()
+        source.stdout.close()
+    source_code = source.wait()
+    tar_code = tar.wait()
+    if source_code != 0 or tar_code != 0:
+        raise subprocess.CalledProcessError(
+            source_code or tar_code,
+            f"download exit {source_code}, tar exit {tar_code} after {copied / 1024**3:.1f} GiB",
+        )
+    print(f"  streamed {copied / 1024**3:.1f} GiB total", flush=True)
+
+
+def _stream_from_hub(name: str, local_dir: Path) -> None:
+    """Download straight into tar so the .tar.gz never lands on disk."""
+    from huggingface_hub import hf_hub_url
+
+    url = hf_hub_url(repo_id=REPO_ID, filename=name, repo_type="dataset")
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    # Token goes to curl on stdin (-K -), not argv. curl -L drops it on the CDN redirect.
+    config = f'header = "Authorization: Bearer {token}"\n'.encode() if token else b""
+    curl = ["curl", "-fsSL", "--retry", "5", "--retry-connrefused", "-K", "-", url]
+
+    marker = extract_marker(local_dir, name)
+    marker.unlink(missing_ok=True)
+    for attempt in range(1, STREAM_ATTEMPTS + 1):
+        print(f"streaming {name} from {REPO_ID} into {local_dir} (attempt {attempt})", flush=True)
+        try:
+            pipe_into_tar(curl, local_dir, source_input=config)
+            break
+        except subprocess.CalledProcessError as error:
+            free = report_disk(local_dir, label="disk after failed stream")
+            print(f"stream failed: {error.cmd}", flush=True)
+            if attempt == STREAM_ATTEMPTS:
+                raise SystemExit(
+                    f"Streaming {name} failed {STREAM_ATTEMPTS} times ({free:.1f} GiB free). "
+                    "curl exit 22 usually means access denied: accept terms at "
+                    f"https://huggingface.co/datasets/{REPO_ID} and set HF_TOKEN."
+                ) from error
+    _finish_extract(local_dir, name)
 
 
 def validate_training_layout(local_dir: Path) -> None:
@@ -222,7 +292,15 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Remove the .tar.gz from --local-dir after a successful extract (saves VM disk).",
     )
+    parser.add_argument(
+        "--stream",
+        action="store_true",
+        help="Pipe the Hugging Face download straight into tar; the .tar.gz never hits disk. "
+        "Implies --vm-only.",
+    )
     args = parser.parse_args(argv)
+    if args.stream:
+        args.vm_only = True
 
     archive_drive_dir = None if args.vm_only else args.drive_dir
     if args.vm_only:
@@ -251,6 +329,12 @@ def main(argv: list[str] | None = None) -> None:
     prefer_drive = archive_drive_dir is not None
     archives = ("train.tar.gz",) if args.train_only else ALL_ARCHIVES
     for name in archives:
+        if args.stream and not (args.local_dir / name).is_file():
+            if extract_marker(args.local_dir, name).is_file() and archive_layout_ok(args.local_dir, name):
+                print(f"already extracted: {name}", flush=True)
+            else:
+                _stream_from_hub(name, args.local_dir)
+            continue
         archive = _ensure_archive(
             name,
             args.local_dir,
