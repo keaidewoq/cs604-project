@@ -212,11 +212,29 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Remove val artifacts from --local-dir before staging train (Colab disk).",
     )
+    parser.add_argument(
+        "--vm-only",
+        action="store_true",
+        help="Keep course tarballs off Drive (download/extract on --local-dir only).",
+    )
+    parser.add_argument(
+        "--delete-local-archive-after-extract",
+        action="store_true",
+        help="Remove the .tar.gz from --local-dir after a successful extract (saves VM disk).",
+    )
     args = parser.parse_args(argv)
 
+    archive_drive_dir = None if args.vm_only else args.drive_dir
+    if args.vm_only:
+        print(
+            "vm-only: course archives will not be stored on Drive "
+            "(use when Drive quota is too small for train.tar.gz).",
+            flush=True,
+        )
+
     args.local_dir.mkdir(parents=True, exist_ok=True)
-    if args.drive_dir is not None:
-        report_disk(args.drive_dir, label="Drive cache")
+    if archive_drive_dir is not None:
+        report_disk(archive_drive_dir, label="Drive cache")
     free = report_disk(args.local_dir, label="VM")
 
     if args.train_only and args.reclaim_vm_for_train:
@@ -230,18 +248,26 @@ def main(argv: list[str] | None = None) -> None:
             flush=True,
         )
 
-    prefer_drive = args.drive_dir is not None
+    prefer_drive = archive_drive_dir is not None
     archives = ("train.tar.gz",) if args.train_only else ALL_ARCHIVES
     for name in archives:
         archive = _ensure_archive(
             name,
             args.local_dir,
-            args.drive_dir,
+            archive_drive_dir,
             prefer_drive_cache=prefer_drive,
         )
         _extract(archive, args.local_dir)
         local_copy = args.local_dir / name
-        if local_copy.is_file() and prefer_drive and (args.drive_dir / name).is_file():
+        if args.delete_local_archive_after_extract and local_copy.is_file():
+            local_copy.unlink()
+            print(f"removed local {name} after extract (VM space)", flush=True)
+        elif (
+            local_copy.is_file()
+            and prefer_drive
+            and archive_drive_dir is not None
+            and (archive_drive_dir / name).is_file()
+        ):
             local_copy.unlink()
             print(f"removed local copy of {name}; using Drive archive", flush=True)
 
