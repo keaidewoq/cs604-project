@@ -30,13 +30,12 @@ class StageDataLayoutTests(unittest.TestCase):
             (root / "train.txt").write_text("line\n" * stage_data.TRAIN_TXT_MIN_LINES, encoding="utf-8")
             self.assertTrue(stage_data.archive_layout_ok(root, "train.tar.gz"))
 
-    def test_stale_marker_cleared_when_layout_invalid(self) -> None:
+    def test_stale_marker_detected_when_layout_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             marker = stage_data.extract_marker(root, "train.tar.gz")
             marker.write_text("ok\n", encoding="utf-8")
-            stage_data.clear_extract_marker(root, "train.tar.gz")
-            self.assertFalse(marker.is_file())
+            self.assertFalse(stage_data.archive_layout_ok(root, "train.tar.gz"))
 
 
 if __name__ == "__main__":

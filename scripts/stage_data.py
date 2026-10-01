@@ -7,9 +7,11 @@ Google Drive is the cache. Training reads images from ``--local-dir``
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
+import traceback
 from pathlib import Path
 
 REPO_ID = "doem1997/cs604-course-data"
@@ -17,6 +19,8 @@ ALL_ARCHIVES = ("train.tar.gz", "val.tar.gz")
 
 TRAIN_TXT_MIN_LINES = 350_000
 VAL_TXT_MIN_LINES = 40_000
+# Rough lower bound: compressed train tar + extracted images on /content during extract.
+MIN_LOCAL_FREE_GIB_TRAIN = 35.0
 
 ARCHIVE_CHECKS: dict[str, tuple[tuple[str, ...], int | None]] = {
     "train.tar.gz": (("train.txt", "train"), TRAIN_TXT_MIN_LINES),
@@ -48,56 +52,97 @@ def archive_layout_ok(local_dir: Path, archive_name: str) -> bool:
     return True
 
 
-def clear_extract_marker(local_dir: Path, archive_name: str) -> None:
-    extract_marker(local_dir, archive_name).unlink(missing_ok=True)
-
-
-def report_disk(path: Path) -> None:
+def report_disk(path: Path, *, label: str = "disk") -> float:
     usage = shutil.disk_usage(path)
     free_gib = usage.free / (1024**3)
     total_gib = usage.total / (1024**3)
-    print(f"disk {path}: {free_gib:.1f} GiB free of {total_gib:.1f} GiB total", flush=True)
+    print(f"{label} {path}: {free_gib:.1f} GiB free of {total_gib:.1f} GiB total", flush=True)
+    return free_gib
 
 
-def resolve_archive_path(local_dir: Path, downloaded: Path, name: str) -> Path:
-    candidate = local_dir / name
+def resolve_archive_path(root: Path, downloaded: Path, name: str) -> Path:
+    candidate = root / name
     if candidate.is_file():
         return candidate
     if downloaded.is_file():
         return downloaded
-    raise FileNotFoundError(f"Could not locate {name} after download (got {downloaded})")
+    raise FileNotFoundError(f"Could not locate {name} under {root} (download returned {downloaded})")
 
 
-def _ensure_archive(name: str, local_dir: Path, drive_dir: Path | None) -> Path:
+def reclaim_vm_space_for_train(local_dir: Path) -> None:
+    """Drop val artifacts from the VM so train extract fits on /content."""
+    for name in ("val", "val.txt", "val.tar.gz", ".extracted_val.tar.gz"):
+        path = local_dir / name
+        if path.is_dir():
+            print(f"reclaim VM space: removing {path}", flush=True)
+            shutil.rmtree(path)
+        elif path.is_file():
+            print(f"reclaim VM space: removing {path}", flush=True)
+            path.unlink()
+
+
+def _download_from_hub(name: str, cache_dir: Path) -> Path:
+    from huggingface_hub import hf_hub_download
+    from huggingface_hub.utils import GatedRepoError, HfHubHTTPError
+
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    print(f"downloading {name} from {REPO_ID} into {cache_dir}", flush=True)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        downloaded = Path(
+            hf_hub_download(
+                repo_id=REPO_ID,
+                repo_type="dataset",
+                filename=name,
+                local_dir=str(cache_dir),
+                token=token,
+            )
+        )
+    except GatedRepoError as error:
+        raise SystemExit(
+            "Hugging Face dataset access denied. Accept terms at "
+            f"https://huggingface.co/datasets/{REPO_ID} then set HF_TOKEN "
+            "(Colab Secrets or /content/drive/MyDrive/cs604/secrets/hf_token.txt)."
+        ) from error
+    except HfHubHTTPError as error:
+        raise SystemExit(f"Hugging Face download failed for {name}: {error}") from error
+    return resolve_archive_path(cache_dir, downloaded, name)
+
+
+def _ensure_archive(
+    name: str,
+    local_dir: Path,
+    drive_dir: Path | None,
+    *,
+    prefer_drive_cache: bool,
+) -> Path:
     local = local_dir / name
     if local.is_file():
         return local
-    if drive_dir is not None and (drive_dir / name).is_file():
-        print(f"copying {name} from Drive to local disk", flush=True)
-        local_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(drive_dir / name, local)
-        return local
-
-    from huggingface_hub import hf_hub_download
-
-    print(f"downloading {name} from {REPO_ID} (Drive cache miss)", flush=True)
-    local_dir.mkdir(parents=True, exist_ok=True)
-    downloaded = Path(
-        hf_hub_download(
-            repo_id=REPO_ID,
-            repo_type="dataset",
-            filename=name,
-            local_dir=str(local_dir),
-        )
-    )
-    archive = resolve_archive_path(local_dir, downloaded, name)
     if drive_dir is not None:
-        drive_dir.mkdir(parents=True, exist_ok=True)
         cached = drive_dir / name
-        if not cached.is_file():
+        if cached.is_file():
+            if prefer_drive_cache:
+                print(f"using Drive archive (no local copy): {cached}", flush=True)
+                return cached
+            print(f"copying {name} from Drive to local disk", flush=True)
+            local_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(cached, local)
+            return local
+
+    cache_dir = drive_dir if drive_dir is not None else local_dir
+    archive = _download_from_hub(name, cache_dir)
+    if drive_dir is not None and cache_dir == drive_dir:
+        print(f"cached {name} on Drive at {archive}", flush=True)
+    elif drive_dir is not None and not (drive_dir / name).is_file() and archive.is_file():
+        drive_dir.mkdir(parents=True, exist_ok=True)
+        dest = drive_dir / name
+        try:
             print(f"caching {name} on Drive for the next session", flush=True)
-            shutil.copy2(archive, cached)
-    return archive
+            shutil.copy2(archive, dest)
+        except OSError as error:
+            print(f"warning: could not cache {name} on Drive ({error}); continuing", flush=True)
+    return archive if archive.is_file() else local_dir / name
 
 
 def _extract(archive: Path, local_dir: Path) -> None:
@@ -112,14 +157,18 @@ def _extract(archive: Path, local_dir: Path) -> None:
         )
         marker.unlink(missing_ok=True)
     if not archive.is_file():
-        raise FileNotFoundError(
-            f"Missing archive {archive}. Upload to Drive cs604/data/ or allow Hugging Face download."
+        raise SystemExit(
+            f"Missing archive {archive.name}. Upload to Drive cs604/data/ or allow Hugging Face download."
         )
-    print(f"extracting {archive.name}", flush=True)
+    print(f"extracting {archive.name} from {archive}", flush=True)
     try:
         subprocess.run(["tar", "-xzf", str(archive), "-C", str(local_dir)], check=True)
     except subprocess.CalledProcessError as error:
-        raise SystemExit(f"tar failed for {archive.name} (exit {error.returncode})") from error
+        free = report_disk(local_dir, label="disk after failed tar")
+        raise SystemExit(
+            f"tar failed for {archive.name} (exit {error.returncode}). "
+            f"Free space now {free:.1f} GiB — need ~{MIN_LOCAL_FREE_GIB_TRAIN:.0f}+ GiB on /content for train."
+        ) from error
     if not archive_layout_ok(local_dir, archive.name):
         marker.unlink(missing_ok=True)
         list_path = local_dir / "train.txt" if archive.name == "train.tar.gz" else local_dir / "val.txt"
@@ -158,22 +207,43 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Stage only train.tar.gz (enough for LoRA training; saves VM disk).",
     )
+    parser.add_argument(
+        "--reclaim-vm-for-train",
+        action="store_true",
+        help="Remove val artifacts from --local-dir before staging train (Colab disk).",
+    )
     args = parser.parse_args(argv)
 
     args.local_dir.mkdir(parents=True, exist_ok=True)
-    report_disk(args.local_dir)
+    if args.drive_dir is not None:
+        report_disk(args.drive_dir, label="Drive cache")
+    free = report_disk(args.local_dir, label="VM")
 
+    if args.train_only and args.reclaim_vm_for_train:
+        reclaim_vm_space_for_train(args.local_dir)
+        free = report_disk(args.local_dir, label="VM after reclaim")
+
+    if args.train_only and free < MIN_LOCAL_FREE_GIB_TRAIN:
+        print(
+            f"warning: only {free:.1f} GiB free on VM; train extract typically needs "
+            f"~{MIN_LOCAL_FREE_GIB_TRAIN:.0f}+ GiB on /content",
+            flush=True,
+        )
+
+    prefer_drive = args.drive_dir is not None
     archives = ("train.tar.gz",) if args.train_only else ALL_ARCHIVES
     for name in archives:
-        archive = _ensure_archive(name, args.local_dir, args.drive_dir)
+        archive = _ensure_archive(
+            name,
+            args.local_dir,
+            args.drive_dir,
+            prefer_drive_cache=prefer_drive,
+        )
         _extract(archive, args.local_dir)
-        if (
-            args.drive_dir is not None
-            and archive.is_file()
-            and (args.drive_dir / name).is_file()
-        ):
-            archive.unlink()
-            print(f"removed local copy of {name}; Drive still has the archive", flush=True)
+        local_copy = args.local_dir / name
+        if local_copy.is_file() and prefer_drive and (args.drive_dir / name).is_file():
+            local_copy.unlink()
+            print(f"removed local copy of {name}; using Drive archive", flush=True)
 
     validate_training_layout(args.local_dir)
     print("data ready", args.local_dir, flush=True)
@@ -182,5 +252,15 @@ def main(argv: list[str] | None = None) -> None:
 if __name__ == "__main__":
     try:
         main()
+    except SystemExit as error:
+        if error.code not in (None, 0):
+            message = str(error).strip()
+            if message:
+                print(message, file=sys.stderr, flush=True)
+        raise
     except KeyboardInterrupt:
         sys.exit(130)
+    except Exception as error:
+        print(f"stage_data failed: {error}", file=sys.stderr, flush=True)
+        traceback.print_exc()
+        sys.exit(1)
