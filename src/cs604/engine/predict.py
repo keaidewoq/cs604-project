@@ -11,6 +11,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from cs604.data.dataset import CS604ImageDataset, load_split_index
+from cs604.engine.checkpoint_io import sha256_file
 from cs604.models.build import build_from_config, load_model_state
 
 
@@ -93,20 +94,30 @@ def predict_split(
     elapsed = time.perf_counter() - started
     index_path = Path(data_root) / f"{split}.txt"
     validate_submission(output_path, index_path, int(cfg["num_classes"]))
+    from cs604.engine.loop import _git_metadata
+
     metrics = {
         "checkpoint": str(checkpoint_path),
+        # Hashes tie an uploaded file to the exact checkpoint (see record_submission.py).
+        "checkpoint_sha256": sha256_file(checkpoint_path),
+        "checkpoint_step": checkpoint.get("step"),
+        "checkpoint_best_accuracy": checkpoint.get("best_accuracy"),
+        "config_file": cfg.get("config_file", ""),
+        "predict_git_commit": _git_metadata().get("git_commit", "unknown"),
         "split": split,
         "samples": count,
         "elapsed_sec": elapsed,
         "images_per_sec": count / max(elapsed, 1e-9),
         "milliseconds_per_image": 1000 * elapsed / max(count, 1),
         "device": torch.cuda.get_device_name(0),
+        "submission_sha256": sha256_file(output_path),
     }
-    output_path.with_suffix(".inference.json").write_text(
-        json.dumps(metrics, indent=2), encoding="utf-8"
-    )
     if make_zip:
         zip_path = output_path.with_suffix(".zip")
         with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             archive.write(output_path, arcname=output_path.name)
+        metrics["zip_sha256"] = sha256_file(zip_path)
+    output_path.with_suffix(".inference.json").write_text(
+        json.dumps(metrics, indent=2), encoding="utf-8"
+    )
     return output_path

@@ -43,6 +43,7 @@ def main() -> None:
     args = parser.parse_args()
 
     cfg = load_config(args.config)
+    cfg["config_file"] = args.config.as_posix()  # ties run.json/config.json to the YAML
     for key in (
         "data_root",
         "output_dir",

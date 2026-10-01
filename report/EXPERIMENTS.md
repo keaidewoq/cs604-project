@@ -1,6 +1,6 @@
 # Experiment record
 
-The machine-readable source is `outputs/experiment_index.csv`. For each
+The machine-readable source is `report/experiment_index.csv`. For each
 leaderboard candidate, copy the following information into this file:
 
 - Run name and Git commit:

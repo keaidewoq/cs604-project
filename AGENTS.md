@@ -69,4 +69,4 @@ One line per image: `image_path class_id`, with `class_id` in `[0, 9999]`. Prese
 
 ## Report numbers
 
-Copy metrics from `run.json`, `metrics.csv`, and the `.inference.json` beside each prediction. Record them in `report/EXPERIMENTS.md`. The index is `outputs/experiment_index.csv`. Do not reconstruct numbers from memory at report time.
+Copy metrics from `run.json`, `metrics.csv`, and the `.inference.json` beside each prediction. Record them in `report/EXPERIMENTS.md`. The index is `report/experiment_index.csv`, rebuilt by `scripts/summarize_experiments.py`. Do not reconstruct numbers from memory at report time.

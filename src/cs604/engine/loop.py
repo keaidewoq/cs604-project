@@ -459,6 +459,7 @@ def run_training(cfg: dict) -> Path:
     props = torch.cuda.get_device_properties(0)
     run_info = {
         **_git_metadata(),
+        "config_file": cfg.get("config_file", ""),
         "device": torch.cuda.get_device_name(0),
         "vram_gb": round(props.total_memory / 1024**3, 2),
         "precision": precision,
