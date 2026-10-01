@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from cs604.data.dataset import CS604ImageDataset  # noqa: E402
 from cs604.engine.predict import validate_submission  # noqa: E402
-from cs604.models.build import build_from_config  # noqa: E402
+from cs604.models.build import build_from_config, load_model_state  # noqa: E402
 
 
 @torch.inference_mode()
@@ -38,7 +38,7 @@ def main() -> None:
     for path in args.checkpoints:
         checkpoint = torch.load(path, map_location="cpu", weights_only=False)
         model = build_from_config(checkpoint["config"])
-        model.load_state_dict(checkpoint["model"])
+        load_model_state(model, checkpoint)
         models.append(model.cuda().eval())
         configs.append(checkpoint["config"])
     if len({int(cfg["num_classes"]) for cfg in configs}) != 1:

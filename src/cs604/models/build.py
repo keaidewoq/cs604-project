@@ -164,6 +164,82 @@ def build_from_config(cfg: dict) -> nn.Module:
     )
 
 
+def use_compact_checkpoints(cfg: dict) -> bool:
+    """Compact checkpoints drop frozen backbone weights that timm can rebuild.
+
+    Safe only when the frozen backbone is exactly the pretrained one, so it is the
+    default for LoRA/head runs without ``init_checkpoint``.
+    """
+
+    frozen_backbone = str(cfg.get("mode", "full")) in ("lora", "head")
+    default = frozen_backbone and not cfg.get("init_checkpoint")
+    compact = bool(cfg.get("compact_checkpoints", default))
+    if compact and not default:
+        raise ValueError(
+            "compact_checkpoints needs mode lora/head and no init_checkpoint; "
+            "set compact_checkpoints: false"
+        )
+    return compact
+
+
+def _compact_keys(model: nn.Module) -> set[str]:
+    classifier_ids = {id(p) for p in _classifier(model).parameters()}
+    return {
+        name for name, p in model.named_parameters()
+        if p.requires_grad or id(p) in classifier_ids
+    } | {name for name, _ in model.named_buffers()}
+
+
+def base_fingerprint(model: nn.Module) -> str:
+    """Hash a sample of frozen backbone tensors to catch a different pretrained base."""
+
+    import hashlib
+
+    keep = _compact_keys(model)
+    state = model.state_dict()
+    frozen = sorted(name for name in state if name not in keep)
+    digest = hashlib.sha256()
+    for name in sorted({frozen[0], frozen[len(frozen) // 2], frozen[-1]} if frozen else ()):
+        digest.update(name.encode())
+        digest.update(state[name].detach().float().cpu().numpy().tobytes())
+    return digest.hexdigest()
+
+
+def checkpoint_model_state(model: nn.Module, compact: bool) -> dict:
+    """The ``model`` entry of a checkpoint, plus its format fields."""
+
+    state = model.state_dict()
+    if not compact:
+        return {"model": state, "model_format": "full"}
+    keep = _compact_keys(model)
+    return {
+        "model": {name: tensor for name, tensor in state.items() if name in keep},
+        "model_format": "compact",
+        "base_fingerprint": base_fingerprint(model),
+    }
+
+
+def load_model_state(model: nn.Module, checkpoint: dict) -> None:
+    """Load a full or compact checkpoint into a model built from its config."""
+
+    state = checkpoint["model"]
+    if checkpoint.get("model_format", "full") == "full":
+        model.load_state_dict(state)
+        return
+    expected = _compact_keys(model)
+    if set(state) != expected:
+        raise ValueError(
+            "Compact checkpoint keys do not match this model's trainable/classifier "
+            f"weights ({len(set(state) ^ expected)} differ)"
+        )
+    if checkpoint.get("base_fingerprint") != base_fingerprint(model):
+        raise ValueError(
+            "Frozen backbone differs from the one this compact checkpoint was trained on "
+            "(timm weights changed?)"
+        )
+    model.load_state_dict(state, strict=False)
+
+
 def parameter_report(model: nn.Module) -> dict[str, float]:
     total = sum(p.numel() for p in model.parameters())
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)

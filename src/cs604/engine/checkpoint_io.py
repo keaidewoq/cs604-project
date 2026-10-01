@@ -12,6 +12,8 @@ from pathlib import Path
 
 import torch
 
+from cs604.models.build import checkpoint_model_state, use_compact_checkpoints
+
 REQUIRED_KEYS = (
     "model",
     "optimizer",
@@ -55,7 +57,8 @@ def _build_payload(
     best_accuracy: float,
 ) -> dict:
     return {
-        "model": model.state_dict(),
+        # LoRA/head runs omit the frozen pretrained backbone (~0.37 GB -> ~32 MB).
+        **checkpoint_model_state(model, use_compact_checkpoints(cfg)),
         "optimizer": optimizer.state_dict(),
         "scheduler": scheduler.state_dict(),
         "config": cfg,

@@ -28,6 +28,7 @@ from cs604.models.build import (
     apply_class_prototypes,
     build_from_config,
     build_vit,
+    load_model_state,
     parameter_report,
 )
 from cs604.engine.baseline import (
@@ -394,7 +395,7 @@ def run_training(cfg: dict) -> Path:
     if cfg.get("init_checkpoint") and not cfg.get("resume"):
         initial = torch.load(cfg["init_checkpoint"], map_location="cpu", weights_only=False)
         _check_architecture_compatibility(cfg, initial.get("config", {}))
-        model.load_state_dict(initial["model"])
+        load_model_state(model, initial)
     report = parameter_report(model)
     trainable = [parameter for parameter in model.parameters() if parameter.requires_grad]
     if not trainable:
@@ -442,7 +443,7 @@ def run_training(cfg: dict) -> Path:
     if cfg.get("resume"):
         checkpoint = torch.load(cfg["resume"], map_location="cpu", weights_only=False)
         _check_architecture_compatibility(cfg, checkpoint.get("config", {}))
-        model.load_state_dict(checkpoint["model"])
+        load_model_state(model, checkpoint)
         optimizer.load_state_dict(checkpoint["optimizer"])
         if "scheduler" in checkpoint:
             scheduler.load_state_dict(checkpoint["scheduler"])

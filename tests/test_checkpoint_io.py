@@ -22,6 +22,9 @@ class TinyModel(nn.Module):
         super().__init__()
         self.head = nn.Linear(2, 2)
 
+    def get_classifier(self):
+        return self.head
+
     def forward(self, images):
         return self.head(images)
 

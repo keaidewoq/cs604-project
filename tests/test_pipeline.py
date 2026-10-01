@@ -48,6 +48,84 @@ class LoRATests(unittest.TestCase):
                 torch.testing.assert_close(value, reloaded.state_dict()[key])
 
 
+class TinyViT(nn.Module):
+    """Just enough of a timm ViT for build_vit: blocks[].attn.qkv, norm, head."""
+
+    def __init__(self, seed: int, width: int = 4, classes: int = 3):
+        super().__init__()
+        torch.manual_seed(seed)
+        self.patch = nn.Linear(width, width)
+        self.blocks = nn.ModuleList(
+            nn.Module() for _ in range(2)
+        )
+        for block in self.blocks:
+            block.attn = nn.Module()
+            block.attn.qkv = nn.Linear(width, width)
+        self.norm = nn.LayerNorm(width)
+        self.head = nn.Linear(width, classes)
+
+    def get_classifier(self):
+        return self.head
+
+    def set_grad_checkpointing(self, enabled: bool) -> None:
+        pass
+
+
+class CompactCheckpointTests(unittest.TestCase):
+    CFG = {"timm_checkpoint": "tiny", "num_classes": 3, "mode": "lora", "lora_rank": 2,
+           "head_type": "cosine", "train_head": False}
+
+    def _build(self, seed: int):
+        from unittest.mock import patch
+
+        from cs604.models.build import build_from_config
+
+        with patch("cs604.models.build.timm.create_model", return_value=TinyViT(seed)):
+            return build_from_config(self.CFG)
+
+    def test_compact_keeps_only_trained_and_head_weights_and_round_trips(self) -> None:
+        from cs604.models.build import checkpoint_model_state, load_model_state
+
+        model = self._build(seed=0)
+        with torch.no_grad():
+            for name, parameter in model.named_parameters():
+                if "lora" in name or name.startswith("head."):
+                    parameter.add_(1.0)
+        saved = checkpoint_model_state(model, compact=True)
+        self.assertEqual(saved["model_format"], "compact")
+        self.assertTrue(all("lora" in key or key.startswith("head.") for key in saved["model"]))
+        self.assertIn("head.weight", saved["model"])  # frozen but prototype-initialized
+        self.assertNotIn("patch.weight", saved["model"])
+
+        restored = self._build(seed=0)
+        load_model_state(restored, saved)
+        for key, value in model.state_dict().items():
+            torch.testing.assert_close(restored.state_dict()[key], value)
+
+        with self.assertRaisesRegex(ValueError, "Frozen backbone differs"):
+            load_model_state(self._build(seed=1), saved)
+
+    def test_full_checkpoints_still_load(self) -> None:
+        from cs604.models.build import checkpoint_model_state, load_model_state
+
+        model = self._build(seed=0)
+        restored = self._build(seed=1)
+        load_model_state(restored, {"model": model.state_dict()})  # pre-compact checkpoints
+        torch.testing.assert_close(restored.patch.weight, model.patch.weight)
+        self.assertEqual(checkpoint_model_state(model, compact=False)["model_format"], "full")
+
+    def test_compact_default_only_for_frozen_pretrained_backbone(self) -> None:
+        from cs604.models.build import use_compact_checkpoints
+
+        self.assertTrue(use_compact_checkpoints({"mode": "lora"}))
+        self.assertTrue(use_compact_checkpoints({"mode": "head"}))
+        self.assertFalse(use_compact_checkpoints({"mode": "full"}))
+        self.assertFalse(use_compact_checkpoints({"mode": "lora", "init_checkpoint": "x.pt"}))
+        self.assertFalse(use_compact_checkpoints({"mode": "lora", "compact_checkpoints": False}))
+        with self.assertRaisesRegex(ValueError, "compact_checkpoints"):
+            use_compact_checkpoints({"mode": "full", "compact_checkpoints": True})
+
+
 class PrototypeTests(unittest.TestCase):
     def test_prototypes_replace_classifier_weights(self) -> None:
         layer = CosineClassifier(4, 3)

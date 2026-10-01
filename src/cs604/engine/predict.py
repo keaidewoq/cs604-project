@@ -11,7 +11,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from cs604.data.dataset import CS604ImageDataset, load_split_index
-from cs604.models.build import build_from_config
+from cs604.models.build import build_from_config, load_model_state
 
 
 def validate_submission(
@@ -56,7 +56,7 @@ def predict_split(
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     cfg = checkpoint["config"]
     model = build_from_config(cfg)
-    model.load_state_dict(checkpoint["model"])
+    load_model_state(model, checkpoint)
     model.cuda().eval()
 
     from timm.data import create_transform, resolve_model_data_config
