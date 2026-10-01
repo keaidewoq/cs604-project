@@ -65,9 +65,12 @@ Validation and test labels are withheld. Do not hand-label those images or train
 
 ## Submission
 
-One line per image, `image_path class_id`, with `class_id` in `[0, 9999]`. Name the file `val_team_xx.txt` (Phase 1) or `test_team_xx.txt` (Phase 2), zip it, and upload to CodaBench. Write submissions under `outputs/submissions/`.
+One line per image, `image_path class_id`, with `class_id` in `[0, 9999]`. Name the file `val_team_xx.txt` (Phase 1) or `test_team_xx.txt` (Phase 2), zip it, and upload to CodaBench. Write submissions into the run folder, `cs604-outputs/<EXPERIMENT>/submissions/` (see `WORKFLOW.md`).
 
 ## Experiment workflow
+
+**Step-by-step runbook:** [`WORKFLOW.md`](WORKFLOW.md) covers the virtualenv, local screens,
+Colab runs, syncing from Drive, prediction, and recording CodaBench results.
 
 For the current prototype-validation implementation, active worktree, and exact
 next-run commands, read [`report/HANDOFF.md`](report/HANDOFF.md). This is the shared

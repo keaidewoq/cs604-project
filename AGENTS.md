@@ -63,6 +63,10 @@ A real local run, only when the user asks:
 
 Resume with `--resume C:\Users\Van Le\cs604-project\cs604-outputs\local-full\last.pt` and the same config. Every run should keep its resolved config, git commit, `hardware.json`, parameter counts, timing, and metrics.
 
+## Workflow
+
+`WORKFLOW.md` is the runbook from config to recorded CodaBench score. Follow it, and update it when a script or step changes.
+
 ## Submissions
 
 One line per image: `image_path class_id`, with `class_id` in `[0, 9999]`. Preserve `val.txt` / `test.txt` order. Name the file `val_team_xx.txt` or `test_team_xx.txt`. Generate it with `scripts/predict.py`, which checks row count, paths, and class range.
