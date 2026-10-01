@@ -47,7 +47,7 @@ class BaselineTests(unittest.TestCase):
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
 
-    def run_fixture(self, accuracies, evaluate_only=False, resume=None):
+    def run_fixture(self, accuracies, evaluate_only=False, resume=None, epochs=1):
         output = self.root / "run"
         split = output / "splits" / "internal_val.txt"
         split.parent.mkdir(parents=True, exist_ok=True)
@@ -57,7 +57,7 @@ class BaselineTests(unittest.TestCase):
         optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
         cfg = {
             "output_dir": str(output), "timm_checkpoint": "tiny", "num_classes": 2,
-            "mode": "head", "batch_size": 2, "epochs": 1, "lr": 0.01,
+            "mode": "head", "batch_size": 2, "epochs": epochs, "lr": 0.01,
             "precision": "fp32", "num_workers": 0, "log_every": 1, "ckpt_every": 1,
             "evaluate_before_training": True, "evaluate_only": evaluate_only,
             "expected_initial_accuracy": 0.439, "initial_accuracy_tolerance": 0.001,
@@ -236,6 +236,26 @@ class BaselineTests(unittest.TestCase):
         with torch.autocast("cpu", dtype=torch.bfloat16):
             reduced_scores = head(inputs)
         self.assertEqual(reduced_scores.argmax(dim=1).item(), 0)  # Reduced precision ties the scores.
+
+    def test_resuming_preceding_numbered_checkpoint_after_corrupt_latest(self):
+        import os
+
+        staging = self.root / "checkpoint-staging"
+        staging.mkdir()
+        with patch.dict(os.environ, {"CS604_CHECKPOINT_STAGING": str(staging)}, clear=False):
+            first = self.run_fixture([0.439, 0.46, 0.47], epochs=2)
+        self.assertEqual(first.steps, 2)
+        output = first.output
+        corrupt = output / "checkpoints" / "resume_step_000002.pt"
+        with corrupt.open("r+b") as handle:
+            handle.truncate(max(1, handle.tell() // 2))
+        with self.assertRaises(Exception):
+            self.checkpoint(corrupt)
+        previous = output / "checkpoints" / "resume_step_000001.pt"
+        resumed = self.run_fixture([0.48], resume=str(previous), epochs=2)
+        self.assertIsNone(resumed.error)
+        self.assertGreaterEqual(resumed.steps, 1)
+        self.assertEqual(self.checkpoint(resumed.output / "last.pt")["step"], 2)
 
     def test_checkpoint_config_restores_head_precision(self):
         cfg = {"timm_checkpoint": "tiny", "num_classes": 2, "mode": "head",

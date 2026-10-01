@@ -37,6 +37,7 @@ from cs604.engine.baseline import (
     check_prototype_split,
     validate_baseline_setup,
 )
+from cs604.engine.checkpoint_io import save_training_checkpoint
 
 
 class SyntheticImages(Dataset):
@@ -346,33 +347,6 @@ def evaluate(model, loader: DataLoader, device: torch.device, amp_dtype) -> dict
     }
 
 
-def _save_training_checkpoint(
-    path: Path,
-    model,
-    optimizer,
-    scheduler,
-    cfg: dict,
-    step: int,
-    epoch: int,
-    next_batch: int,
-    best_accuracy: float,
-) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(
-        {
-            "model": model.state_dict(),
-            "optimizer": optimizer.state_dict(),
-            "scheduler": scheduler.state_dict(),
-            "config": cfg,
-            "step": step,
-            "epoch": epoch,
-            "next_batch": next_batch,
-            "best_accuracy": best_accuracy,
-        },
-        path,
-    )
-
-
 def _check_architecture_compatibility(current: dict, saved: dict) -> None:
     if bool(current.get("cosine_head_fp32", False)) != bool(saved.get("cosine_head_fp32", False)):
         raise ValueError("Checkpoint cosine_head_fp32 does not match the current config")
@@ -539,7 +513,7 @@ def run_training(cfg: dict) -> Path:
                 cfg, output_dir / "splits" / "internal_val.txt", len(val_dataset)
             )
             # A normal prediction-compatible checkpoint, preserved even if evaluation fails.
-            _save_training_checkpoint(
+            save_training_checkpoint(
                 output_dir / "baseline.pt", model, optimizer, scheduler, cfg,
                 0, 0, 0, best_accuracy,
             )
@@ -571,7 +545,7 @@ def run_training(cfg: dict) -> Path:
                 )
             best_accuracy = result["accuracy"]
             for name in ("baseline.pt", "best.pt"):
-                _save_training_checkpoint(
+                save_training_checkpoint(
                     output_dir / name, model, optimizer, scheduler, cfg,
                     0, 0, 0, best_accuracy,
                 )
@@ -651,7 +625,7 @@ def run_training(cfg: dict) -> Path:
                 )
                 log_started, log_images, log_loss, log_updates = now, 0, 0.0, 0
             if step % ckpt_every == 0:
-                _save_training_checkpoint(
+                save_training_checkpoint(
                     output_dir / "last.pt", model, optimizer, scheduler, cfg,
                     step, epoch, batch_index + 1, best_accuracy,
                 )
@@ -675,14 +649,14 @@ def run_training(cfg: dict) -> Path:
             print(f"validation top1={100 * result['accuracy']:.2f}% loss={result['loss']:.4f}")
             if result["accuracy"] > best_accuracy:
                 best_accuracy = result["accuracy"]
-                _save_training_checkpoint(
+                save_training_checkpoint(
                     output_dir / "best.pt", model, optimizer, scheduler, cfg,
                     step, epoch + 1, 0, best_accuracy,
                 )
 
         next_epoch = epoch if stopped else epoch + 1
         next_batch = batch_index + 1 if stopped else 0
-        _save_training_checkpoint(
+        save_training_checkpoint(
             output_dir / "last.pt", model, optimizer, scheduler, cfg,
             step, next_epoch, next_batch, best_accuracy,
         )
