@@ -195,7 +195,7 @@ class in about 7 minutes. Staging the data takes 20–40 minutes, once per runti
 | Debug cells (if present) | disk and HF access checks | only if stage data fails |
 | Checkpoint smoke | 4 synthetic steps, corrupts a checkpoint, resumes | `colab checkpoint smoke passed` |
 | Training | set `EXPERIMENTS = ["<EXPERIMENT>", ...]`, then run | `===== <name> =====` blocks with `step ... img/s` and `validation top1=...`, a `summary`, then the runtime ends |
-| Disconnect (last cell) | ends the runtime now | use it whenever you stop working without auto-disconnect |
+| Disconnect (last cell) | flushes Drive, then ends the runtime now | use it whenever you stop working without auto-disconnect |
 
    - **Stage data** reuses images already on the VM. If it stops on low disk,
      run the debug disk cell. Cursor doesn't show `!` shell output, so use
@@ -214,6 +214,17 @@ class in about 7 minutes. Staging the data takes 20–40 minutes, once per runti
      using units.
      - It does not disconnect after a check failure or a manual interrupt.
        Then it prints a reminder; run the Disconnect cell when you're done.
+     - Before ending the runtime it runs `drive.flush_and_unmount()`, so the
+       last checkpoints, `run.json`, and `train.log` finish uploading to Drive.
+     - **Watchdog:** once the checks pass, a timer ends the runtime after a
+       hard limit even if training hangs and never returns. With
+       `WATCHDOG_HOURS = None` the limit is each config's
+       `budget_48gb_hours` in wall-clock time on this GPU, plus 30 minutes per
+       experiment (about 2.8 h for one 1.9-hour-budget run on an A100 40 GB).
+       Configs without a budget need `WATCHDOG_HOURS` set to a number. After
+       an interrupt the watchdog stays armed; `WATCHDOG.cancel()` stops it.
+     - After a run, confirm on colab.research.google.com → Runtime → Manage
+       sessions that nothing is still active.
    - **Resume** an interrupted run with
      `RESUME = {"<name>": ".../checkpoints/resume_step_XXXXXX.pt"}`, using the
      newest good checkpoint on Drive.
