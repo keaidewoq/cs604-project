@@ -58,7 +58,19 @@ leaderboard candidate, copy the following information into this file:
 
 - Prototype initialization, 2026-09-29: average pretrained feature of 40 training images per class. Internal top-1 **43.90%** on the fixed 5-image holdout, with no training. File: `cs604-outputs/prototypes/class_prototypes.pt`. This matches the course zero-shot reference of 43.7%.
 
-## Required comparisons
+## Experiment direction updated 2026-10-02
+
+See [the iNaturalist 2021 strategy](INAT2021_STRATEGY.md) for dataset research,
+verified newer run evidence, and the ordered experiment plan. The current saved
+reference is **51.826% internal top-1** from
+`cs604-outputs/prototype_lora_r8_fp32_40/run.json`; its prediction audit identifies
+the same selected checkpoint. This is not a recorded public leaderboard score.
+
+Prioritize a prototype-initialized full fine-tune, a controlled crop-policy
+ablation, and then image-detail/inference tests. Reconcile cumulative compute
+before scheduling runs. Broad LoRA rank and last-block sweeps are deferred.
+
+## Earlier comparison backlog (superseded in priority)
 
 - Frozen backbone with trained linear head
 - Full fine-tuning
