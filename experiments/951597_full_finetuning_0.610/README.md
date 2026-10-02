@@ -1,5 +1,8 @@
 # 951597_full_finetuning_0.610
 
+## Link to G-drive (checkpoints + zip)
+- https://drive.google.com/drive/folders/1FoBdsXvuHqx3WNPtWOCpCnc6mgGHdnt0?usp=drive_link
+
 ## Results
 - Method: Full fine-tuning, ViT-B/16
 - Training images: 450,000
