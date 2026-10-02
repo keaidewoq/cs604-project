@@ -38,6 +38,12 @@ from cs604.engine.baseline import (
     check_prototype_split,
     validate_baseline_setup,
 )
+from cs604.engine.budget import (
+    budget_wall_seconds,
+    cosine_lr_factor,
+    effective_step,
+    training_limit_seconds,
+)
 from cs604.engine.checkpoint_io import save_training_checkpoint
 
 
@@ -428,18 +434,22 @@ def run_training(cfg: dict) -> Path:
     max_steps = None if cfg.get("max_steps") is None else int(cfg["max_steps"])
     total_steps = max_steps or steps_per_epoch * epochs
     warmup_steps = int(cfg.get("warmup_steps", max(1, round(total_steps * 0.05))))
+    # With a time budget, the schedule runs ahead of the step count when the
+    # clock does, so the decay still ends inside the budget.
+    budget_clock = {"elapsed_sec": 0.0, "limit_sec": None}
 
     def lr_factor(step: int) -> float:
-        if step < warmup_steps:
-            return max(1e-3, (step + 1) / max(1, warmup_steps))
-        progress = (step - warmup_steps) / max(1, total_steps - warmup_steps)
-        return 0.5 * (1.0 + math.cos(math.pi * min(1.0, progress)))
+        position = effective_step(
+            step, total_steps, budget_clock["elapsed_sec"], budget_clock["limit_sec"]
+        )
+        return cosine_lr_factor(position, warmup_steps, total_steps)
 
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_factor)
     start_epoch = 0
     resume_batch = 0
     step = 0
     best_accuracy = -1.0
+    prior_elapsed = 0.0
     if cfg.get("resume"):
         checkpoint = torch.load(cfg["resume"], map_location="cpu", weights_only=False)
         _check_architecture_compatibility(cfg, checkpoint.get("config", {}))
@@ -451,6 +461,7 @@ def run_training(cfg: dict) -> Path:
         start_epoch = int(checkpoint.get("epoch", 0))
         resume_batch = int(checkpoint.get("next_batch", 0))
         best_accuracy = float(checkpoint.get("best_accuracy", -1.0))
+        prior_elapsed = float(checkpoint.get("elapsed_sec", 0.0))
 
     precision = str(cfg.get("precision", "bf16"))
     amp_dtype = torch.bfloat16 if precision == "bf16" else (
@@ -470,6 +481,17 @@ def run_training(cfg: dict) -> Path:
         "evaluate_only": evaluate_only,
         **report,
     }
+    budget_sec = None
+    if cfg.get("budget_48gb_hours") is not None:
+        budget_sec = budget_wall_seconds(float(cfg["budget_48gb_hours"]), run_info["vram_gb"])
+        run_info["budget_48gb_hours"] = float(cfg["budget_48gb_hours"])
+        run_info["budget_wall_sec"] = budget_sec
+        print(
+            f"time budget {cfg['budget_48gb_hours']} x 48 GB-hours = "
+            f"{budget_sec / 3600:.2f} wall-clock hours on {run_info['vram_gb']} GB"
+        )
+    if prior_elapsed:
+        run_info["resumed_at_elapsed_sec"] = prior_elapsed
     (output_dir / "run.json").write_text(json.dumps(run_info, indent=2), encoding="utf-8")
     (output_dir / "config.json").write_text(json.dumps(cfg, indent=2), encoding="utf-8")
     print(
@@ -490,8 +512,12 @@ def run_training(cfg: dict) -> Path:
 
     started = time.perf_counter()
 
+    def run_elapsed() -> float:
+        """Seconds this run has used, including sessions before a resume."""
+        return prior_elapsed + time.perf_counter() - started
+
     def finish_run(status: str) -> None:
-        elapsed = time.perf_counter() - started
+        elapsed = run_elapsed()
         run_info.update(
             {
                 "status": status,
@@ -507,6 +533,8 @@ def run_training(cfg: dict) -> Path:
         (output_dir / "run.json").write_text(json.dumps(run_info, indent=2), encoding="utf-8")
         metrics_file.close()
 
+    # Seconds the final holdout evaluation takes; the budget keeps room for it.
+    final_eval_sec = 0.0
     if baseline_requested(cfg) and not cfg.get("resume"):
         try:
             if val_dataset is None:
@@ -517,7 +545,7 @@ def run_training(cfg: dict) -> Path:
             # A normal prediction-compatible checkpoint, preserved even if evaluation fails.
             save_training_checkpoint(
                 output_dir / "baseline.pt", model, optimizer, scheduler, cfg,
-                0, 0, 0, best_accuracy,
+                0, 0, 0, best_accuracy, elapsed_sec=run_elapsed(),
             )
             val_loader = _loader(val_dataset, cfg, False, int(cfg.get("seed", 0)))
             result = evaluate(model, val_loader, device, amp_dtype)
@@ -527,13 +555,14 @@ def run_training(cfg: dict) -> Path:
             }
             (output_dir / "baseline.json").write_text(json.dumps(baseline, indent=2), encoding="utf-8")
             run_info["initial_internal_accuracy"] = result["accuracy"]
+            final_eval_sec = result["elapsed_sec"]
             writer.writerow(
                 {
                     "phase": "initial_val", "epoch": 0, "step": 0,
                     "loss": result["loss"], "accuracy": result["accuracy"], "lr": "",
                     "images_per_sec": result["images_per_sec"],
                     "max_mem_gb": torch.cuda.max_memory_allocated() / 1024**3,
-                    "elapsed_sec": time.perf_counter() - started,
+                    "elapsed_sec": run_elapsed(),
                 }
             )
             metrics_file.flush()
@@ -549,7 +578,7 @@ def run_training(cfg: dict) -> Path:
             for name in ("baseline.pt", "best.pt"):
                 save_training_checkpoint(
                     output_dir / name, model, optimizer, scheduler, cfg,
-                    0, 0, 0, best_accuracy,
+                    0, 0, 0, best_accuracy, elapsed_sec=run_elapsed(),
                 )
         except Exception as error:
             run_info["error"] = str(error)
@@ -579,8 +608,21 @@ def run_training(cfg: dict) -> Path:
     model.train()
     optimizer.zero_grad(set_to_none=True)
     stopped = False
+    budget_stopped = False
+    validating = val_dataset is not None and bool(cfg.get("validate", True))
+
+    def over_budget() -> bool:
+        if budget_sec is None:
+            return False
+        limit = training_limit_seconds(budget_sec, final_eval_sec if validating else 0.0)
+        budget_clock["limit_sec"] = limit
+        return run_elapsed() >= limit
 
     for epoch in range(start_epoch, epochs):
+        if over_budget():
+            # The previous epoch's evaluation used up the budget.
+            budget_stopped = True
+            break
         train_loader = _loader(train_dataset, cfg, True, int(cfg.get("seed", 0)) + epoch)
         for batch_index, (images, labels, _paths) in enumerate(train_loader):
             if epoch == start_epoch and batch_index < resume_batch:
@@ -602,6 +644,7 @@ def run_training(cfg: dict) -> Path:
                 torch.nn.utils.clip_grad_norm_(trainable, float(cfg["clip_grad_norm"]))
             optimizer.step()
             optimizer.zero_grad(set_to_none=True)
+            budget_clock["elapsed_sec"] = run_elapsed()
             scheduler.step()
             step += 1
             log_loss += accumulated_loss / max(1, accumulated_batches)
@@ -609,6 +652,8 @@ def run_training(cfg: dict) -> Path:
             accumulated_loss = 0.0
             accumulated_batches = 0
             done = max_steps is not None and step >= max_steps
+            if over_budget():
+                budget_stopped = done = True
             if step % log_every == 0 or done:
                 now = time.perf_counter()
                 row = {
@@ -617,19 +662,26 @@ def run_training(cfg: dict) -> Path:
                     "lr": optimizer.param_groups[0]["lr"],
                     "images_per_sec": log_images / max(now - log_started, 1e-9),
                     "max_mem_gb": torch.cuda.max_memory_allocated() / 1024**3,
-                    "elapsed_sec": now - started,
+                    "elapsed_sec": run_elapsed(),
                 }
                 writer.writerow(row)
                 metrics_file.flush()
+                budget_note = ""
+                if budget_sec is not None:
+                    used = row["elapsed_sec"] / budget_sec
+                    budget_note = (
+                        f" | budget {100 * used:.1f}% used, "
+                        f"~{step / steps_per_epoch / max(used, 1e-9):.1f} epochs fit"
+                    )
                 print(
                     f"step {step} loss {row['loss']:.4f} "
-                    f"{row['images_per_sec']:.1f} img/s"
+                    f"{row['images_per_sec']:.1f} img/s{budget_note}"
                 )
                 log_started, log_images, log_loss, log_updates = now, 0, 0.0, 0
             if step % ckpt_every == 0:
                 save_training_checkpoint(
                     output_dir / "last.pt", model, optimizer, scheduler, cfg,
-                    step, epoch, batch_index + 1, best_accuracy,
+                    step, epoch, batch_index + 1, best_accuracy, elapsed_sec=run_elapsed(),
                 )
             if done:
                 stopped = True
@@ -638,13 +690,14 @@ def run_training(cfg: dict) -> Path:
         if val_dataset is not None and bool(cfg.get("validate", True)):
             val_loader = _loader(val_dataset, cfg, False, int(cfg.get("seed", 0)))
             result = evaluate(model, val_loader, device, amp_dtype)
+            final_eval_sec = result["elapsed_sec"]
             writer.writerow(
                 {
                     "phase": "val", "epoch": epoch + 1, "step": step,
                     "loss": result["loss"], "accuracy": result["accuracy"], "lr": "",
                     "images_per_sec": result["images_per_sec"],
                     "max_mem_gb": torch.cuda.max_memory_allocated() / 1024**3,
-                    "elapsed_sec": time.perf_counter() - started,
+                    "elapsed_sec": run_elapsed(),
                 }
             )
             metrics_file.flush()
@@ -653,18 +706,22 @@ def run_training(cfg: dict) -> Path:
                 best_accuracy = result["accuracy"]
                 save_training_checkpoint(
                     output_dir / "best.pt", model, optimizer, scheduler, cfg,
-                    step, epoch + 1, 0, best_accuracy,
+                    step, epoch + 1, 0, best_accuracy, elapsed_sec=run_elapsed(),
                 )
 
         next_epoch = epoch if stopped else epoch + 1
         next_batch = batch_index + 1 if stopped else 0
         save_training_checkpoint(
             output_dir / "last.pt", model, optimizer, scheduler, cfg,
-            step, next_epoch, next_batch, best_accuracy,
+            step, next_epoch, next_batch, best_accuracy, elapsed_sec=run_elapsed(),
         )
         resume_batch = 0
         if stopped:
             break
 
+    if budget_sec is not None:
+        run_info["stopped_by_budget"] = budget_stopped
+        if budget_stopped:
+            print("stopped at the time budget; the learning rate had already decayed to zero")
     finish_run("completed")
     return output_dir / ("best.pt" if (output_dir / "best.pt").is_file() else "last.pt")

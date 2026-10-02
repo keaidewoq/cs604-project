@@ -83,7 +83,7 @@ change the holdout or replace it with a random subset.
 3. **Smoke-test only if you changed code** in `src/` or `scripts/`. Run the
    unit tests and a 2-step synthetic LoRA run (about 1 minute):
    ```powershell
-   python -m unittest tests.test_pipeline tests.test_checkpoint_io tests.test_baseline tests.test_stage_data tests.test_workflow
+   python -m unittest tests.test_budget tests.test_pipeline tests.test_checkpoint_io tests.test_baseline tests.test_stage_data tests.test_workflow
    python scripts/train.py --config configs/experiments/colab_checkpoint_smoke.yaml --synthetic --max-steps 2 --output-dir "C:/Users/Van Le/cs604-project/cs604-outputs/smoke-check"
    ```
    Delete `cs604-outputs\smoke-check` afterwards. A config-only change needs no
@@ -150,7 +150,24 @@ class in about 7 minutes. Staging the data takes 20–40 minutes, once per runti
      must be the `/content` path. Its file is byte-identical to the laptop's
      `prototypes/splits/internal_val.txt`, so Colab and laptop scores are
      comparable.
-   - `ckpt_every` can be large, for example 5000. Runs are short and a
+   - **Time budget.** To use the course budget, set `budget_48gb_hours`
+     (for example `1.9`, leaving room under the 2.0 + 10% limit) and make
+     `epochs` a generous upper bound. Template:
+     `configs/experiments/prototype_lora_r8_fp32_budget_40.yaml`.
+     - The run converts the budget to wall-clock time for the GPU it gets:
+       2.0 × 48 GB-hours is 1.0 h on the 96 GB RTX PRO 6000, about 2.4 h on
+       an A100 40 GB, and 1.2 h on an A100 80 GB.
+     - The cosine learning-rate schedule follows whichever is further along,
+       steps or time, so it decays to zero by the deadline. Training then
+       stops, leaving time for the final holdout evaluation.
+     - Each log line shows the share of the budget used and how many epochs
+       will fit. `run.json` records `budget_wall_sec` and `stopped_by_budget`.
+     - Elapsed time is stored in every checkpoint, so a resumed run continues
+       the same clock. Time after the last checkpoint is lost and not counted.
+     - The clock starts after the model and data index are built, and it
+       includes every holdout evaluation.
+   - `ckpt_every`: 1000 for runs of an hour or more, so a disconnect loses
+     little work. For short runs it can be larger, for example 5000; a
      checkpoint is also written at the end of each epoch.
 2. **Commit and push it:**
    ```powershell

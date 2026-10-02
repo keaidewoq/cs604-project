@@ -1,0 +1,46 @@
+# Rank-8 LoRA, same recipe as prototype_lora_r8_fp32_40, trained for the full
+# course budget instead of one epoch. Tests how much of the gap to the 68.3%
+# LoRA reference is training length alone. Only the length changes
+# (num_workers affects speed only).
+# budget_48gb_hours fits the cosine schedule to 1.9 x 48 GB-hours (about 2.3 h on an
+# A100 40 GB) and stops there; `epochs` is an upper bound, not a target.
+# Prototypes were built from 40 images/class; holdout is 5 images/class (50k total).
+data_root: "/content/cs604-course-data"
+output_dir: "/content/drive/MyDrive/cs604/outputs/prototype-lora-r8-fp32-budget-40"
+timm_checkpoint: "vit_base_patch16_224.augreg2_in21k_ft_in1k"
+num_classes: 10000
+image_size: 224
+mode: lora
+lora_rank: 8
+lora_alpha: 16
+lora_dropout: 0.05
+head_type: cosine
+cosine_head_fp32: true
+train_head: false
+prototype_file: "/content/cs604-inputs/class_prototypes.pt"
+evaluate_before_training: true
+expected_initial_accuracy: 0.439
+initial_accuracy_tolerance: 0.001
+expected_initial_samples: 50000
+baseline_reference_split: "/content/cs604-inputs/internal_val.txt"
+batch_size: 32
+eval_batch_size: 64
+grad_accum: 1
+num_workers: 8
+epochs: 30
+budget_48gb_hours: 1.9
+max_steps: null
+train_per_class: null
+val_per_class: 5
+split_seed: 604
+validate: true
+lr: 0.0005
+weight_decay: 0.01
+label_smoothing: 0.0
+precision: bf16
+grad_checkpointing: false
+log_every: 100
+ckpt_every: 1000
+seed: 0
+synthetic: false
+resume: null

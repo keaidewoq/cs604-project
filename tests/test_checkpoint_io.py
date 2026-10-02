@@ -80,6 +80,18 @@ class CheckpointIOTests(unittest.TestCase):
         loaded = torch.load(previous, map_location="cpu", weights_only=False)
         self.assertEqual(loaded["step"], 1)
 
+    def test_elapsed_time_is_saved_for_resume(self):
+        output = self.root / "run"
+        model = TinyModel()
+        optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda _: 1.0)
+        checkpoint_io.save_training_checkpoint(
+            output / "last.pt", model, optimizer, scheduler, {"mode": "head"},
+            5, 0, 5, 0.439, elapsed_sec=1234.5,
+        )
+        loaded = torch.load(output / "last.pt", map_location="cpu", weights_only=False)
+        self.assertEqual(loaded["elapsed_sec"], 1234.5)
+
 
 if __name__ == "__main__":
     unittest.main()

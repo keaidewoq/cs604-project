@@ -55,6 +55,7 @@ def _build_payload(
     epoch: int,
     next_batch: int,
     best_accuracy: float,
+    elapsed_sec: float,
 ) -> dict:
     return {
         # LoRA/head runs omit the frozen pretrained backbone (~0.37 GB -> ~32 MB).
@@ -66,6 +67,8 @@ def _build_payload(
         "epoch": int(epoch),
         "next_batch": int(next_batch),
         "best_accuracy": float(best_accuracy),
+        # Run time so far, so a resumed run keeps counting GPU-hours from here.
+        "elapsed_sec": float(elapsed_sec),
     }
 
 
@@ -127,13 +130,14 @@ def save_training_checkpoint(
     epoch: int,
     next_batch: int,
     best_accuracy: float,
+    elapsed_sec: float = 0.0,
 ) -> dict:
     """Stage on local disk, verify, then copy to a versioned file and dest."""
 
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     payload = _build_payload(
-        model, optimizer, scheduler, cfg, step, epoch, next_batch, best_accuracy
+        model, optimizer, scheduler, cfg, step, epoch, next_batch, best_accuracy, elapsed_sec
     )
     staging_root = _staging_dir()
     token = f"{dest.name}_{step:06d}_{os.getpid()}_{time.time_ns()}"
