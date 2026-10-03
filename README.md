@@ -35,6 +35,37 @@ Each run folder stores the resolved `config.yaml`, `step_log.csv`, `epoch_log.cs
 
 Submission lines are `image_path class_id`, matching the course label files.
 
+## Parameter table
+
+Shared defaults live in `configs/base.yaml`. A method file only lists what it **changes**. Blank = inherit from base.
+
+| Parameter | Meaning | base | full_ft | linear_probe | lora_r8 | bitfit | adapter | adaptformer |
+|---|---|---|---|---|---|---|---|---|
+| `method` | What to train | `full_ft` | `full_ft` | `linear_probe` | `lora` | `bitfit` | `adapter` | `adaptformer` |
+| `model_name` | timm backbone | `vit_base_patch16_224.augreg2_in21k_ft_in1k` | | | | | | |
+| `pretrained` | Load ImageNet weights | `true` | | | | | | |
+| `num_classes` | Head size | `10000` | | | | | | |
+| `img_size` | Train/eval resolution | `224` | | | | | | |
+| `data_root` | Where images + `*.txt` live | `/content/data` | | | | | | |
+| `batch_size` | Images per step | `64` | `32` | | | | | |
+| `grad_accum_steps` | Steps before optimizer update (effective batch = batch × this) | `1` | `2` | | | | | |
+| `epochs` | Passes over train | `3` | `2` | `5` | `5` | `5` | `5` | `5` |
+| `lr` | AdamW learning rate | `1e-4` | `1e-4` | `1e-3` | `1e-3` | `1e-3` | `1e-3` | `1e-3` |
+| `weight_decay` | AdamW weight decay | `0.05` | | `0.0` | | | | |
+| `warmup` | Warmup length in epochs | `1.0` | | | | | | |
+| `bf16` | Mixed precision on GPU | `true` | | | | | | |
+| `num_workers` | DataLoader workers | `2` | | | | | | |
+| `seed` | RNG seed | `42` | | | | | | |
+| `output_dir` | Run folder parent | `outputs` | | | | | | |
+| `label_smoothing` | CE label smoothing | `0.0` | | | | | | |
+| `lora_rank` | LoRA rank | — | | | `8` | | | |
+| `lora_alpha` | LoRA scale (`alpha/rank`) | — | | | `16` | | | |
+| `lora_dropout` | LoRA dropout | — | | | `0.1` | | | |
+| `adapter_dim` | Bottleneck width | — | | | | | `64` | `64` |
+| `adaptformer_scale` | Parallel FFN scale `s` | — | | | | | | `0.1` |
+
+On Colab, `colab_launcher.ipynb` also prints the **resolved** config for your chosen `METHOD` as a table before training.
+
 ## Add a method or an ablation
 
 **New method**
