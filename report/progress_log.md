@@ -2,6 +2,34 @@
 
 Newest session at the top. Each entry records what ran, which files went in and out, the result, and the decision. Training numbers still live in each output folder's `run.json`, `metrics.csv`, and `config.json`.
 
+## 2026-10-03 — Full-budget frozen-head run, diagnosis, and new course rules
+
+**Code (2026-10-02, commits `c5ac31d`, `8cb4732`):** `budget_48gb_hours` fits the
+cosine schedule to a 48 GB-hour budget and stops training in time for the final
+holdout evaluation; checkpoints carry elapsed time through a resume. The Colab
+training cell flushes Drive before ending the runtime and arms a watchdog that
+ends it if training hangs. See `WORKFLOW.md`.
+
+**Run:** `configs/experiments/prototype_lora_r8_fp32_budget_40.yaml` on Colab,
+A100 80 GB, commit `8cb4732`. Output:
+`C:\Users\Van Le\cs604-project\cs604-outputs\prototype_lora_r8_fp32_budget_40`.
+Stopped by the budget after 83,308 updates (6.7 epochs), 1.901 normalized hours.
+Internal top-1 **52.924%**, versus 51.826% for the 1-epoch run; accuracy levelled
+off from epoch 4. The 80 GB card gave only 1.15 h of wall-clock budget and ran at
+about 740 images/s.
+
+**Diagnosis (evaluation-only, laptop):** `analysis/diagnose_best.json` in the run
+folder. 61.55% top-1 on its own training images (underfitting); cross-entropy
+lowest near cosine scale 40, not the frozen 20; mean cosine to the true prototype
+0.58. The `baseline.pt` comparison was stopped at the 1-hour background limit
+because the laptop evaluated at about 28 images/s.
+
+**Decision from the Prof:** train the classifier head in every method; the head
+is not counted in the 5% limit; any comparable-size ViT may be the backbone.
+Recorded in `AGENTS.md` ("Course rules"). Earlier frozen-head runs become an
+ablation. Next: `head_lr` support and a trained-head screen, then a prototype
+screen of candidate backbones (`report/HANDOFF.md`, `report/INAT2021_STRATEGY.md`).
+
 ## 2026-10-01 — Colab data staging debugged; 40-image LoRA run started
 
 Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch

@@ -1,6 +1,59 @@
 # Prototype baseline: agent handoff
 
-Updated: 2026-10-01. Read this together with `AGENTS.md` before continuing.
+Updated: 2026-10-03. Read this together with `AGENTS.md` before continuing.
+"Where to work" is current; the sections after it are the 2026-10-01 history.
+
+## Current status (2026-10-03)
+
+**Rules changed.** The Prof confirmed: the classifier head must be trained and
+is not counted in the 5% limit, and any ViT of comparable size may be the
+backbone. See "Course rules" in `AGENTS.md`. Every earlier LoRA result used a
+frozen head and is now the frozen-head ablation.
+
+**Latest runs (frozen head, rank-8 `qkv` LoRA, 40 images/class, Colab):**
+
+| Run | GPU | Epochs | Normalized 48 GB-h | Internal top-1 |
+| --- | --- | --- | --- | --- |
+| `cs604-outputs/prototype_lora_r8_fp32_40` | RTX PRO 6000, 95 GB | 1 | 0.191 | 51.826% |
+| `cs604-outputs/prototype_lora_r8_fp32_budget_40` | A100 80 GB | 6.7 (budget stop) | 1.901 | 52.924% |
+
+The budget run (commit `8cb4732`) levelled off: per-epoch holdout accuracy was
+49.74, 50.92, 51.77, 52.72, 52.70, 52.92, 52.91%. Ten times the budget bought
++1.1 points.
+
+**Diagnosis** (evaluation-only, on the budget run's `best.pt`; script and
+results in `cs604-outputs/prototype_lora_r8_fp32_budget_40/analysis/`):
+
+| | Holdout (50,000) | Train sample (2/class, eval transform) |
+| --- | --- | --- |
+| Top-1 / top-5 | 52.92% / 78.24% | 61.55% / 83.61% |
+| Mean cosine to own class prototype | 0.582 | 0.597 |
+| Cross-entropy at the fixed scale 20 | 2.686 | 2.440 |
+| Lowest cross-entropy over scales tried | 2.184 at scale 40 | 1.799 at scale 40 |
+
+- Underfitting, not overfitting: 61.6% on images it trained on for 6.7 epochs.
+- The frozen cosine temperature (20) is too low; about 40 fits better.
+- Features stay far from the frozen prototypes (cosine 0.58).
+Conclusion: training length is not the bottleneck; the frozen head and small
+trainable capacity are. This matches the Prof's guidance to train the head.
+
+**Next experiments (in order; details in `report/INAT2021_STRATEGY.md`):**
+
+1. Code: separate head learning rate (`head_lr`), configurable train crop
+   scale, then the trained-head screen config.
+2. Trained-head screen on the current backbone: rank-8 `qkv` LoRA plus
+   prototype-initialized trainable cosine head (temperature trains with it),
+   10 images/class, against `prototype_lora_r8_fp32_screen` (51.094%).
+3. Backbone screen without training: prototype accuracy on the fixed holdout
+   for each candidate ViT-B. Run on Colab; the laptop evaluated at only about
+   28 images/s (about 30 min per 50,000 images) on 2026-10-03.
+4. More backbone capacity within 5% (LoRA on all linear layers or higher rank;
+   AdaptFormer), then a prototype-initialized full fine-tune.
+5. Full-budget runs only for finalists. Prefer a 40 GB A100 to an 80 GB one:
+   the budget is GB-hours, so 40 GB gets 2.4 h versus 1.2 h.
+
+Time budget tooling (`budget_48gb_hours`, elapsed time carried through resume)
+and the Colab watchdog plus Drive flush are documented in `WORKFLOW.md`.
 
 ## Where to work
 
@@ -15,7 +68,8 @@ Updated: 2026-10-01. Read this together with `AGENTS.md` before continuing.
   `git_dirty: true` at `910b2ff4d3cfcf89485243550fd429277d50aa95`, because its
   config was not committed before that run. Use `git log -1` for the latest
   commit. Do not switch back to the original checkout and assume these changes
-  are present there. The branch has not been merged or pushed.
+  are present there. The branch is pushed to `origin` (Colab checks out its
+  tip) but not merged into `main`.
 - The app's managed-worktree tool could not recognize the nested repository;
   this is a normal Git worktree created with `git worktree add`.
 

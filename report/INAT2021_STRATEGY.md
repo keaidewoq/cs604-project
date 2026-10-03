@@ -2,9 +2,51 @@
 
 Date: 2026-10-02. Research and proposed experiments only; no new training run was launched.
 
+## Update 2026-10-03: rules confirmed, order revised
+
+The Prof confirmed three things (also in `AGENTS.md`, "Course rules"):
+
+- The classifier head **must be trained** in every method, starting from the
+  class prototypes.
+- The head is **not counted** in the 5% limit; it applies to the backbone only
+  (about 4.3M parameters for ViT-B).
+- **Any vision transformer of comparable size** may be the backbone.
+  Checkpoints trained on iNat2021 or TreeOfLife-10M stay excluded (leakage).
+
+New evidence: the full-budget frozen-head run
+(`cs604-outputs/prototype_lora_r8_fp32_budget_40`, 6.7 epochs, 1.90 normalized
+hours) reached 52.924%, only +1.1 points over the 1-epoch run, and levelled off
+from epoch 4. An evaluation-only check showed underfitting (61.6% top-1 on its
+own training images), a frozen temperature that is too low (cross-entropy is
+lowest near scale 40, not 20), and features far from the frozen prototypes
+(mean cosine 0.58). Numbers and paths: `report/HANDOFF.md`.
+
+Revised order (replaces the order below where they conflict):
+
+1. **Trained head on the current backbone.** Rank-8 `qkv` LoRA plus the
+   prototype-initialized cosine head trained with its own learning rate; the
+   temperature trains with the head. Screen at 10 images/class against
+   `prototype_lora_r8_fp32_screen` (51.094%). Needs a `head_lr` option.
+2. **Backbone screen without training.** Prototype accuracy on the fixed
+   holdout for DINOv2 ViT-B/14, CLIP or SigLIP ViT-B/16, EVA-02 ViT-B,
+   `vit_base_patch16_384`, and the current `augreg2` ViT-B/16 (43.90%). Needs
+   prototype building and model loading for other timm ViT families. Record
+   each model's pretraining data.
+3. **Backbone capacity within 5%** on the best backbone: LoRA on all linear
+   layers or higher rank, and AdaptFormer as the second course method.
+4. **Crop policy and image detail** (sections 2–3 below), now with a trained
+   head.
+5. **Prototype-initialized full fine-tune** (section 1 below) on the chosen
+   backbone, head trained, layer-wise learning-rate decay.
+6. **Full-budget runs for finalists only**, preferably on a 40 GB A100
+   (2.4 h of budget versus 1.2 h on an 80 GB card).
+
+Every frozen-head result so far becomes the "frozen vs. trained head" ablation
+in the report.
+
 ## Decision
 
-Keep prototype-initialized ViT-B/16 with a frozen cosine head and rank-8 LoRA as the reference. Reframe the study around compute-limited species recognition across diverse organisms: classifier initialization, preservation of diagnostic image detail, and efficient feature adaptation. Prioritize a credible full-fine-tuning comparison and controlled crop experiments over a broad rank sweep.
+*(Superseded 2026-10-03: the head is now trained; see the update above.)* Keep prototype-initialized ViT-B/16 with a frozen cosine head and rank-8 LoRA as the reference. Reframe the study around compute-limited species recognition across diverse organisms: classifier initialization, preservation of diagnostic image detail, and efficient feature adaptation. Prioritize a credible full-fine-tuning comparison and controlled crop experiments over a broad rank sweep.
 
 ## Dataset evidence and its implications
 
@@ -20,7 +62,7 @@ Consequences for our experiments:
 - Test whether crops omit the organism or distinguishing parts. Preserve color cues initially; do not simultaneously introduce strong color changes, erasing, MixUp, and CutMix.
 - Treat one centroid per species as a useful baseline, with possible limitations for different life stages or views. Test that limitation after the core comparisons.
 - Taxonomy-aware losses and group metrics require a legitimate class-to-taxonomy mapping, which the local course metadata does not provide. They are conditional extensions, not the next implementation.
-- Public source labels, image matching, filenames, or original archives must not be used to recover the withheld course labels. Dataset provenance informs model design; the existing evaluation boundary remains fixed. External biodiversity checkpoints and extra images are outside the current prescribed-backbone experiment.
+- Public source labels, image matching, filenames, or original archives must not be used to recover the withheld course labels. Dataset provenance informs model design; the existing evaluation boundary remains fixed. External biodiversity checkpoints and extra images are outside the current prescribed-backbone experiment. *(2026-10-03: other comparable-size ViT backbones are now allowed; checkpoints trained on iNat2021 or TreeOfLife-10M and extra iNaturalist images remain excluded.)*
 
 ## Current evidence, checked against local artifacts
 
@@ -66,9 +108,9 @@ If distinct appearance clusters remain problematic, test two train-derived centr
 
 ### 5. Capacity and loss changes only after the preceding evidence
 
-Try rank 16 against rank 8 with alpha/rank held constant if training and validation evidence suggests insufficient capacity. A large rank grid is no longer the default priority. A trainable dense 10,000 x 768 classifier alone exceeds 5% of this model, so do not add it to the PEFT method while claiming the current parameter budget. Count any learned head residual, scale, or auxiliary head explicitly.
+Try rank 16 against rank 8 with alpha/rank held constant if training and validation evidence suggests insufficient capacity. A large rank grid is no longer the default priority. *(Superseded 2026-10-03: the head is not counted in the 5% limit and must be trained.)* A trainable dense 10,000 x 768 classifier alone exceeds 5% of this model, so do not add it to the PEFT method while claiming the current parameter budget. Count any learned head residual, scale, or auxiliary head explicitly.
 
-Small label smoothing is a possible later single-variable test for overconfidence. Pure temperature scaling cannot change a single model's top-1 argmax; use it for calibration or ensemble weighting, not as an expected standalone accuracy gain.
+Small label smoothing is a possible later single-variable test for overconfidence. Pure temperature scaling cannot change a single model's top-1 argmax; use it for calibration or ensemble weighting, not as an expected standalone accuracy gain. *(2026-10-03: during training the temperature does matter, because it shapes the gradients. The frozen value 20 was measured as too low; with a trained head it is learned.)*
 
 ## Selection and implementation gates
 

@@ -76,6 +76,12 @@ change the holdout or replace it with a random subset.
    `configs/experiments/<EXPERIMENT>.yaml`. Change only what the experiment
    tests, plus `train_per_class` and `epochs`. Write a comment at the top saying
    what it tests. Keep the local paths (`C:/Users/Van Le/...`).
+   - **Train the head** (`train_head: true`, prototype-initialized) in every
+     new config. Existing configs mostly have `train_head: false`; copying one
+     means changing that line. A frozen head is only for a labelled ablation.
+     See "Course rules" in `AGENTS.md`.
+   - Do not add keys for features that are not implemented yet (listed in
+     `AGENTS.md`); unknown keys are ignored without warning.
 2. **Make sure the GPU is free.** Only one training job at a time:
    ```powershell
    nvidia-smi

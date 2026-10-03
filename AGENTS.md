@@ -1,10 +1,44 @@
 # CS604 agent instructions
 
-Fine-grained 10,000-class classification with ViT-B/16. The course requires a full fine-tune and a parameter-efficient method, under a 2-hour × 48 GB training budget.
+Fine-grained 10,000-class classification with a ViT-B-sized vision transformer (currently ViT-B/16). The course requires a full fine-tune and a parameter-efficient method, under a 2-hour × 48 GB training budget.
+
+## Course rules confirmed by the Prof (2026-10-03)
+
+These override anything older in `report/`, `README.md`, or `.cursor/plans/`.
+
+1. **Train the classifier head in every experiment.** The Prof expects head
+   retraining. New configs set `train_head: true` and start the head from the
+   class prototypes (`prototype_file`). A frozen head (`train_head: false`) is
+   allowed only as a labelled ablation, with a comment at the top of the YAML
+   saying so.
+2. **The head is not counted in the 5% limit.** "Under 5%" applies to the
+   backbone's trainable parameters (LoRA, adapters, biases, selected blocks).
+   The backbone allowance is therefore about 4.3M parameters for ViT-B (rank-8
+   `qkv` LoRA uses 0.29M). Report trainable % both without the head (the course
+   number: `backbone_trainable_params / total_params`) and with it.
+   `run.json`'s `trainable_pct` includes the head.
+3. **Any vision transformer of comparable size (about 86M, ViT-B class) may be
+   the backbone**, not only `vit_base_patch16_224.augreg2_in21k_ft_in1k`.
+   Candidates: DINOv2 ViT-B/14, CLIP/SigLIP ViT-B/16 image encoders, EVA-02
+   ViT-B, `vit_base_patch16_384`. Ask before using non-ViT or hybrid models
+   (ConvNeXt, Swin).
+4. **No checkpoints trained or fine-tuned on iNaturalist 2021 or TreeOfLife-10M**
+   (for example BioCLIP, iNat-finetuned timm weights). The course data appears to
+   be iNat2021 "train_mini" (see `report/INAT2021_STRATEGY.md`), so its test
+   images may be in their training data. Check each model's pretraining data
+   and record it in the report.
+5. Earlier frozen-head results (43.90% prototypes, 51.094% screen, 51.826% and
+   52.924% LoRA runs) are now the **frozen-head ablation**, not the method.
+
+Current status and the next experiments are in `report/HANDOFF.md`; the
+experiment order is in `report/INAT2021_STRATEGY.md`.
 
 ## Paths
 
-This git repo is `C:\Users\Van Le\cs604-project\cs604-group-project`.
+This git repo is the `prototype-baseline` worktree,
+`C:\Users\Van Le\cs604-project\cs604-prototype-baseline`. All agents work here.
+`C:\Users\Van Le\cs604-project\cs604-group-project` is the original checkout
+on `main` and is out of date.
 
 | What | Where |
 | --- | --- |
@@ -39,7 +73,13 @@ outputs/submissions/      audited CodaBench files
 report/                   experiment record and final report
 ```
 
-`scripts/train.py` is the local and Colab entry point. Model modes live in `src/cs604/models/build.py`: full fine-tune, frozen backbone, last blocks, and LoRA on attention `qkv`.
+`scripts/train.py` is the local and Colab entry point. Model modes live in `src/cs604/models/build.py`: full fine-tune, frozen backbone, last blocks, and LoRA on attention `qkv`. `train_head` controls whether the classifier trains in `lora` and `last_blocks` modes; `full` and `head` always train it.
+
+Not implemented yet (needed by the next experiments): a separate head learning
+rate, a learnable cosine temperature while the head is frozen, a configurable
+train-crop scale and eval crop, configurable input resolution, and backbones
+other than timm `vit_base_patch16_*`. Until a feature exists, do not put its
+key in a config: unknown keys are silently ignored.
 
 ## Verify
 

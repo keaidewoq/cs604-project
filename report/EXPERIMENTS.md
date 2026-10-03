@@ -14,7 +14,25 @@ leaderboard candidate, copy the following information into this file:
 - Checkpoint and prediction file:
 - Conclusion and next action:
 
+## Rules update 2026-10-03
+
+The Prof confirmed that the classifier head must be trained and is not counted
+in the 5% limit, and that any comparable-size ViT may be the backbone (see
+`AGENTS.md`, "Course rules"). All entries below used a frozen or head-only
+setup and form the frozen-head ablation. For new entries, give the backbone
+name and pretraining data, and trainable parameters both without the head
+(course number) and with it.
+
 ## Completed
+
+- Prototype LoRA rank-8, full time budget, frozen head, finished 2026-10-03 00:21 SGT: internal top-1 **52.924%** (26,462 / 50,000), from a remeasured start of **43.934%**. Per-epoch holdout: 49.74, 50.92, 51.77, 52.72, 52.70, 52.92, 52.91% (the last is a partial epoch at the budget stop). Gain over the 1-epoch run (51.826%): +1.10 points for 10× the budget. No public score.
+  Config: `configs/experiments/prototype_lora_r8_fp32_budget_40.yaml`. Commit: `8cb47324cb8cc4bfb651356809c923b2c79ad471`, clean.
+  Method: as `prototype_lora_r8_fp32_40` (frozen 40-image cosine prototypes, fp32 class scores, rank-8 `qkv` LoRA, lr 0.0005, batch 32), with `budget_48gb_hours: 1.9` and `epochs: 30` as an upper bound, so the cosine schedule followed the time budget. `num_workers` 8 instead of 4.
+  Changed variable: training length (83,308 updates, 6.7 epochs, versus 12,500 updates, 1 epoch).
+  Total parameters: 93,773,569; trainable LoRA: 294,912 (0.3145%); trainable classifier: 0.
+  NVIDIA A100-SXM4-80GB (79.25 GiB); peak allocated 2.0887 GiB; elapsed 4144.71 s, GPU-hours 1.1513, normalized 48-GiB hours 1.9009; `stopped_by_budget: true`. Training about 740 images/s, holdout evaluation about 910 images/s; the 8 holdout evaluations used about 11% of the budget. Source: that run's `run.json` and `metrics.csv`.
+  Diagnosis (evaluation-only, `analysis/diagnose_best.json` in the run folder): 61.55% top-1 on a 2-per-class sample of its own training images (underfitting); cross-entropy lowest near cosine scale 40 versus the frozen 20; mean cosine to the true prototype 0.58.
+  Conclusion: training length is not the bottleneck for the frozen-head setup. Next: train the head (now required), then screen backbones. See `report/HANDOFF.md`.
 
 - Prototype LoRA rank-8 screen, 2026-09-30: internal top-1 **51.094%** (25,547 / 50,000) after two epochs, up from a remeasured start of **43.900%** (21,950 / 50,000). Gain versus the 43.90% prototype baseline: **+7.194 percentage points** (3,597 images). Epoch 1 was 50.508% (25,254 / 50,000); epoch 2 added 0.586 points. No public score.
   Config: `configs/experiments/prototype_lora_r8_fp32_screen.yaml`. Recorded commit: `910b2ff4d3cfcf89485243550fd429277d50aa95` on `prototype-baseline` (`git_dirty: true` because this config was uncommitted during the run).

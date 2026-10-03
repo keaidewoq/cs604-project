@@ -1,6 +1,8 @@
 # CS604 — Fine-Grained ViT Adaptation
 
-Fine-grained multi-class classification (10,000 classes) with a ViT-B/16 foundation model. The course asks for full fine-tuning and a parameter-efficient adaptation method under a 2-hour × 48 GB VRAM training budget.
+Fine-grained multi-class classification (10,000 classes) with a ViT-B-sized vision transformer (currently ViT-B/16). The course asks for full fine-tuning and a parameter-efficient adaptation method under a 2-hour × 48 GB VRAM training budget.
+
+**Course rules confirmed 2026-10-03** (details in `AGENTS.md`): the classifier head is always trained and is not counted in the 5% limit; any comparable-size ViT may be the backbone; no checkpoints trained on iNaturalist 2021 or TreeOfLife-10M. Current status: `report/HANDOFF.md`.
 
 ## Local GPU
 
@@ -93,7 +95,8 @@ The internal split always reserves the same five images per class. Screening
 configs use fewer training images per class, never an ordinary random subset.
 
 For the under-5% prototype + LoRA design, first build class prototypes, then
-train from that initialization:
+train from that initialization (the head is trained too; the 5% limit counts
+backbone parameters only):
 
 ```powershell
 & "C:\Users\Van Le\.venvs\cs604\Scripts\python.exe" scripts\build_prototypes.py --config configs\experiments\prototype_init.yaml --output C:\Users\Van Le\cs604-project\cs604-outputs\prototypes\class_prototypes.pt

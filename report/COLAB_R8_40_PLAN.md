@@ -1,5 +1,11 @@
 # Colab rank-8 finalist: 40 training images per class
 
+> **Completed and superseded (2026-10-03).** This run is
+> `cs604-outputs/prototype_lora_r8_fp32_40` (51.826%). Its frozen head
+> (`train_head: false`) is no longer the method: the head must now be trained
+> (`AGENTS.md`, "Course rules"). Keep this file as the record of the
+> checkpoint-safety and Colab preflight design.
+
 Status: implementation plan, 2026-10-01. This file does not authorize or record a
 training run. Implement the preparation in Cursor, then run one Colab job after the
 preflight gates below pass.
