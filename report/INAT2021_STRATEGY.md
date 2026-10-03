@@ -23,6 +23,16 @@ lowest near scale 40, not 20), and features far from the frozen prototypes
 
 Revised order (replaces the order below where they conflict):
 
+0. **Base model: ImageNet-21k-only ViT-B/16** (Prof, 2026-10-03; `AGENTS.md`
+   rule 6). Build prototypes for `vit_base_patch16_224.orig_in21k` (the PDF's
+   `vit-base-patch16-224-in21k`) and `vit_base_patch16_224.augreg_in21k`, keep
+   the better one, and run steps 1 and 3-6 on it. The existing
+   `augreg2_in21k_ft_in1k` results become the IN1k-vs-IN21k comparison. A
+   plausible reason IN21k-only features suit this task: they were trained on
+   about 21,000 classes, including many plant and animal species, and were
+   never narrowed to ImageNet-1k's 1,000 classes. Treat that as a hypothesis
+   for the prototype comparison to test.
+
 1. **Trained head on the current backbone.** Rank-8 `qkv` LoRA plus the
    prototype-initialized cosine head trained with its own learning rate; the
    temperature trains with the head. Screen at 10 images/class against

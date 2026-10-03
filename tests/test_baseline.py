@@ -47,7 +47,7 @@ class BaselineTests(unittest.TestCase):
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
 
-    def run_fixture(self, accuracies, evaluate_only=False, resume=None, epochs=1):
+    def run_fixture(self, accuracies, evaluate_only=False, resume=None, epochs=1, expected=0.439):
         output = self.root / "run"
         split = output / "splits" / "internal_val.txt"
         split.parent.mkdir(parents=True, exist_ok=True)
@@ -60,7 +60,7 @@ class BaselineTests(unittest.TestCase):
             "mode": "head", "batch_size": 2, "epochs": epochs, "lr": 0.01,
             "precision": "fp32", "num_workers": 0, "log_every": 1, "ckpt_every": 1,
             "evaluate_before_training": True, "evaluate_only": evaluate_only,
-            "expected_initial_accuracy": 0.439, "initial_accuracy_tolerance": 0.001,
+            "expected_initial_accuracy": expected, "initial_accuracy_tolerance": 0.001,
             "expected_initial_samples": 2, "resume": resume,
         }
         dataset = [(torch.tensor([1., 0.]), 0, "train/a.jpg"),
@@ -139,6 +139,20 @@ class BaselineTests(unittest.TestCase):
             rows = list(csv.DictReader(handle))
         self.assertEqual([row["phase"] for row in rows], ["initial_val"])
 
+    def test_new_backbone_without_expected_accuracy_records_step_zero(self):
+        # A first evaluate-only run on a new backbone measures its gate value.
+        run = self.run_fixture([0.30], evaluate_only=True, expected=None)
+        self.assertIsNone(run.error)
+        baseline = json.loads((run.output / "baseline.json").read_text())
+        self.assertTrue(baseline["passed"])
+        self.assertEqual(baseline["initial_internal_accuracy"], 0.30)
+        self.assertIsNone(baseline["expected_initial_accuracy"])
+        self.assertIsNone(baseline["accuracy_delta"])
+        info = json.loads((run.output / "run.json").read_text())
+        self.assertEqual(info["status"], "evaluated")
+        self.assertEqual(info["initial_internal_accuracy"], 0.30)
+        self.assertEqual(self.checkpoint(run.output / "best.pt")["best_accuracy"], 0.30)
+
     def test_worse_training_cannot_replace_initial_best(self):
         run = self.run_fixture([0.439, 0.40])
         self.assertIsNone(run.error)
@@ -196,13 +210,28 @@ class BaselineTests(unittest.TestCase):
         reference = self.root / "reference.txt"
         current.write_text("a 0\n")
         reference.write_text("b 0\n")
-        cfg = {"evaluate_before_training": True, "baseline_reference_split": str(reference), "split_seed": 604}
+        cfg = {"evaluate_before_training": True, "baseline_reference_split": str(reference), "split_seed": 604,
+               "timm_checkpoint": "vit_base_patch16_224.augreg2_in21k_ft_in1k"}
         with self.assertRaisesRegex(ValueError, "holdout does not match"):
             baseline_provenance(cfg, current, 1)
         with self.assertRaisesRegex(ValueError, "split_seed"):
             check_prototype_split(cfg, {"split_seed": 0, "val_per_class": 5})
         with self.assertRaisesRegex(ValueError, "Expected 2"):
             baseline_provenance({"expected_initial_samples": 2}, current, 1)
+
+    def test_prototypes_must_come_from_the_configured_backbone(self):
+        in21k = {"timm_checkpoint": "vit_base_patch16_224.orig_in21k", "split_seed": 604}
+        split = {"split_seed": 604, "val_per_class": 5}
+        check_prototype_split(in21k, {**split, "timm_checkpoint": "vit_base_patch16_224.orig_in21k"})
+        with self.assertRaisesRegex(ValueError, "built with vit_base_patch16_224.augreg_in21k"):
+            check_prototype_split(in21k, {**split, "timm_checkpoint": "vit_base_patch16_224.augreg_in21k"})
+        # Files without the field predate it and were all built with the IN1k fine-tune.
+        with self.assertRaisesRegex(ValueError, "augreg2_in21k_ft_in1k"):
+            check_prototype_split(in21k, split)
+        check_prototype_split({**in21k, "timm_checkpoint": "vit_base_patch16_224.augreg2_in21k_ft_in1k"}, split)
+        # The backbone check applies even to runs without a step-zero gate.
+        with self.assertRaisesRegex(ValueError, "built with"):
+            check_prototype_split({"timm_checkpoint": "vit_base_patch16_224.orig_in21k"}, split)
 
     def test_accuracy_tolerance_is_absolute_and_nonfinite_values_fail(self):
         cfg = {"expected_initial_accuracy": 0.439, "initial_accuracy_tolerance": 0.001}

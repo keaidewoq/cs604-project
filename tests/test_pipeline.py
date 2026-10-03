@@ -126,6 +126,95 @@ class CompactCheckpointTests(unittest.TestCase):
             use_compact_checkpoints({"mode": "full", "compact_checkpoints": True})
 
 
+class HeadLearningRateTests(unittest.TestCase):
+    def _build(self, train_head: bool):
+        from unittest.mock import patch
+
+        from cs604.models.build import build_from_config
+
+        cfg = {**CompactCheckpointTests.CFG, "train_head": train_head}
+        with patch("cs604.models.build.timm.create_model", return_value=TinyViT(0)):
+            return build_from_config(cfg)
+
+    def test_without_head_lr_one_group_holds_every_trainable_parameter(self) -> None:
+        from cs604.models.build import optimizer_param_groups
+
+        model = self._build(train_head=True)
+        groups = optimizer_param_groups(model, 5e-4)
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(groups[0]["lr"], 5e-4)
+        trainable = [p for p in model.parameters() if p.requires_grad]
+        self.assertEqual([id(p) for p in groups[0]["params"]], [id(p) for p in trainable])
+        optimizer = torch.optim.AdamW(groups, lr=5e-4)
+        self.assertEqual([g["lr"] for g in optimizer.param_groups], [5e-4])
+
+    def test_head_lr_puts_weight_and_temperature_in_their_own_group(self) -> None:
+        from cs604.models.build import optimizer_param_groups
+
+        model = self._build(train_head=True)
+        backbone, head = optimizer_param_groups(model, 5e-4, head_lr=2e-3)
+        self.assertEqual((backbone["lr"], head["lr"]), (5e-4, 2e-3))
+        head_ids = {id(model.head.weight), id(model.head.log_scale)}
+        self.assertEqual({id(p) for p in head["params"]}, head_ids)
+        self.assertTrue(backbone["params"])
+        self.assertTrue(all(id(p) not in head_ids for p in backbone["params"]))
+        self.assertEqual(
+            len(backbone["params"]) + len(head["params"]),
+            sum(1 for p in model.parameters() if p.requires_grad),
+        )
+
+    def test_scheduler_scales_both_groups_and_keeps_their_ratio(self) -> None:
+        from cs604.models.build import optimizer_param_groups
+
+        model = self._build(train_head=True)
+        optimizer = torch.optim.AdamW(optimizer_param_groups(model, 5e-4, 2e-3), lr=5e-4)
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda step: 0.5)
+        scheduler.step()
+        backbone_lr, head_lr = (group["lr"] for group in optimizer.param_groups)
+        self.assertAlmostEqual(backbone_lr, 2.5e-4)
+        self.assertAlmostEqual(head_lr, 1e-3)
+
+    def test_head_lr_with_a_frozen_head_is_an_error(self) -> None:
+        from cs604.models.build import optimizer_param_groups
+
+        with self.assertRaisesRegex(ValueError, "train_head"):
+            optimizer_param_groups(self._build(train_head=False), 5e-4, head_lr=2e-3)
+        with self.assertRaisesRegex(ValueError, "positive"):
+            optimizer_param_groups(self._build(train_head=True), 5e-4, head_lr=0.0)
+
+
+class TrainCropScaleTests(unittest.TestCase):
+    def test_unset_keeps_timm_default(self) -> None:
+        from timm.data import create_transform
+
+        from cs604.engine.loop import _transform_crop_scale, train_crop_scale
+
+        self.assertIsNone(train_crop_scale({}))
+        self.assertIsNone(train_crop_scale({"train_crop_scale": None}))
+        default = create_transform(input_size=(3, 224, 224), is_training=True)
+        self.assertEqual(_transform_crop_scale(default), [0.08, 1.0])
+
+    def test_configured_scale_reaches_the_train_transform(self) -> None:
+        from timm.data import create_transform
+
+        from cs604.engine.loop import _transform_crop_scale, train_crop_scale
+
+        scale = train_crop_scale({"train_crop_scale": [0.35, 1.0]})
+        self.assertEqual(scale, (0.35, 1.0))
+        transform = create_transform(input_size=(3, 224, 224), is_training=True, scale=scale)
+        self.assertEqual(_transform_crop_scale(transform), [0.35, 1.0])
+        # The eval transform has no random crop, so nothing to record there.
+        evaluation = create_transform(input_size=(3, 224, 224), is_training=False)
+        self.assertIsNone(_transform_crop_scale(evaluation))
+
+    def test_invalid_scales_are_rejected(self) -> None:
+        from cs604.engine.loop import train_crop_scale
+
+        for bad in (0.5, [0.5], [0.0, 1.0], [0.6, 0.4], [0.5, 1.2], "0.3,1"):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                train_crop_scale({"train_crop_scale": bad})
+
+
 class PrototypeTests(unittest.TestCase):
     def test_prototypes_replace_classifier_weights(self) -> None:
         layer = CosineClassifier(4, 3)

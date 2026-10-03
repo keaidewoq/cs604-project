@@ -72,16 +72,29 @@ Screens use fewer training images per class (5, then 10, then 20) and the fixed
 change the holdout or replace it with a random subset.
 
 1. **Write the config.** Copy the closest existing one, for example
-   `configs/experiments/prototype_lora_r8_fp32_screen.yaml`, to
+   `configs/experiments/prototype_lora_r8_trainhead_screen.yaml`, to
    `configs/experiments/<EXPERIMENT>.yaml`. Change only what the experiment
    tests, plus `train_per_class` and `epochs`. Write a comment at the top saying
-   what it tests. Keep the local paths (`C:/Users/Van Le/...`).
+   what it tests and which screen it is compared against. Keep the local paths
+   (`C:/Users/Van Le/...`).
    - **Train the head** (`train_head: true`, prototype-initialized) in every
-     new config. Existing configs mostly have `train_head: false`; copying one
+     new config. Most older configs have `train_head: false`; copying one
      means changing that line. A frozen head is only for a labelled ablation.
      See "Course rules" in `AGENTS.md`.
+   - `head_lr` sets the head's learning rate (cosine weight and temperature);
+     unset, the head uses `lr`. It requires `train_head: true`.
+   - `train_crop_scale: [min, max]` sets the training RandomResizedCrop area
+     range; unset, timm's `[0.08, 1.0]`. Both values are recorded in `run.json`.
    - Do not add keys for features that are not implemented yet (listed in
      `AGENTS.md`); unknown keys are ignored without warning.
+   - **A new backbone needs its own prototypes and gate** (rule 6 in
+     `AGENTS.md`). Build them with
+     `python scripts/build_prototypes.py --config configs/experiments/prototype_init_<variant>.yaml`
+     (output from the config's `prototype_output`; an existing build is never
+     overwritten), then run its evaluate-only `prototype_validate_<variant>.yaml`
+     with `expected_initial_accuracy: null`. Use the measured accuracy as
+     `expected_initial_accuracy` in that backbone's training configs. Training
+     refuses prototypes built with a different `timm_checkpoint`.
 2. **Make sure the GPU is free.** Only one training job at a time:
    ```powershell
    nvidia-smi

@@ -3,6 +3,10 @@
 Each prototype is the average feature of that class's training images. The
 fixed internal validation images are excluded, then used only to measure
 top-1 accuracy. No classifier weights are trained.
+
+The output file records the backbone it was built with (``timm_checkpoint``);
+training refuses to pair it with a different one. An existing output is never
+overwritten, so each backbone needs its own folder.
 """
 
 from __future__ import annotations
@@ -63,7 +67,9 @@ def _run_loader(loader: DataLoader, consume, progress_every: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--output", type=Path, help="prototype .pt file; defaults to the config's prototype_output"
+    )
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--per-class", type=int)
@@ -72,6 +78,19 @@ def main() -> None:
         raise SystemExit("CUDA is required")
 
     cfg = yaml.safe_load(args.config.read_text(encoding="utf-8"))
+    if args.output is None:
+        if not cfg.get("prototype_output"):
+            raise SystemExit("Pass --output or set prototype_output in the config")
+        args.output = Path(cfg["prototype_output"])
+    existing = [
+        path for path in (args.output, args.output.with_suffix(".json"), args.output.parent / "splits")
+        if path.exists()
+    ]
+    if existing:
+        raise SystemExit(
+            "Refusing to overwrite an existing prototype build: "
+            + ", ".join(str(path) for path in existing)
+        )
     from cs604.models.build import build_vit
 
     model = build_vit(
@@ -147,12 +166,14 @@ def main() -> None:
         {
             "prototypes": prototypes.cpu(),
             "samples_per_class": counts.cpu(),
+            "timm_checkpoint": cfg["timm_checkpoint"],
             "split_seed": int(cfg.get("split_seed", 0)),
             "val_per_class": int(cfg.get("val_per_class", 5)),
         },
         args.output,
     )
     summary = {
+        "timm_checkpoint": cfg["timm_checkpoint"],
         "train_images": len(train_samples),
         "val_images": evaluated,
         "internal_top1_accuracy": accuracy,

@@ -18,7 +18,7 @@ These override anything older in `report/`, `README.md`, or `.cursor/plans/`.
    number: `backbone_trainable_params / total_params`) and with it.
    `run.json`'s `trainable_pct` includes the head.
 3. **Any vision transformer of comparable size (about 86M, ViT-B class) may be
-   the backbone**, not only `vit_base_patch16_224.augreg2_in21k_ft_in1k`.
+   the backbone**, not only the course model (see rule 6 for where to start).
    Candidates: DINOv2 ViT-B/14, CLIP/SigLIP ViT-B/16 image encoders, EVA-02
    ViT-B, `vit_base_patch16_384`. Ask before using non-ViT or hybrid models
    (ConvNeXt, Swin).
@@ -29,6 +29,18 @@ These override anything older in `report/`, `README.md`, or `.cursor/plans/`.
    and record it in the report.
 5. Earlier frozen-head results (43.90% prototypes, 51.094% screen, 51.826% and
    52.924% LoRA runs) are now the **frozen-head ablation**, not the method.
+6. **Start from the ImageNet-21k-only ViT-B/16, not the IN21k→IN1k fine-tune.**
+   The Prof thinks the IN21k weights are better. This matches the PDF's
+   constraint line, "Base Model – vit-base-patch16-224-in21k". In timm:
+   - `vit_base_patch16_224.orig_in21k`: the original Google weights, the same
+     as HF `google/vit-base-patch16-224-in21k` named in the PDF.
+   - `vit_base_patch16_224.augreg_in21k`: the newer "How to train your ViT"
+     IN21k weights.
+   Build prototypes for both and pick by prototype accuracy on the fixed
+   holdout; report which one is used. Every existing prototype file, step-zero
+   gate (43.90%) and result belongs to `augreg2_in21k_ft_in1k`. A new backbone
+   needs its own prototype file and its own measured `expected_initial_accuracy`
+   (from an evaluate-only run). Never pair prototypes with a different backbone.
 
 Current status and the next experiments are in `report/HANDOFF.md`; the
 experiment order is in `report/INAT2021_STRATEGY.md`.
@@ -75,11 +87,18 @@ report/                   experiment record and final report
 
 `scripts/train.py` is the local and Colab entry point. Model modes live in `src/cs604/models/build.py`: full fine-tune, frozen backbone, last blocks, and LoRA on attention `qkv`. `train_head` controls whether the classifier trains in `lora` and `last_blocks` modes; `full` and `head` always train it.
 
-Not implemented yet (needed by the next experiments): a separate head learning
-rate, a learnable cosine temperature while the head is frozen, a configurable
-train-crop scale and eval crop, configurable input resolution, and backbones
-other than timm `vit_base_patch16_*`. Until a feature exists, do not put its
-key in a config: unknown keys are silently ignored.
+Optional training keys: `head_lr` gives the trainable classifier (cosine weight
+and temperature) its own learning rate, needs `train_head: true`, and follows
+the same warmup/cosine schedule; unset, the head shares `lr`.
+`train_crop_scale: [min, max]` sets the RandomResizedCrop area range for
+training; unset, timm's default `[0.08, 1.0]` applies. `run.json` records `lr`,
+`head_lr`, and the `train_crop_scale` the train transform actually used.
+
+Not implemented yet (needed by the next experiments): a learnable cosine
+temperature while the head is frozen, a configurable eval crop, configurable
+input resolution, and backbones other than timm `vit_base_patch16_*`. Until a
+feature exists, do not put its key in a config: unknown keys are silently
+ignored.
 
 ## Verify
 

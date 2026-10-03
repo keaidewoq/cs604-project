@@ -1,0 +1,52 @@
+# Trained-head screen on the IN1k fine-tune (augreg2_in21k_ft_in1k). Since
+# AGENTS.md rule 6 this is the IN1k side of the IN1k-vs-IN21k comparison. Tests
+# training the prototype-initialized cosine head together with rank-8 qkv LoRA;
+# the head's temperature trains with it. Copy of prototype_lora_r8_fp32_screen.yaml with
+# only train_head: true and head_lr added (plus its own output_dir).
+# Compare against prototype_lora_r8_fp32_screen: 51.094% (frozen head, same
+# 10 images/class, same 50,000-image holdout, same 2 epochs and lr).
+# head_lr 0.001: the rate the head-only screen used from these same prototypes
+# (43.90% -> 45.86%, stable); 2x the LoRA lr so the temperature can climb from
+# 20 toward ~40 within the run, but not far higher, because 10 images/class
+# could pull 7.68M head weights away from the 40-image prototypes.
+# Step zero is unchanged (LoRA B = 0, head = prototypes), so the 43.90% gate holds.
+# Trainable: 0.29M backbone (0.31%, the course number) + 7.68M head.
+data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
+output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/prototype_lora_r8_trainhead_screen"
+timm_checkpoint: "vit_base_patch16_224.augreg2_in21k_ft_in1k"
+num_classes: 10000
+image_size: 224
+mode: lora
+lora_rank: 8
+lora_alpha: 16
+lora_dropout: 0.05
+head_type: cosine
+cosine_head_fp32: true
+train_head: true
+head_lr: 0.001
+prototype_file: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/class_prototypes.pt"
+evaluate_before_training: true
+expected_initial_accuracy: 0.439
+initial_accuracy_tolerance: 0.001
+expected_initial_samples: 50000
+baseline_reference_split: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/splits/internal_val.txt"
+batch_size: 32
+eval_batch_size: 64
+grad_accum: 1
+num_workers: 4
+epochs: 2
+max_steps: null
+train_per_class: 10
+val_per_class: 5
+split_seed: 604
+validate: true
+lr: 0.0005
+weight_decay: 0.01
+label_smoothing: 0.0
+precision: bf16
+grad_checkpointing: false
+log_every: 100
+ckpt_every: 1000
+seed: 0
+synthetic: false
+resume: null

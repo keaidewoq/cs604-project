@@ -1,0 +1,38 @@
+# Step-zero accuracy for vit_base_patch16_224.augreg_in21k with its own prototypes
+# (prototype_init_augreg_in21k.yaml must have run). Evaluation only, no optimizer updates.
+# expected_initial_accuracy is null: there is no value yet, so the run records
+# the measured accuracy instead of gating on the IN1k model's 43.90%. Copy the
+# result from baseline.json into this backbone's later configs as its gate.
+# baseline_reference_split stays the original fixed holdout file.
+data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
+output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/prototype_validate_augreg_in21k"
+timm_checkpoint: "vit_base_patch16_224.augreg_in21k"
+num_classes: 10000
+image_size: 224
+mode: head
+head_type: cosine
+cosine_head_fp32: true
+train_head: true
+prototype_file: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes_augreg_in21k/class_prototypes.pt"
+evaluate_only: true
+evaluate_before_training: true
+expected_initial_accuracy: null
+initial_accuracy_tolerance: 0.001
+expected_initial_samples: 50000
+baseline_reference_split: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/splits/internal_val.txt"
+train_per_class: 5
+val_per_class: 5
+split_seed: 604
+validate: true
+batch_size: 64
+eval_batch_size: 128
+grad_accum: 1
+num_workers: 4
+epochs: 1
+lr: 0.001
+weight_decay: 0.0
+precision: bf16
+grad_checkpointing: false
+seed: 0
+synthetic: false
+resume: null

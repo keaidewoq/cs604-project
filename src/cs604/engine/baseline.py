@@ -44,8 +44,19 @@ def validate_baseline_setup(cfg: dict, output_dir: Path) -> None:
         )
 
 
+# Prototype files written before build_prototypes.py recorded its backbone.
+LEGACY_PROTOTYPE_BACKBONE = "vit_base_patch16_224.augreg2_in21k_ft_in1k"
+
+
 def check_prototype_split(cfg: dict, prototype_blob) -> None:
-    """Prototype labels must come from the same split used for evaluation."""
+    """Prototypes must come from this backbone and the split used for evaluation."""
+    if isinstance(prototype_blob, dict):
+        built_with = prototype_blob.get("timm_checkpoint", LEGACY_PROTOTYPE_BACKBONE)
+        if built_with != cfg.get("timm_checkpoint"):
+            raise ValueError(
+                f"Prototypes were built with {built_with}, not {cfg.get('timm_checkpoint')}; "
+                "build prototypes for this backbone"
+            )
     if not baseline_requested(cfg):
         return
     if not isinstance(prototype_blob, dict):

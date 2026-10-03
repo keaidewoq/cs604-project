@@ -29,6 +29,7 @@ from cs604.models.build import (
     build_from_config,
     build_vit,
     load_model_state,
+    optimizer_param_groups,
     parameter_report,
 )
 from cs604.engine.baseline import (
@@ -354,6 +355,30 @@ def evaluate(model, loader: DataLoader, device: torch.device, amp_dtype) -> dict
     }
 
 
+def train_crop_scale(cfg: dict) -> tuple[float, float] | None:
+    """RandomResizedCrop area range from ``train_crop_scale``; None keeps timm's default."""
+
+    value = cfg.get("train_crop_scale")
+    if value is None:
+        return None
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        raise ValueError(f"train_crop_scale must be [min, max], got {value!r}")
+    low, high = float(value[0]), float(value[1])
+    if not 0.0 < low <= high <= 1.0:
+        raise ValueError(f"train_crop_scale needs 0 < min <= max <= 1, got {value!r}")
+    return low, high
+
+
+def _transform_crop_scale(transform) -> list[float] | None:
+    """The RandomResizedCrop scale a built timm transform actually uses."""
+
+    for step in getattr(transform, "transforms", ()):
+        scale = getattr(step, "scale", None)
+        if scale is not None:
+            return [float(scale[0]), float(scale[1])]
+    return None
+
+
 def _check_architecture_compatibility(current: dict, saved: dict) -> None:
     if bool(current.get("cosine_head_fp32", False)) != bool(saved.get("cosine_head_fp32", False)):
         raise ValueError("Checkpoint cosine_head_fp32 does not match the current config")
@@ -414,6 +439,9 @@ def run_training(cfg: dict) -> Path:
     for key in ("hflip", "color_jitter", "auto_augment", "re_prob"):
         if key in cfg:
             train_kwargs[key] = cfg[key]
+    crop_scale = train_crop_scale(cfg)
+    if crop_scale is not None:
+        train_kwargs["scale"] = crop_scale
     train_transform = None if cfg.get("synthetic") else create_transform(
         **data_cfg, **train_kwargs
     )
@@ -422,8 +450,9 @@ def run_training(cfg: dict) -> Path:
     )
     train_dataset, val_dataset = _make_datasets(cfg, train_transform, eval_transform)
 
+    head_lr = None if cfg.get("head_lr") is None else float(cfg["head_lr"])
     optimizer = torch.optim.AdamW(
-        trainable,
+        optimizer_param_groups(model, float(cfg["lr"]), head_lr),
         lr=float(cfg["lr"]),
         weight_decay=float(cfg.get("weight_decay", 0.05)),
     )
@@ -479,6 +508,15 @@ def run_training(cfg: dict) -> Path:
         "grad_accum": grad_accum,
         "effective_batch_size": int(cfg["batch_size"]) * grad_accum,
         "evaluate_only": evaluate_only,
+        "lr": float(cfg["lr"]),
+        # null: the head (if trained) shares lr.
+        "head_lr": head_lr,
+        # Scale of the built train transform; the configured value with synthetic data.
+        "train_crop_scale": (
+            _transform_crop_scale(train_transform)
+            if train_transform is not None
+            else None if crop_scale is None else list(crop_scale)
+        ),
         **report,
     }
     budget_sec = None

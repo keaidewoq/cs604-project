@@ -240,6 +240,32 @@ def load_model_state(model: nn.Module, checkpoint: dict) -> None:
     model.load_state_dict(state, strict=False)
 
 
+def optimizer_param_groups(
+    model: nn.Module, lr: float, head_lr: float | None = None
+) -> list[dict]:
+    """AdamW parameter groups: one group at ``lr``, or backbone and head groups.
+
+    Without ``head_lr`` this is a single group of every trainable parameter, as
+    before. With it, the trainable classifier parameters (cosine weight and
+    temperature) get ``head_lr``. The backbone group stays first, so
+    ``param_groups[0]["lr"]`` is still the backbone rate in the metrics log.
+    """
+
+    trainable = [p for p in model.parameters() if p.requires_grad]
+    if head_lr is None:
+        return [{"params": trainable, "lr": lr}]
+    if head_lr <= 0:
+        raise ValueError(f"head_lr must be positive, got {head_lr}")
+    classifier_ids = {id(p) for p in _classifier(model).parameters()}
+    head = [p for p in trainable if id(p) in classifier_ids]
+    backbone = [p for p in trainable if id(p) not in classifier_ids]
+    if not head:
+        raise ValueError("head_lr is set but the classifier is frozen; set train_head: true")
+    groups = [{"params": backbone, "lr": lr}] if backbone else []
+    groups.append({"params": head, "lr": head_lr})
+    return groups
+
+
 def parameter_report(model: nn.Module) -> dict[str, float]:
     total = sum(p.numel() for p in model.parameters())
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
