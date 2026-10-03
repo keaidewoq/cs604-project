@@ -1,0 +1,4 @@
+inherits: base.yaml
+method: bitfit
+lr: 1.0e-3
+epochs: 5

@@ -1,0 +1,9 @@
+# Colab already ships a CUDA torch build; do not pin torch.
+torch
+timm
+pyyaml
+huggingface_hub
+pandas
+matplotlib
+tqdm
+pillow
