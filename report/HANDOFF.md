@@ -47,45 +47,41 @@ trainable capacity are. This matches the Prof's guidance to train the head.
    `configs/experiments/prototype_lora_r8_trainhead_screen.yaml`: the 51.094%
    screen with only `train_head: true` and `head_lr: 0.001` (the head-only
    screen's rate, 2x the LoRA `lr`). It keeps timm's crop scale.
-2. **Switch the base to ImageNet-21k-only weights** (rule 6 in `AGENTS.md`).
-   **Prepared 2026-10-03, not yet run.** Configs, run in this order per
-   variant (`orig_in21k`, `augreg_in21k`):
-   - `prototype_init_<variant>.yaml`: `prototype_init.yaml` with only
-     `timm_checkpoint` changed plus `prototype_output`
-     (`cs604-outputs/prototypes_<variant>/class_prototypes.pt`). Run with
-     `python scripts/build_prototypes.py --config configs/experiments/prototype_init_<variant>.yaml`.
-     It prints the prototype top-1 on the fixed holdout; the higher one picks
-     the variant.
-   - `prototype_validate_<variant>.yaml`: evaluate-only copy of
-     `prototype_validate_fp32_head.yaml` with that backbone and prototype file,
-     `expected_initial_accuracy: null` (records instead of gating) and the
-     original `prototypes/splits/internal_val.txt` as the holdout reference.
-     Its `baseline.json` `initial_internal_accuracy` becomes the backbone's
-     gate in later configs.
-   Code changes: `build_prototypes.py` takes its output from the config,
-   refuses to overwrite an existing build, and stores `timm_checkpoint` in the
-   prototype file. Training refuses prototypes built with another backbone;
-   files without that field count as `augreg2_in21k_ft_in1k` (all existing
-   ones). Checked with the real IN21k weights on a throwaway 3-class dataset:
-   timm loads both with only `head.weight`/`head.bias` missing (`orig_in21k`
-   ships without a head), the training path's logits equal the prototype
-   script's features, and the null gate records and passes. Same preprocessing
-   as the IN1k model (mean/std 0.5, bicubic, crop 0.9).
-   Time per variant: laptop prototype build about 1.35 h (92.6 img/s on
-   2026-09-29; up to about 4.5 h if loading is as slow as the 28 img/s seen on
-   2026-10-03), evaluate-only 6–30 min. Colab: about 5 min (RTX PRO 6000) to
-   9 min (A100) per build and under 1 min per evaluation, but staging the data
-   takes 20–40 min per runtime. The laptop is cheaper for these.
-   **Colab caveat:** the notebook's training cell passes
-   `--prototype-file /content/cs604-inputs/class_prototypes.pt` (the IN1k file)
-   to every prototype config, and has no `build_prototypes.py` cell. IN21k
-   runs on Colab therefore fail the backbone check until the notebook copies
-   and selects per-backbone prototype files.
-3. Trained-head screen on the chosen IN21k backbone: a copy of
-   `prototype_lora_r8_trainhead_screen.yaml` with only `timm_checkpoint`,
-   `prototype_file` and `expected_initial_accuracy` changed. 10 images/class.
-   Compare with the IN1k trained-head screen below and the 51.094% frozen-head
-   screen.
+2. **Done 2026-10-03: base model is `vit_base_patch16_224.augreg_in21k`**
+   (rule 6 in `AGENTS.md`). Laptop runs at commit `84b7902`, on the fixed
+   holdout (split file byte-identical to the original):
+
+   | Backbone | Prototype top-1 | Evaluate-only gate | Loss at scale 20 |
+   | --- | --- | --- | --- |
+   | `augreg2_in21k_ft_in1k` (previous) | 43.900% | 43.900% | — |
+   | `orig_in21k` | 41.816% | 41.816% | 3.045 |
+   | `augreg_in21k` | **50.014%** | **50.014%** | 4.227 |
+
+   - Prototypes: `cs604-outputs/prototypes_augreg_in21k/class_prototypes.pt`
+     (and `prototypes_orig_in21k/`). Gate: `expected_initial_accuracy: 0.50014`,
+     from `cs604-outputs/prototype_validate_augreg_in21k/baseline.json`.
+   - The training path reproduced each prototype score exactly.
+   - `augreg_in21k`'s higher loss at the fixed scale 20 despite higher accuracy
+     suggests it needs a larger cosine temperature; the trained head learns it.
+   - Configs: `prototype_init_<variant>.yaml` (run with
+     `python scripts/build_prototypes.py --config ...`) and
+     `prototype_validate_<variant>.yaml` (`expected_initial_accuracy: null`).
+     `build_prototypes.py` refuses to overwrite and stores `timm_checkpoint`;
+     training rejects prototypes built with another backbone (files without
+     the field count as `augreg2_in21k_ft_in1k`).
+   - Laptop times: builds 48–62 min (120–156 img/s), evaluate-only 5 min each.
+   - **Colab caveat:** the notebook's training cell passes
+     `--prototype-file /content/cs604-inputs/class_prototypes.pt` (the IN1k
+     file) to every prototype config. `augreg_in21k` runs on Colab fail the
+     backbone check until the notebook copies the `augreg_in21k` prototype file
+     to Drive inputs (with its hash) and selects it per config.
+3. **Next (config ready, not yet run):** trained-head screen on
+   `augreg_in21k`, `configs/experiments/prototype_lora_r8_trainhead_augreg_in21k_screen.yaml`:
+   a copy of `prototype_lora_r8_trainhead_screen.yaml` with only
+   `timm_checkpoint`, `prototype_file` (`prototypes_augreg_in21k/class_prototypes.pt`),
+   `expected_initial_accuracy: 0.50014` and `output_dir` changed.
+   10 images/class, laptop about 2 hours. Compare with the IN1k trained-head screen below and the 51.094%
+   frozen-head screen.
    - The prepared IN1k trained-head screen
      (`prototype_lora_r8_trainhead_screen.yaml`, step zero 43.90%) is now the
      IN1k-vs-IN21k ablation. It can run on the laptop (about 2 hours) while

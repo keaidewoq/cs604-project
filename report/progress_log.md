@@ -2,6 +2,32 @@
 
 Newest session at the top. Each entry records what ran, which files went in and out, the result, and the decision. Training numbers still live in each output folder's `run.json`, `metrics.csv`, and `config.json`.
 
+## 2026-10-03 — ImageNet-21k base model chosen: augreg_in21k
+
+**Code and configs (commit `84b7902`):** `head_lr`, `train_crop_scale`, the
+IN1k trained-head screen config, and prototype/evaluate-only configs for both
+IN21k ViT-B/16 variants. `build_prototypes.py` stores its backbone and refuses
+to overwrite; training rejects prototypes from another backbone.
+
+**Runs (laptop, RTX 5080, commit `84b7902`; `git_dirty` only from the
+uncommitted notebook):** 40-image prototypes per class, scored on the fixed
+50,000-image holdout (split file byte-identical to `prototypes/splits/internal_val.txt`).
+
+| Backbone | Prototype top-1 | Evaluate-only gate | Holdout loss at scale 20 | Build time |
+| --- | --- | --- | --- | --- |
+| `augreg2_in21k_ft_in1k` (previous) | 43.900% | 43.900% | — | 81 min |
+| `orig_in21k` | 41.816% | 41.816% | 3.045 | 62 min |
+| `augreg_in21k` | **50.014%** | **50.014%** | 4.227 | 48 min |
+
+Outputs: `cs604-outputs\prototypes_<variant>\class_prototypes.{pt,json}` and
+`cs604-outputs\prototype_validate_<variant>\` (`baseline.json`, `run.json`).
+
+**Decision:** `vit_base_patch16_224.augreg_in21k` is the base model (rule 6),
+with `expected_initial_accuracy: 0.50014`. Its prototypes alone are 1.08 points
+below the 51.094% frozen-head LoRA screen. Its higher loss at the fixed scale 20
+despite higher accuracy suggests it needs a larger cosine temperature, which the
+trained head can learn. Next: the trained-head screen on `augreg_in21k`.
+
 ## 2026-10-03 — Full-budget frozen-head run, diagnosis, and new course rules
 
 **Code (2026-10-02, commits `c5ac31d`, `8cb4732`):** `budget_48gb_hours` fits the
