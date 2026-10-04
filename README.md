@@ -2,7 +2,7 @@
 
 Fine-grained multi-class classification (10,000 classes) with a ViT-B-sized vision transformer (currently ViT-B/16). The course asks for full fine-tuning and a parameter-efficient adaptation method under a 2-hour × 48 GB VRAM training budget.
 
-**Course rules confirmed 2026-10-03** (details in `AGENTS.md`): the classifier head is always trained and is not counted in the 5% limit; any comparable-size ViT may be the backbone; no checkpoints trained on iNaturalist 2021 or TreeOfLife-10M. Current status: `report/HANDOFF.md`.
+**Course rules confirmed 2026-10-03** (details in `AGENTS.md`): the classifier head is always trained and is not counted in the 5% limit; any comparable-size ViT may be the backbone; no checkpoints trained on iNaturalist 2021 or TreeOfLife-10M. Results so far: `report/EXPERIMENTS.md`.
 
 ## Setup
 
@@ -93,9 +93,9 @@ One line per image, `image_path class_id`, with `class_id` in `[0, 9999]`. Name 
 **Step-by-step runbook:** [`WORKFLOW.md`](WORKFLOW.md) covers the virtualenv, local screens,
 Colab runs, syncing from Drive, prediction, and recording CodaBench results.
 
-For the current prototype-validation implementation and exact next-run
-commands, read [`report/HANDOFF.md`](report/HANDOFF.md). This is the shared
-handoff for coding agents; use one agent and one GPU job at a time.
+Results and decisions are recorded in [`report/EXPERIMENTS.md`](report/EXPERIMENTS.md)
+and [`report/progress_log.md`](report/progress_log.md), with one row per run in
+`report/experiment_index.csv`. Use one agent and one GPU job at a time.
 
 Use one YAML file per experiment under `configs/experiments/`. Every run saves
 its resolved config, Git commit, hardware, parameter counts, timing, metrics,

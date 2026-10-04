@@ -93,7 +93,7 @@ because the laptop evaluated at about 28 images/s.
 is not counted in the 5% limit; any comparable-size ViT may be the backbone.
 Recorded in `AGENTS.md` ("Course rules"). Earlier frozen-head runs become an
 ablation. Next: `head_lr` support and a trained-head screen, then a prototype
-screen of candidate backbones (`report/HANDOFF.md`, `report/INAT2021_STRATEGY.md`).
+screen of candidate backbones.
 
 ## 2026-10-01 — Colab data staging debugged; 40-image LoRA run started
 

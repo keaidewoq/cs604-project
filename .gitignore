@@ -37,3 +37,8 @@ CLAUDE.local.md
 *.npz
 *.tar.gz
 *.zip
+
+# Personal planning notes kept beside the shared records in report/
+report/HANDOFF.md
+report/INAT2021_STRATEGY.md
+report/COLAB_R8_40_PLAN.md

@@ -153,7 +153,7 @@ partway through.
   Total parameters: 93,773,569; trainable LoRA: 294,912 (0.3145%); trainable classifier: 0.
   NVIDIA A100-SXM4-80GB (79.25 GiB); peak allocated 2.0887 GiB; elapsed 4144.71 s, GPU-hours 1.1513, normalized 48-GiB hours 1.9009; `stopped_by_budget: true`. Training about 740 images/s, holdout evaluation about 910 images/s; the 8 holdout evaluations used about 11% of the budget. Source: that run's `run.json` and `metrics.csv`.
   Diagnosis (evaluation-only, `analysis/diagnose_best.json` in the run folder): 61.55% top-1 on a 2-per-class sample of its own training images (underfitting); cross-entropy lowest near cosine scale 40 versus the frozen 20; mean cosine to the true prototype 0.58.
-  Conclusion: training length is not the bottleneck for the frozen-head setup. Next: train the head (now required), then screen backbones. See `report/HANDOFF.md`.
+  Conclusion: training length is not the bottleneck for the frozen-head setup. Next: train the head (now required), then screen backbones.
 
 - Prototype LoRA rank-8 screen, 2026-09-30: internal top-1 **51.094%** (25,547 / 50,000) after two epochs, up from a remeasured start of **43.900%** (21,950 / 50,000). Gain versus the 43.90% prototype baseline: **+7.194 percentage points** (3,597 images). Epoch 1 was 50.508% (25,254 / 50,000); epoch 2 added 0.586 points. No public score.
   Config: `configs/experiments/prototype_lora_r8_fp32_screen.yaml`. Recorded commit: `910b2ff4d3cfcf89485243550fd429277d50aa95` on `prototype-baseline` (`git_dirty: true` because this config was uncommitted during the run).
@@ -199,8 +199,7 @@ partway through.
 
 ## Experiment direction updated 2026-10-02
 
-See [the iNaturalist 2021 strategy](INAT2021_STRATEGY.md) for dataset research,
-verified newer run evidence, and the ordered experiment plan. The current saved
+The course data appears to be iNaturalist 2021 "train_mini". The current saved
 reference is **51.826% internal top-1** from
 `cs604-outputs/prototype_lora_r8_fp32_40/run.json`; its prediction audit identifies
 the same selected checkpoint. This is not a recorded public leaderboard score.

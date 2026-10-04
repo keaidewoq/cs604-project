@@ -24,7 +24,7 @@ These override anything older in `report/`, `README.md`, or `.cursor/plans/`.
    (ConvNeXt, Swin).
 4. **No checkpoints trained or fine-tuned on iNaturalist 2021 or TreeOfLife-10M**
    (for example BioCLIP, iNat-finetuned timm weights). The course data appears to
-   be iNat2021 "train_mini" (see `report/INAT2021_STRATEGY.md`), so its test
+   be iNat2021 "train_mini", so its test
    images may be in their training data. Check each model's pretraining data
    and record it in the report.
 5. Earlier frozen-head results (43.90% prototypes, 51.094% screen, 51.826% and
@@ -42,8 +42,9 @@ These override anything older in `report/`, `README.md`, or `.cursor/plans/`.
    needs its own prototype file and its own measured `expected_initial_accuracy`
    (from an evaluate-only run). Never pair prototypes with a different backbone.
 
-Current status and the next experiments are in `report/HANDOFF.md`; the
-experiment order is in `report/INAT2021_STRATEGY.md`.
+Results are in `report/EXPERIMENTS.md` and `report/progress_log.md`. If they
+exist locally (they are gitignored), `report/HANDOFF.md` holds the current
+status and next experiments, and `report/INAT2021_STRATEGY.md` the experiment order.
 
 ## Paths
 
