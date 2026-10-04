@@ -10,6 +10,7 @@ batch_size: 64
 grad_accum_steps: 1
 epochs: 3
 lr: 1.0e-4
+# head_lr: 1.0e-3   # if set, classifier uses this; backbone keeps `lr` (Qian FT)
 weight_decay: 0.05
 warmup: 1.0          # warmup epochs (can be fractional)
 bf16: true

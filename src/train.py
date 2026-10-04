@@ -41,19 +41,36 @@ def parse_args():
     return p.parse_args()
 
 
-def adamw_param_groups(model, weight_decay):
+def _split_decay(params, weight_decay, lr):
     decay, no_decay = [], []
-    for param in model.parameters():
+    for param in params:
         if not param.requires_grad:
             continue
         if param.ndim < 2:
             no_decay.append(param)
         else:
             decay.append(param)
-    return [
-        {"params": decay, "weight_decay": weight_decay},
-        {"params": no_decay, "weight_decay": 0.0},
-    ]
+    groups = []
+    if decay:
+        groups.append({"params": decay, "lr": lr, "weight_decay": weight_decay})
+    if no_decay:
+        groups.append({"params": no_decay, "lr": lr, "weight_decay": 0.0})
+    return groups
+
+
+def adamw_param_groups(model, weight_decay, lr, head_lr=None):
+    """One lr for everything, or backbone `lr` + classifier `head_lr` (Qian's FT)."""
+    if head_lr is None:
+        return _split_decay(model.parameters(), weight_decay, lr)
+    head_ids = {id(p) for p in model.get_classifier().parameters()}
+    backbone = [p for p in model.parameters() if id(p) not in head_ids]
+    head = [p for p in model.parameters() if id(p) in head_ids]
+    groups = _split_decay(backbone, weight_decay, lr)
+    groups.extend(_split_decay(head, weight_decay, float(head_lr)))
+    if not groups:
+        raise ValueError("No trainable parameters")
+    print(f"[optim] backbone lr={lr}  head_lr={head_lr}")
+    return groups
 
 
 def build_scheduler(optimizer, warmup_steps, total_steps):
@@ -129,7 +146,9 @@ def train(cfg):
     load_prototypes(cfg, model)
     loss_fn = build_loss(cfg)
 
-    groups = adamw_param_groups(model, float(cfg.weight_decay))
+    groups = adamw_param_groups(
+        model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get("head_lr")
+    )
     optimizer = AdamW(groups, lr=float(cfg.lr))
 
     accum = max(int(cfg.grad_accum_steps), 1)
