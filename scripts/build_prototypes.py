@@ -91,16 +91,17 @@ def main() -> None:
             "Refusing to overwrite an existing prototype build: "
             + ", ".join(str(path) for path in existing)
         )
-    from cs604.models.build import build_vit
+    from cs604.models.build import build_vit, model_data_config
 
     model = build_vit(
         checkpoint=cfg["timm_checkpoint"],
         num_classes=int(cfg["num_classes"]),
         mode="head",
+        image_size=None if cfg.get("image_size") is None else int(cfg["image_size"]),
     ).cuda().eval()
-    from timm.data import create_transform, resolve_model_data_config
+    from timm.data import create_transform
 
-    transform = create_transform(**resolve_model_data_config(model), is_training=False)
+    transform = create_transform(**model_data_config(model), is_training=False)
     samples = load_split_index(Path(cfg["data_root"]) / "train.txt")
     per_class = args.per_class if args.per_class is not None else cfg.get("prototype_per_class")
     train_samples, val_samples = stratified_split(

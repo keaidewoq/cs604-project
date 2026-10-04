@@ -60,10 +60,12 @@ def predict_split(
     load_model_state(model, checkpoint)
     model.cuda().eval()
 
-    from timm.data import create_transform, resolve_model_data_config
+    from timm.data import create_transform
+
+    from cs604.models.build import model_data_config
 
     transform = create_transform(
-        **resolve_model_data_config(model), is_training=False
+        **model_data_config(model), is_training=False
     )
     dataset = CS604ImageDataset(data_root, split, transform=transform)
     loader = DataLoader(

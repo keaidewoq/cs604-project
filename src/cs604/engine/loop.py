@@ -29,6 +29,7 @@ from cs604.models.build import (
     build_from_config,
     build_vit,
     load_model_state,
+    model_data_config,
     optimizer_param_groups,
     parameter_report,
 )
@@ -432,9 +433,9 @@ def run_training(cfg: dict) -> Path:
     if not trainable:
         raise ValueError("The selected mode has no trainable parameters")
 
-    from timm.data import create_transform, resolve_model_data_config
+    from timm.data import create_transform
 
-    data_cfg = resolve_model_data_config(model)
+    data_cfg = model_data_config(model)
     train_kwargs = {"is_training": True}
     for key in ("hflip", "color_jitter", "auto_augment", "re_prob"):
         if key in cfg:

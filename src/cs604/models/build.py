@@ -1,4 +1,4 @@
-"""Build ViT-B/16 variants used by the CS604 experiments."""
+"""Build the ViT-B variants (timm VisionTransformer) used by the CS604 experiments."""
 
 from __future__ import annotations
 
@@ -89,8 +89,11 @@ def build_vit(
     lora_alpha: float = 16.0,
     lora_dropout: float = 0.0,
     cosine_head_fp32: bool = False,
+    image_size: int | None = None,
 ) -> nn.Module:
-    model = timm.create_model(checkpoint, pretrained=True, num_classes=num_classes)
+    # image_size resizes the position embeddings, e.g. DINOv2 (default 518) to 224.
+    size_kwargs = {} if image_size is None else {"img_size": int(image_size)}
+    model = timm.create_model(checkpoint, pretrained=True, num_classes=num_classes, **size_kwargs)
     if head_type == "cosine":
         old_head = _classifier(model)
         if not isinstance(old_head, nn.Linear):
@@ -161,7 +164,24 @@ def build_from_config(cfg: dict) -> nn.Module:
         lora_alpha=float(cfg.get("lora_alpha", 16.0)),
         lora_dropout=float(cfg.get("lora_dropout", 0.0)),
         cosine_head_fp32=bool(cfg.get("cosine_head_fp32", False)),
+        image_size=None if cfg.get("image_size") is None else int(cfg["image_size"]),
     )
+
+
+def model_data_config(model: nn.Module) -> dict:
+    """timm's preprocessing for ``model``, at the input size it was built for.
+
+    timm keeps the checkpoint's default input size in the data config even when
+    ``img_size`` changed it (DINOv2: 518), so take the size from the patch embedding.
+    """
+
+    from timm.data import resolve_model_data_config
+
+    config = resolve_model_data_config(model)
+    img_size = getattr(getattr(model, "patch_embed", None), "img_size", None)
+    if img_size is not None:
+        config["input_size"] = (config["input_size"][0], *img_size)
+    return config
 
 
 def use_compact_checkpoints(cfg: dict) -> bool:

@@ -44,10 +44,12 @@ def main() -> None:
     if len({int(cfg["num_classes"]) for cfg in configs}) != 1:
         raise ValueError("All checkpoints must have the same class count")
 
-    from timm.data import create_transform, resolve_model_data_config
+    from timm.data import create_transform
+
+    from cs604.models.build import model_data_config
 
     transform = create_transform(
-        **resolve_model_data_config(models[0]), is_training=False
+        **model_data_config(models[0]), is_training=False
     )
     dataset = CS604ImageDataset(args.data_root, args.split, transform=transform)
     loader = DataLoader(

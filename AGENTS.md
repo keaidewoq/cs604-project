@@ -93,12 +93,18 @@ the same warmup/cosine schedule; unset, the head shares `lr`.
 `train_crop_scale: [min, max]` sets the RandomResizedCrop area range for
 training; unset, timm's default `[0.08, 1.0]` applies. `run.json` records `lr`,
 `head_lr`, and the `train_crop_scale` the train transform actually used.
+`image_size` is passed to timm as `img_size`, which resizes the position
+embeddings; the transforms follow the built model (`model_data_config`), with
+the checkpoint's own mean/std and crop. Any timm `VisionTransformer` with a
+`qkv` Linear works, e.g. DINOv2 `vit_base_patch14_dinov2.lvd142m` at
+`image_size: 224` (default 518; at 224 it has 256 patches versus 196 for
+ViT-B/16, about 30% more compute per image).
 
 Not implemented yet (needed by the next experiments): a learnable cosine
-temperature while the head is frozen, a configurable eval crop, configurable
-input resolution, and backbones other than timm `vit_base_patch16_*`. Until a
-feature exists, do not put its key in a config: unknown keys are silently
-ignored.
+temperature while the head is frozen, a configurable eval crop, and timm model
+classes other than `VisionTransformer` (EVA-02 uses `Eva`; CLIP/SigLIP image
+towers are untested). Until a feature exists, do
+not put its key in a config: unknown keys are silently ignored.
 
 ## Verify
 

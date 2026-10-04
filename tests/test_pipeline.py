@@ -183,6 +183,50 @@ class HeadLearningRateTests(unittest.TestCase):
             optimizer_param_groups(self._build(train_head=True), 5e-4, head_lr=0.0)
 
 
+class ImageSizeTests(unittest.TestCase):
+    @staticmethod
+    def _offline(name, _create=__import__("timm").create_model, **kwargs):
+        kwargs["pretrained"] = False  # architecture only; no download
+        return _create(name, **kwargs)
+
+    def test_image_size_reaches_timm_only_when_set(self) -> None:
+        from unittest.mock import patch
+
+        from cs604.models.build import build_from_config
+
+        cfg = {**CompactCheckpointTests.CFG, "image_size": 224}
+        with patch("cs604.models.build.timm.create_model",
+                   side_effect=lambda *args, **kwargs: TinyViT(0)) as create:
+            build_from_config(cfg)
+            self.assertEqual(create.call_args.kwargs["img_size"], 224)
+            build_from_config(CompactCheckpointTests.CFG)
+            self.assertNotIn("img_size", create.call_args.kwargs)
+
+    def test_dinov2_at_224_gets_a_224_transform(self) -> None:
+        from unittest.mock import patch
+
+        from cs604.models.build import build_from_config, model_data_config
+
+        cfg = {"timm_checkpoint": "vit_base_patch14_dinov2.lvd142m", "num_classes": 10,
+               "mode": "lora", "head_type": "cosine", "train_head": True, "image_size": 224}
+        with patch("cs604.models.build.timm.create_model", side_effect=self._offline):
+            model = build_from_config(cfg)
+        self.assertEqual(tuple(model.pos_embed.shape), (1, 257, 768))  # 16x16 patches + CLS
+        config = model_data_config(model)
+        self.assertEqual(config["input_size"], (3, 224, 224))
+        self.assertEqual(config["mean"], (0.485, 0.456, 0.406))  # its own preprocessing
+        with torch.inference_mode():
+            self.assertEqual(tuple(model(torch.zeros(1, 3, 224, 224)).shape), (1, 10))
+
+    def test_vit_b16_data_config_is_unchanged(self) -> None:
+        from timm.data import resolve_model_data_config
+
+        from cs604.models.build import model_data_config
+
+        model = self._offline("vit_base_patch16_224.augreg_in21k", num_classes=10)
+        self.assertEqual(model_data_config(model), resolve_model_data_config(model))
+
+
 class TrainCropScaleTests(unittest.TestCase):
     def test_unset_keeps_timm_default(self) -> None:
         from timm.data import create_transform
