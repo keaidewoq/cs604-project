@@ -25,4 +25,8 @@ def build_peft(model, cfg):
         from .adaptformer import apply_adaptformer
 
         return apply_adaptformer(model, cfg)
+    if method == "last_blocks":
+        from .last_blocks import apply_last_blocks
+
+        return apply_last_blocks(model, cfg)
     raise ValueError(f"Unknown PEFT method: {method!r}")

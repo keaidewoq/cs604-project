@@ -1,6 +1,8 @@
 # CS604 course project
 
-10,000-class image classification by fine-tuning ViT-B/16. The skeleton compares full fine-tuning against parameter-efficient methods (LoRA, BitFit; Adapter and AdaptFormer are stubs).
+10,000-class image classification by fine-tuning ViT-B/16. One trainer (`python -m src.train`) plus YAML configs. Adapter and AdaptFormer are still stubs.
+
+The `van` branch's extra experiment lab was **not** git-merged (it is a second framework). What we kept from it: **prototype / cosine head**, **last-N-block tuning**, and a **shared run log** under `report/`.
 
 Default backbone: `vit_base_patch16_224.augreg2_in21k_ft_in1k` (timm). Change `model_name` in `configs/base.yaml` to try the ImageNet-21k-only variant, e.g. `vit_base_patch16_224.augreg_in21k`.
 
@@ -8,10 +10,11 @@ Default backbone: `vit_base_patch16_224.augreg2_in21k_ft_in1k` (timm). Change `m
 
 ```text
 configs/    base.yaml + one file per method / ablation
-src/        data, model, losses, train, predict, utils
-src/peft/   lora, bitfit (implemented); adapter, adaptformer (stubs)
-scripts/    download_data.py, benchmark_latency.py, plot_curves.py
+src/        data, model, heads, losses, train, predict, utils
+src/peft/   lora, bitfit, last_blocks; adapter / adaptformer stubs
+scripts/    download_data.py, build_prototypes.py, benchmark_latency.py, plot_curves.py
 notebooks/  colab_launcher.ipynb
+report/     progress_log.md + experiment_index.csv (team log)
 outputs/    run dirs (gitignored)
 figures/    plots
 ```
@@ -25,7 +28,8 @@ From the repo root, the same commands are:
 
 ```bash
 python scripts/download_data.py --dest /content/data
-python -m src.train --config configs/lora_r8.yaml --data_root /content/data --output_dir /content/drive/MyDrive/cs604-runs
+python scripts/build_prototypes.py --config configs/prototype_probe.yaml --output /content/drive/MyDrive/CS604_RUNS/prototypes.pt
+python -m src.train --config configs/prototype_lora_r8.yaml --data_root /content/data --output_dir /content/drive/MyDrive/CS604_RUNS
 python -m src.predict --config configs/lora_r8.yaml --ckpt /path/to/best.pt --split val --team xx
 python scripts/plot_curves.py --run_dir outputs/lora_YYYYMMDD_HHMMSS
 python scripts/benchmark_latency.py --config configs/lora_r8.yaml
@@ -64,7 +68,9 @@ Shared defaults live in `configs/base.yaml`. A method file only lists what it **
 | `adapter_dim` | Bottleneck width | — | | | | | `64` | `64` |
 | `adaptformer_scale` | Parallel FFN scale `s` | — | | | | | | `0.1` |
 
-On Colab, `colab_launcher.ipynb` also prints the **resolved** config for your chosen `METHOD` as a table before training.
+Extra knobs (from Van): `head_type` (`linear`/`cosine`), `head_init` (`random`/`prototype`), `prototype_file`, `last_n_blocks`, `evaluate_before_training`.
+
+On Colab, `colab_launcher.ipynb` also prints the **resolved** config for your chosen `METHOD` as a table before training. After a run, add a line to `report/experiment_index.csv` and a note in `report/progress_log.md`.
 
 ## Add a method or an ablation
 

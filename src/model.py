@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import timm
 
+from src.heads import replace_head
 from src.peft import build_peft
 from src.utils import PEFT_METHODS
 
@@ -43,4 +44,5 @@ def build_model(cfg):
         num_classes=int(cfg.num_classes),
         img_size=int(cfg.img_size),
     )
+    replace_head(model, cfg)
     return apply_method(model, cfg)

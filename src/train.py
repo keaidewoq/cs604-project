@@ -14,6 +14,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from tqdm import tqdm
 
 from src.data import build_dataloaders
+from src.heads import load_prototypes
 from src.losses import build_loss
 from src.model import build_model
 from src.utils import (
@@ -125,6 +126,7 @@ def train(cfg):
 
     loaders = build_dataloaders(cfg)
     model = build_model(cfg).to(device)
+    load_prototypes(cfg, model)
     loss_fn = build_loss(cfg)
 
     groups = adamw_param_groups(model, float(cfg.weight_decay))
@@ -139,6 +141,23 @@ def train(cfg):
     log_run_stats("start", model, timer, vram)
     vram.reset()
 
+    has_val = bool(loaders["val"] is not None and loaders["has_val_labels"])
+    use_bf16 = bool(cfg.bf16)
+    if has_val and bool(cfg.get("evaluate_before_training", False)):
+        before = evaluate(model, loaders["val"], loss_fn, device, use_bf16)
+        print(
+            f"[before train] val_loss={before['val_loss']:.4f} val_acc={before['val_acc']:.4f} "
+            "(prototype / random head, no updates yet)"
+        )
+        if bool(cfg.get("evaluate_only", False)):
+            save_checkpoint(run_dir / "last.pt", model, cfg, 0, before)
+            stats = log_run_stats("end", model, timer, vram)
+            with (run_dir / "run_stats.txt").open("w", encoding="utf-8") as f:
+                for k, v in stats.items():
+                    f.write(f"{k}={v}\n")
+            print(f"[train] evaluate_only done. {run_dir}")
+            return run_dir
+
     step_path = run_dir / "step_log.csv"
     epoch_path = run_dir / "epoch_log.csv"
     step_f = step_path.open("w", newline="", encoding="utf-8")
@@ -152,8 +171,6 @@ def train(cfg):
 
     best_acc = -1.0
     global_step = 0
-    use_bf16 = bool(cfg.bf16)
-    has_val = bool(loaders["val"] is not None and loaders["has_val_labels"])
 
     try:
         for epoch in range(1, int(cfg.epochs) + 1):

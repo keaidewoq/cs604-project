@@ -18,3 +18,7 @@ seed: 42
 output_dir: outputs
 label_smoothing: 0.0
 method: full_ft
+head_type: linear          # linear | cosine (cosine pairs with prototype init)
+head_init: random          # random | prototype
+# prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes.pt
+
