@@ -1,5 +1,5 @@
-# Trained-head screen on the chosen base model, vit_base_patch16_224.augreg_in21k
-# (AGENTS.md rule 6; prototypes 50.014% vs 43.90% for the IN1k fine-tune).
+# Trained-head screen on the best ImageNet-21k ViT-B/16, vit_base_patch16_224.augreg_in21k
+# (AGENTS.md rule 6; prototypes 50.014% vs 43.90% IN1k; base model not locked, see report/EXPERIMENTS.md).
 # Copy of prototype_lora_r8_trainhead_screen.yaml (the IN1k trained-head screen)
 # with only timm_checkpoint, prototype_file, expected_initial_accuracy and
 # output_dir changed. Rank-8 qkv LoRA plus the prototype-initialized cosine head,

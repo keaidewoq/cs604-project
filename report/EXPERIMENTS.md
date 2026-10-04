@@ -23,6 +23,127 @@ setup and form the frozen-head ablation. For new entries, give the backbone
 name and pretraining data, and trainable parameters both without the head
 (course number) and with it.
 
+## Base-model screen: class-prototype accuracy (2026-10-03 to 2026-10-04)
+
+**Purpose.** Choose the pretrained backbone before any adaptation. The Prof
+asked us to start from the ImageNet-21k-only ViT-B/16 (`AGENTS.md`, rule 6) and
+allows any vision transformer of comparable size (rule 3). We compared the two
+ImageNet-21k ViT-B/16 releases, the IN21k→IN1k fine-tune used until now, and
+DINOv2 ViT-B/14, with no training at all: each model's frozen features, a
+cosine classifier built from class prototypes, and the same fixed holdout.
+
+**Protocol (identical for every model).**
+
+- Data: the course training set (450,000 labelled images, 45 per class,
+  10,000 classes). The fixed internal holdout is 5 images per class (50,000
+  images, `split_seed: 604`), the same file for every model (SHA-256
+  `19a10c37a775559f4eee516215ad10c4b906ee50d66f7cbd95bc5ec88f2f2f69`).
+- Prototypes: the remaining 40 images per class (400,000 images) go through the
+  frozen backbone once with the model's own evaluation transform. Each class
+  prototype is the mean of its 40 L2-normalized features (the pre-logits CLS
+  token), normalized again. Built by `scripts/build_prototypes.py`.
+- Scoring: each holdout image goes to the class with the highest cosine
+  similarity to its feature; top-1 accuracy over 50,000 images.
+- Confirmation: an evaluation-only run of the training code
+  (`scripts/train.py`, `evaluate_only: true`) loads the prototypes into the
+  cosine head and re-scores the holdout (bf16 backbone, float32 class scores).
+  Its accuracy must match the prototype script's; it becomes the step-zero gate
+  (`expected_initial_accuracy`) for training runs on that backbone.
+- No optimizer updates. The prototypes use training labels, so this is
+  supervised nearest-class-mean classification, not zero-shot.
+- Hardware: RTX 5080 Laptop GPU, bf16 autocast for the backbone.
+
+**Table 1. Candidate backbones.** Parameters exclude the classifier. GMACs are
+multiply-accumulates per image at the evaluated input size, measured with
+`torch.utils.flop_counter`.
+
+| timm checkpoint | Pretraining data | Pretraining method | Params | Patch | Input | Patches | GMACs |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `vit_base_patch16_224.orig_in21k` | ImageNet-21k (about 14M images, 21,843 classes) | Supervised, original ViT recipe (Dosovitskiy et al., 2021). The course PDF's `vit-base-patch16-224-in21k` | 85.80M | 16 | 224 | 196 | 16.85 |
+| `vit_base_patch16_224.augreg_in21k` | ImageNet-21k | Supervised, AugReg recipe with stronger augmentation and regularization (Steiner et al., 2022) | 85.80M | 16 | 224 | 196 | 16.85 |
+| `vit_base_patch16_224.augreg2_in21k_ft_in1k` | ImageNet-21k, then ImageNet-1k | `augreg_in21k` fine-tuned on ImageNet-1k (timm "augreg2") | 85.80M | 16 | 224 | 196 | 16.85 |
+| `vit_base_patch14_dinov2.lvd142m` | LVD-142M (142M images retrieved from about 1.2B web images) | Self-supervised (Oquab et al., 2024); ViT-B distilled from DINOv2 ViT-g/14 (1.1B parameters) | 85.72M | 14 | 224 | 256 | 21.94 |
+
+Evaluation transforms (each model's timm default): the three ViT-B/16 models
+resize the short side to 248 and center-crop 224 (`crop_pct` 0.9), mean/std
+0.5; DINOv2 resizes to 224 and center-crops 224 (`crop_pct` 1.0), ImageNet
+mean/std. All use bicubic resizing. DINOv2's default input is 518 (1,369
+patches, 116.98 GMACs, 6.9× the ViT-B/16 cost); it was run at 224 by resizing
+its position embeddings (`image_size: 224`).
+
+**Table 2. Results on the fixed 50,000-image holdout.** 95% intervals are
+binomial (±1.96 standard errors). Differences between models are paired on the
+same images, so the intervals overstate the uncertainty of a difference.
+
+| Backbone | Prototype top-1 | Correct / 50,000 | 95% interval | vs IN1k fine-tune | Evaluation-only gate | Holdout loss at scale 20 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `orig_in21k` | 41.816% | 20,908 | 41.38–42.25% | −2.084 | 41.816% | 3.045 |
+| `augreg2_in21k_ft_in1k` (previous base) | 43.900% | 21,950 | 43.47–44.33% | — | 43.900% | 3.501 |
+| `augreg_in21k` | 50.014% | 25,007 | 49.58–50.45% | +6.114 | 50.014% | 4.227 |
+| **`dinov2` ViT-B/14 @ 224** | **53.758%** | **26,879** | 53.32–54.20% | **+9.858** | 53.758% | **2.602** |
+
+- The training code's evaluation-only run reproduced every prototype score
+  exactly (float32 class scores), so each backbone's step-zero gate equals its
+  prototype accuracy.
+- DINOv2 leads `augreg_in21k` by 3.744 points (1,872 images); `augreg_in21k`
+  leads `orig_in21k` by 8.198 points. Both gaps are far larger than the
+  intervals.
+- The loss is cross-entropy with the cosine scale fixed at 20, reported only as
+  a calibration hint: `augreg_in21k` has the highest loss despite its accuracy,
+  so its features need a larger temperature. Training the head (and its
+  temperature) addresses this.
+- For reference, the previous best trained result, frozen-head rank-8 LoRA on
+  the IN1k fine-tune after 6,250 updates (`prototype_lora_r8_fp32_screen`), was
+  51.094%. DINOv2's prototypes alone exceed it.
+
+**Table 3. Pretraining-data check (rule 4: no checkpoints trained on
+iNaturalist 2021 or TreeOfLife-10M).**
+
+| Backbone | iNaturalist or TreeOfLife in pretraining? | Source |
+| --- | --- | --- |
+| `orig_in21k`, `augreg_in21k` | No. ImageNet-21k only | timm model cards; ViT and AugReg papers |
+| `augreg2_in21k_ft_in1k` | No. ImageNet-21k and ImageNet-1k | timm model card |
+| `dinov2` | No iNaturalist dataset among LVD-142M's curation sources (ImageNet-22k, ImageNet-1k, Google Landmarks v2, fine-grained sets such as CUB-200, Flowers-102, Stanford Cars, and segmentation/depth/retrieval sets). iNaturalist 2018 and 2021 are marked as not used "as is" for pretraining, not used for retrieving pretraining data, and used for evaluation only. Because LVD-142M was retrieved from a pool of 1.2B web images, web copies of iNaturalist photos cannot be ruled out | DINOv2 paper, Tables 15 and 18 |
+
+**Table 4. Provenance.** All prototype builds wrote exactly 40 images per class
+and the holdout file above.
+
+| Backbone | Prototype config | Prototype file (SHA-256, first 12) | Evaluation-only run | Commit |
+| --- | --- | --- | --- | --- |
+| `augreg2_in21k_ft_in1k` | `prototype_init.yaml` | `prototypes/class_prototypes.pt` (`c4c90ef9443c`) | `prototype-validate-fp32-head` | `010cf39` |
+| `orig_in21k` | `prototype_init_orig_in21k.yaml` | `prototypes_orig_in21k/class_prototypes.pt` (`10238462a01e`) | `prototype_validate_orig_in21k` | `84b7902` |
+| `augreg_in21k` | `prototype_init_augreg_in21k.yaml` | `prototypes_augreg_in21k/class_prototypes.pt` (`744ac61f816c`) | `prototype_validate_augreg_in21k` | `84b7902` |
+| `dinov2` | `prototype_init_dinov2.yaml` | `prototypes_dinov2/class_prototypes.pt` (`60a22c99ef0f`) | `prototype_validate_dinov2` | `2f96526` |
+
+Paths are under `cs604-outputs/`. Each run folder holds `baseline.json` (score,
+loss, holdout and prototype hashes), `run.json` and `config.json`; each
+prototype folder holds `class_prototypes.json` and its split files. The runs
+record `git_dirty: true` only because `notebooks/colab_train.ipynb` was
+uncommitted; the code was the stated commit. Build times (48–81 min) are not
+comparable across models: until 2026-10-04 the laptop GPU was held at a 35 W
+power limit by its charger, and the DINOv2 build switched to the full 175 W
+partway through.
+
+**Caveats.**
+
+- Prototype accuracy measures frozen features with a nearest-class-mean head.
+  It predicts, but does not guarantee, the ranking after LoRA and head training.
+- Compute differs: at 224, DINOv2 costs 30% more per image than ViT-B/16, so
+  under the fixed GPU-hour budget it sees fewer training images. A
+  compute-matched setting (196 px, 196 patches) was not run.
+- The evaluation crops differ (`crop_pct` 0.9 versus 1.0; each model's
+  default). Their effect was not isolated.
+- DINOv2's ViT-B has ViT-B size but was distilled from a 1.1B-parameter model.
+- One measurement per model. The scores are deterministic up to GPU arithmetic
+  (no training randomness); a paired significance test was not run because
+  per-image predictions were not saved.
+- DINOv2 with registers (`vit_base_patch14_reg4_dinov2.lvd142m`) and other
+  ViT-B families (CLIP/SigLIP, EVA-02) were not screened.
+
+**Decision.** Pending. DINOv2 ViT-B/14 at 224 has the best starting point
+(53.758%). Rule 6 asks to start from the ImageNet-21k ViT-B/16; if that holds,
+`augreg_in21k` (50.014%) is the base and DINOv2 is reported as a comparison.
+
 ## Completed
 
 - Prototype LoRA rank-8, full time budget, frozen head, finished 2026-10-03 00:21 SGT: internal top-1 **52.924%** (26,462 / 50,000), from a remeasured start of **43.934%**. Per-epoch holdout: 49.74, 50.92, 51.77, 52.72, 52.70, 52.92, 52.91% (the last is a partial epoch at the budget stop). Gain over the 1-epoch run (51.826%): +1.10 points for 10× the budget. No public score.

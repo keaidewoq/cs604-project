@@ -2,6 +2,45 @@
 
 Newest session at the top. Each entry records what ran, which files went in and out, the result, and the decision. Training numbers still live in each output folder's `run.json`, `metrics.csv`, and `config.json`.
 
+## 2026-10-04 — DINOv2 ViT-B/14 prototype comparison; laptop GPU power cap found
+
+**Code (commit `2f96526`):** `image_size` is passed to timm (`img_size`) and the
+transforms follow the built model (`model_data_config`), so DINOv2 runs at 224
+instead of its 518 default. Configs `prototype_init_dinov2.yaml` and
+`prototype_validate_dinov2.yaml`.
+
+**Model check:** `vit_base_patch14_dinov2.lvd142m` is DINOv2's ViT-B: 85.72M
+parameters at 224 (ViT-B/16: 85.80M), same depth/width/heads/MLP. At 224 it has
+256 patches versus 196 for ViT-B/16 (about 30% more compute per image).
+Pretraining: self-supervised on LVD-142M; its curation sources (DINOv2 paper,
+Table 15) include ImageNet-22k, ImageNet-1k, Google Landmarks and fine-grained
+sets such as CUB and Flowers, but no iNaturalist dataset. LVD-142M was retrieved
+from about 1.2B uncurated web images, so web copies of iNaturalist photos
+cannot be ruled out.
+
+**Runs (laptop):** prototype build 53.758% top-1 on the fixed holdout (split
+file byte-identical); evaluate-only gate 53.758% (`prototype_validate_dinov2`,
+commit `2f96526`, `git_dirty` only from the notebook). Holdout loss at scale 20:
+2.602 (augreg_in21k 4.227, orig_in21k 3.045).
+
+| Backbone | Prototype top-1 |
+| --- | --- |
+| `orig_in21k` | 41.816% |
+| `augreg2_in21k_ft_in1k` | 43.900% |
+| `augreg_in21k` | 50.014% |
+| `vit_base_patch14_dinov2.lvd142m` @224 | **53.758%** |
+
+**Laptop GPU:** the old charger capped the RTX 5080 at 35 W (P5, memory clock
+810 of 14,001 MHz; driver default limit 80 W, max 175 W). With the original
+charger and Windows "Best performance" it runs at 174 W, P0, full memory clock:
+prototype inference went from about 124 to about 1,000 img/s. Earlier laptop
+throughput numbers (28–166 img/s, "~2 h" screens) were measured under the cap.
+
+**Decision pending:** DINOv2 leads by 3.7 points but rule 6 (the Prof) asks to
+start from the ImageNet-21k ViT-B/16; confirm before locking the base model.
+This supersedes the 2026-10-03 "augreg_in21k is the base model" decision below.
+Report write-up with all tables: `report/EXPERIMENTS.md`, "Base-model screen".
+
 ## 2026-10-03 — ImageNet-21k base model chosen: augreg_in21k
 
 **Code and configs (commit `84b7902`):** `head_lr`, `train_crop_scale`, the

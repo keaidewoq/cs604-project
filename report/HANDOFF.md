@@ -47,8 +47,10 @@ trainable capacity are. This matches the Prof's guidance to train the head.
    `configs/experiments/prototype_lora_r8_trainhead_screen.yaml`: the 51.094%
    screen with only `train_head: true` and `head_lr: 0.001` (the head-only
    screen's rate, 2x the LoRA `lr`). It keeps timm's crop scale.
-2. **Done 2026-10-03: base model is `vit_base_patch16_224.augreg_in21k`**
-   (rule 6 in `AGENTS.md`). Laptop runs at commit `84b7902`, on the fixed
+2. **Done 2026-10-03: best ImageNet-21k ViT-B/16 is `vit_base_patch16_224.augreg_in21k`**
+   (rule 6 in `AGENTS.md`). The base model is not locked yet; see 2b.
+   Full write-up of the base-model screen (protocol, model specs, results,
+   provenance, caveats): `report/EXPERIMENTS.md`, "Base-model screen". Laptop runs at commit `84b7902`, on the fixed
    holdout (split file byte-identical to the original):
 
    | Backbone | Prototype top-1 | Evaluate-only gate | Loss at scale 20 |
@@ -75,6 +77,19 @@ trainable capacity are. This matches the Prof's guidance to train the head.
      file) to every prototype config. `augreg_in21k` runs on Colab fail the
      backbone check until the notebook copies the `augreg_in21k` prototype file
      to Drive inputs (with its hash) and selects it per config.
+2b. **DINOv2 comparison (2026-10-04), decision pending.**
+   `vit_base_patch14_dinov2.lvd142m` at `image_size: 224` (85.72M parameters,
+   same architecture as ViT-B/16; 256 patches versus 196, about 30% more compute
+   per image): prototype top-1 **53.758%**, gate 53.758%
+   (`cs604-outputs/prototype_validate_dinov2/baseline.json`), prototypes in
+   `cs604-outputs/prototypes_dinov2/`. That is +3.74 points over `augreg_in21k`.
+   No iNaturalist dataset in LVD-142M's curation sources (DINOv2 paper,
+   Tables 15 and 18). Its ViT-B is distilled from DINOv2 ViT-g/14. Rule 6 says
+   to start from the ImageNet-21k ViT-B/16, so the base model needs the user's
+   (and possibly the Prof's) decision before step 3. Details and tables:
+   `report/EXPERIMENTS.md`, "Base-model screen".
+   **Laptop GPU:** use the original charger and Windows "Best performance";
+   the old charger capped the GPU at 35 W (about 7.5x slower).
 3. **Next (config ready, not yet run):** trained-head screen on
    `augreg_in21k`, `configs/experiments/prototype_lora_r8_trainhead_augreg_in21k_screen.yaml`:
    a copy of `prototype_lora_r8_trainhead_screen.yaml` with only
