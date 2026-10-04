@@ -370,6 +370,33 @@ def train_crop_scale(cfg: dict) -> tuple[float, float] | None:
     return low, high
 
 
+TRAIN_TRANSFORM_KEYS = ("hflip", "color_jitter", "auto_augment", "re_prob")
+
+
+def build_transforms(cfg: dict, model):
+    """``(train_transform, eval_transform)`` for ``model``, as training uses them.
+
+    The train transform is timm's ``is_training=True`` pipeline with the config's
+    optional augmentation keys and ``train_crop_scale``. scripts/cache_features.py
+    calls this too, so cached augmented views use exactly the training transform.
+    """
+
+    from timm.data import create_transform
+
+    data_cfg = model_data_config(model)
+    train_kwargs = {"is_training": True}
+    for key in TRAIN_TRANSFORM_KEYS:
+        if key in cfg:
+            train_kwargs[key] = cfg[key]
+    crop_scale = train_crop_scale(cfg)
+    if crop_scale is not None:
+        train_kwargs["scale"] = crop_scale
+    return (
+        create_transform(**data_cfg, **train_kwargs),
+        create_transform(**data_cfg, is_training=False),
+    )
+
+
 def _transform_crop_scale(transform) -> list[float] | None:
     """The RandomResizedCrop scale a built timm transform actually uses."""
 
@@ -433,21 +460,9 @@ def run_training(cfg: dict) -> Path:
     if not trainable:
         raise ValueError("The selected mode has no trainable parameters")
 
-    from timm.data import create_transform
-
-    data_cfg = model_data_config(model)
-    train_kwargs = {"is_training": True}
-    for key in ("hflip", "color_jitter", "auto_augment", "re_prob"):
-        if key in cfg:
-            train_kwargs[key] = cfg[key]
     crop_scale = train_crop_scale(cfg)
-    if crop_scale is not None:
-        train_kwargs["scale"] = crop_scale
-    train_transform = None if cfg.get("synthetic") else create_transform(
-        **data_cfg, **train_kwargs
-    )
-    eval_transform = None if cfg.get("synthetic") else create_transform(
-        **data_cfg, is_training=False
+    train_transform, eval_transform = (
+        (None, None) if cfg.get("synthetic") else build_transforms(cfg, model)
     )
     train_dataset, val_dataset = _make_datasets(cfg, train_transform, eval_transform)
 
@@ -512,6 +527,11 @@ def run_training(cfg: dict) -> Path:
         "lr": float(cfg["lr"]),
         # null: the head (if trained) shares lr.
         "head_lr": head_lr,
+        "head_type": str(cfg.get("head_type", "linear")),
+        # Initial cosine temperature, and whether it trains (cosine heads only).
+        "cosine_scale": float(cfg.get("cosine_scale", 20.0)),
+        "cosine_scale_trainable": bool(cfg.get("cosine_scale_trainable", True)),
+        "linear_head_fp32": bool(cfg.get("linear_head_fp32", False)),
         # Scale of the built train transform; the configured value with synthetic data.
         "train_crop_scale": (
             _transform_crop_scale(train_transform)

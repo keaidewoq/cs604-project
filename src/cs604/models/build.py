@@ -57,6 +57,18 @@ class CosineClassifier(nn.Module):
         return scale * F.linear(F.normalize(inputs, dim=-1), F.normalize(self.weight, dim=-1))
 
 
+class Fp32Linear(nn.Linear):
+    """A linear classifier whose logits stay float32 under bf16 autocast.
+
+    timm's plain ``nn.Linear`` head would produce bf16 logits under autocast,
+    which ties nearby class scores (as ``cosine_head_fp32`` fixes for the cosine head).
+    """
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        with torch.autocast(device_type=inputs.device.type, enabled=False):
+            return F.linear(inputs.float(), self.weight.float(), self.bias.float())
+
+
 def _classifier(model: nn.Module) -> nn.Module:
     classifier = model.get_classifier()
     if not isinstance(classifier, nn.Module):
@@ -90,6 +102,9 @@ def build_vit(
     lora_dropout: float = 0.0,
     cosine_head_fp32: bool = False,
     image_size: int | None = None,
+    cosine_scale: float = 20.0,
+    cosine_scale_trainable: bool = True,
+    linear_head_fp32: bool = False,
 ) -> nn.Module:
     # image_size resizes the position embeddings, e.g. DINOv2 (default 518) to 224.
     size_kwargs = {} if image_size is None else {"img_size": int(image_size)}
@@ -98,8 +113,15 @@ def build_vit(
         old_head = _classifier(model)
         if not isinstance(old_head, nn.Linear):
             raise TypeError("Cosine head replacement expects a linear timm classifier")
-        model.head = CosineClassifier(old_head.in_features, num_classes, force_fp32=cosine_head_fp32)
-    elif head_type != "linear":
+        model.head = CosineClassifier(
+            old_head.in_features, num_classes, scale=cosine_scale, force_fp32=cosine_head_fp32
+        )
+    elif head_type == "linear":
+        if linear_head_fp32:
+            old_head = _classifier(model)
+            model.head = Fp32Linear(old_head.in_features, num_classes)
+            model.head.load_state_dict(old_head.state_dict())
+    else:
         raise ValueError(f"Unknown head_type: {head_type}")
 
     if grad_checkpointing:
@@ -124,7 +146,60 @@ def build_vit(
         _classifier(model).requires_grad_(train_head)
     else:
         raise ValueError(f"Unknown adaptation mode: {mode}")
+    _freeze_scale_unless_trainable(_classifier(model), cosine_scale_trainable)
     return model
+
+
+def _freeze_scale_unless_trainable(classifier: nn.Module, trainable: bool) -> None:
+    """``cosine_scale_trainable: false`` keeps the cosine temperature at its initial value."""
+
+    if trainable:
+        return
+    if not isinstance(classifier, CosineClassifier):
+        raise ValueError("cosine_scale_trainable: false needs head_type: cosine")
+    classifier.log_scale.requires_grad_(False)
+
+
+class FeatureHead(nn.Module):
+    """The classifier alone, for training on cached pre-logits features.
+
+    Built by the same code as the full model's head (``head_type``, ``cosine_scale``,
+    ``cosine_head_fp32``, ``cosine_scale_trainable``, ``linear_head_fp32``), and it exposes
+    ``get_classifier()``, so ``apply_class_prototypes`` and
+    ``optimizer_param_groups`` treat it exactly like the full model in ``mode: head``.
+    The state dict keys (``head.*``) match the full model's classifier keys.
+    """
+
+    def __init__(self, head: nn.Module):
+        super().__init__()
+        self.head = head
+
+    def get_classifier(self) -> nn.Module:
+        return self.head
+
+    def forward(self, features: torch.Tensor) -> torch.Tensor:
+        return self.head(features)
+
+
+def build_feature_head(cfg: dict, in_features: int) -> FeatureHead:
+    """A trainable head matching ``build_from_config(cfg)``'s classifier in ``mode: head``."""
+
+    head_type = str(cfg.get("head_type", "linear"))
+    num_classes = int(cfg["num_classes"])
+    if head_type == "cosine":
+        head: nn.Module = CosineClassifier(
+            in_features,
+            num_classes,
+            scale=float(cfg.get("cosine_scale", 20.0)),
+            force_fp32=bool(cfg.get("cosine_head_fp32", False)),
+        )
+    elif head_type == "linear":
+        linear = Fp32Linear if bool(cfg.get("linear_head_fp32", False)) else nn.Linear
+        head = linear(in_features, num_classes)
+    else:
+        raise ValueError(f"Unknown head_type: {head_type}")
+    _freeze_scale_unless_trainable(head, bool(cfg.get("cosine_scale_trainable", True)))
+    return FeatureHead(head)
 
 
 def apply_class_prototypes(model: nn.Module, prototypes: torch.Tensor) -> None:
@@ -165,6 +240,9 @@ def build_from_config(cfg: dict) -> nn.Module:
         lora_dropout=float(cfg.get("lora_dropout", 0.0)),
         cosine_head_fp32=bool(cfg.get("cosine_head_fp32", False)),
         image_size=None if cfg.get("image_size") is None else int(cfg["image_size"]),
+        cosine_scale=float(cfg.get("cosine_scale", 20.0)),
+        cosine_scale_trainable=bool(cfg.get("cosine_scale_trainable", True)),
+        linear_head_fp32=bool(cfg.get("linear_head_fp32", False)),
     )
 
 

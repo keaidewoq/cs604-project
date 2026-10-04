@@ -93,6 +93,10 @@ the same warmup/cosine schedule; unset, the head shares `lr`.
 `train_crop_scale: [min, max]` sets the RandomResizedCrop area range for
 training; unset, timm's default `[0.08, 1.0]` applies. `run.json` records `lr`,
 `head_lr`, and the `train_crop_scale` the train transform actually used.
+`cosine_scale` (default 20) is the cosine head's initial temperature;
+`cosine_scale_trainable: false` keeps it fixed (an ablation; rule 1 trains it).
+`linear_head_fp32: true` keeps a plain linear head's logits float32 under bf16
+autocast (the linear twin of `cosine_head_fp32`). All three are recorded in `run.json`.
 `image_size` is passed to timm as `img_size`, which resizes the position
 embeddings; the transforms follow the built model (`model_data_config`), with
 the checkpoint's own mean/std and crop. Any timm `VisionTransformer` with a

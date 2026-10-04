@@ -1,0 +1,51 @@
+# Head-only sweep on cached features for vit_base_patch16_224.orig_in21k (the
+# project document's backbone). One YAML for the whole sweep: `base` is a
+# mode: head experiment config (frozen backbone, cosine head from the orig_in21k
+# prototypes, trained temperature); each point overrides a few keys. Run with
+# scripts/sweep_cached_head.py; results go to <output_dir>/sweep.csv (one row per
+# point) and <output_dir>/points/<name>.json (per-epoch holdout curve).
+# Tuned on the fixed internal holdout only (5 images/class, 50,000 images); never
+# on CodaBench. Compared against: the orig_in21k prototype start (41.816%) and,
+# per round, the best point of the previous round. Rounds are appended as results
+# come in; a finished point is never edited (a changed setting gets a new name).
+# Cache: feature_cache_orig_in21k.yaml. train_groups picks the cached views:
+# aug_default (10 views, crop scale [0.08, 1]), aug_crop035 (10 views, [0.35, 1]),
+# clean (1 eval-transform view).
+cache_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/feature_cache/orig_in21k"
+output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/head_sweep_orig_in21k"
+base:
+  timm_checkpoint: "vit_base_patch16_224.orig_in21k"
+  num_classes: 10000
+  mode: head
+  head_type: cosine
+  cosine_head_fp32: true
+  cosine_scale: 20.0
+  cosine_scale_trainable: true
+  prototype_file: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes_orig_in21k/class_prototypes.pt"
+  expected_initial_accuracy: 0.41816
+  initial_accuracy_tolerance: 0.001
+  split_seed: 604
+  val_per_class: 5
+  train_groups: [aug_default]
+  batch_size: 64
+  epochs: 10
+  max_steps: null
+  lr: 0.001
+  weight_decay: 0.0
+  label_smoothing: 0.0
+  precision: bf16
+  seed: 0
+points:
+  # Round 0: the cached twin of head_verify_e2e_orig_in21k.yaml (same batches).
+  - {name: r0_verify_1000, round: 0, epochs: 1, max_steps: 1000, note: "cached twin of head_verify_e2e_orig_in21k"}
+  # Round 1: head learning rate x AdamW weight decay, 10 epochs (each of the 10 views once).
+  - {name: r1_lr3e-4_wd0, round: 1, lr: 0.0003}
+  - {name: r1_lr1e-3_wd0, round: 1, lr: 0.001}
+  - {name: r1_lr3e-3_wd0, round: 1, lr: 0.003}
+  - {name: r1_lr1e-2_wd0, round: 1, lr: 0.01}
+  - {name: r1_lr3e-2_wd0, round: 1, lr: 0.03}
+  - {name: r1_lr3e-4_wd1e-2, round: 1, lr: 0.0003, weight_decay: 0.01}
+  - {name: r1_lr1e-3_wd1e-2, round: 1, lr: 0.001, weight_decay: 0.01}
+  - {name: r1_lr3e-3_wd1e-2, round: 1, lr: 0.003, weight_decay: 0.01}
+  - {name: r1_lr1e-2_wd1e-2, round: 1, lr: 0.01, weight_decay: 0.01}
+  - {name: r1_lr3e-2_wd1e-2, round: 1, lr: 0.03, weight_decay: 0.01}

@@ -133,6 +133,33 @@ change the holdout or replace it with a random subset.
 
 Promote an idea to Colab only when its screen beats the current best screen.
 
+### 1b. Head-only sweeps on cached features
+
+With a frozen backbone (`mode: head`) the head only sees each image's
+pre-logits feature, so head settings can be swept on cached features in about
+2 minutes per 10-epoch setting instead of hours end to end.
+
+1. **Cache the features** (GPU, about one pass over the data per view):
+   ```powershell
+   python scripts/cache_features.py --config configs/experiments/feature_cache_orig_in21k.yaml --groups holdout clean aug_default
+   ```
+   The config lists view groups: the holdout and the training images with the
+   eval transform, and seeded augmented views made with the training transform
+   (`build_transforms`, the one `train.py` uses). The split must match the
+   prototype build's split files byte for byte. Finished views are skipped, so
+   rerun the same command after an interruption. Output and `manifest.json`
+   (backbone, split hashes, transforms, view seeds, shapes, hashes) go under
+   `cs604-outputs/feature_cache/`, never in git. About 0.6 GB per train view.
+2. **Run the sweep:** one YAML (`base` config plus named `points`), results in
+   `<output_dir>/sweep.csv` and `points/<name>.json`:
+   ```powershell
+   python scripts/sweep_cached_head.py --config configs/experiments/head_sweep_orig_in21k.yaml
+   ```
+   Finished points are skipped; add new rounds as new points, never edit a
+   finished one. Each point checks the step-zero gate on the cached holdout.
+3. **Confirm end to end.** Cached results are a screen: run the best settings
+   as ordinary `mode: head` experiment YAMLs (section 1) before promoting one.
+
 ## 2. Full training on Colab
 
 The Colab VM (RTX PRO 6000, 95 GB) trains one epoch over all 40 images per
