@@ -1,4 +1,4 @@
-# Dataset is large (~45 GB, ~500k files). It lives in the sibling folder
+# Dataset is large (~85 GB extracted, ~500k files). It lives in the sibling folder
 # cs604-course-data and is linked at data/.
 # Leading slash keeps src/cs604/data/ (the loader code) in git.
 /data/
@@ -22,3 +22,18 @@ Thumbs.db
 
 # Course brief is SMU Classification: Restricted. Keep it on this machine.
 CS604 project description.pdf
+
+# Per-machine settings: interpreter paths, worktree locations
+.vscode/
+AGENTS.local.md
+CLAUDE.local.md
+
+# Large artifacts, wherever they end up
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+*.npy
+*.npz
+*.tar.gz
+*.zip

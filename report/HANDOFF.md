@@ -115,11 +115,11 @@ and the Colab watchdog plus Drive flush are documented in `WORKFLOW.md`.
 
 ## Where to work
 
-- Active worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`
-- Branch: `prototype-baseline`
-- Base commit: `010cf39aa28aef6987cdadaa15450e467b33f735`
-- Original checkout: `C:\Users\Van Le\cs604-project\cs604-group-project` (unchanged).
-- Dataset and outputs remain shared siblings: `cs604-course-data` and `cs604-outputs`.
+- Branch: `van` in the group repo (`keaidewoq/cs604-project`). Its history
+  continues the earlier `prototype-baseline` branch, which the commits quoted
+  below refer to.
+- Dataset and outputs are siblings of the repo: `cs604-course-data` and
+  `cs604-outputs` (or `$CS604_DATA` and `$CS604_OUTPUTS`).
 - Work on this worktree when switching between Codex, Claude Code, and Cursor.
   The implementation, head-screen write-up, and rank-8 LoRA screen config
   and write-up are on this branch. The LoRA training run recorded
@@ -187,8 +187,8 @@ This is the command used for the successful run. Do not rerun into its existing
 output directory; the overwrite guard will reject it:
 
 ```powershell
-Set-Location 'C:\Users\Van Le\cs604-project\cs604-prototype-baseline'
-& 'C:\Users\Van Le\.venvs\cs604\Scripts\python.exe' -u scripts/train.py --config configs/experiments/prototype_validate_fp32_head.yaml
+Set-Location 'cs604-prototype-baseline'
+& 'python' -u scripts/train.py --config configs/experiments/prototype_validate_fp32_head.yaml
 ```
 
 Input: the existing `cs604-outputs/prototypes/class_prototypes.pt`, built from
@@ -197,7 +197,7 @@ held-out images are forwarded through the model; no optimizer updates occur.
 The configured five training images per class are used only to construct the
 split and are not processed in this evaluation-only run.
 
-Output: `C:\Users\Van Le\cs604-project\cs604-outputs\prototype-validate-fp32-head`.
+Output: `cs604-outputs\prototype-validate-fp32-head`.
 
 Success checks:
 
@@ -219,8 +219,8 @@ it. An interrupted copy would have been resumed with `--resume` pointing at that
 run's `last.pt`; this run finished, so it does not need a resume.
 
 ```powershell
-Set-Location 'C:\Users\Van Le\cs604-project\cs604-prototype-baseline'
-& 'C:\Users\Van Le\.venvs\cs604\Scripts\python.exe' scripts/train.py --config configs/experiments/prototype_head_screen.yaml
+Set-Location 'cs604-prototype-baseline'
+& 'python' scripts/train.py --config configs/experiments/prototype_head_screen.yaml
 ```
 
 It loaded `prototype-validate-fp32-head/best.pt`, evaluated step zero again,
@@ -274,8 +274,8 @@ checkpoints were not modified.
 ## Verification
 
 ```powershell
-& 'C:\Users\Van Le\.venvs\cs604\Scripts\python.exe' -m unittest tests.test_pipeline tests.test_baseline
-& 'C:\Users\Van Le\.venvs\cs604\Scripts\python.exe' scripts/train.py --config configs/smoke.yaml --synthetic --output-dir 'C:\Users\Van Le\cs604-project\cs604-outputs\smoke-prototype-baseline'
+& 'python' -m unittest tests.test_pipeline tests.test_baseline
+& 'python' scripts/train.py --config configs/smoke.yaml --synthetic --output-dir 'cs604-outputs\smoke-prototype-baseline'
 ```
 
 - 15 unit tests passed. Control-flow tests use tiny CPU models and scripted evaluation
@@ -305,7 +305,7 @@ configurations or from these unit tests.
 
 ## Starting a fresh agent chat
 
-Use the existing worktree on branch `prototype-baseline`. Read `AGENTS.md` and
+Use the existing checkout of branch `van`. Read `AGENTS.md` and
 this handoff. The head-only screen and the rank-8 LoRA screen have both been
 run and recorded. Do not start another GPU job in
 `cs604-outputs/prototype-head-screen` or

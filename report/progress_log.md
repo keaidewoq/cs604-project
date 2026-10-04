@@ -77,7 +77,7 @@ ends it if training hangs. See `WORKFLOW.md`.
 
 **Run:** `configs/experiments/prototype_lora_r8_fp32_budget_40.yaml` on Colab,
 A100 80 GB, commit `8cb4732`. Output:
-`C:\Users\Van Le\cs604-project\cs604-outputs\prototype_lora_r8_fp32_budget_40`.
+`cs604-outputs\prototype_lora_r8_fp32_budget_40`.
 Stopped by the budget after 83,308 updates (6.7 epochs), 1.901 normalized hours.
 Internal top-1 **52.924%**, versus 51.826% for the 1-epoch run; accuracy levelled
 off from epoch 4. The 80 GB card gave only 1.15 h of wall-clock budget and ran at
@@ -97,13 +97,13 @@ screen of candidate backbones (`report/HANDOFF.md`, `report/INAT2021_STRATEGY.md
 
 ## 2026-10-01 — Colab data staging debugged; 40-image LoRA run started
 
-Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch
+Worktree: `cs604-prototype-baseline`, branch
 `prototype-baseline`. Colab checks out the pinned commit
 `78c28aa451e14525b79d666057f25793aa652c72`; the notebook cells come from
 `4ed5686` (they run from the local notebook, not the checkout).
 
 **Goal:** run `configs/experiments/prototype_lora_r8_fp32_40.yaml` on Colab Pro
-(account `thv.le.2025@mitb.smu.edu.sg`). The training archive is too large for the
+(account `the team's Colab account`). The training archive is too large for the
 Drive quota (assumed 15 GB), so the data must be staged on the Colab VM.
 
 **Dataset facts (Hugging Face `doem1997/cs604-course-data`):**
@@ -215,18 +215,18 @@ should confirm the Colab rate.
 
 ## 2026-09-30 — rank-8 LoRA screen completed
 
-Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch
+Worktree: `cs604-prototype-baseline`, branch
 `prototype-baseline`, recorded commit `910b2ff4d3cfcf89485243550fd429277d50aa95`
 (`git_dirty: true`; the new config was not committed before the run).
 
 **Run:** `configs/experiments/prototype_lora_r8_fp32_screen.yaml` through
 `scripts/train.py` and the CUDA virtualenv. It was the only GPU job.
 
-- Input: `C:\Users\Van Le\cs604-project\cs604-outputs\prototypes\class_prototypes.pt`
+- Input: `cs604-outputs\prototypes\class_prototypes.pt`
   and the fixed 50,000-image internal holdout. The frozen cosine head stayed at
   those 40-image prototypes, with float32 class scores. LoRA rank 8 on attention
   `qkv` trained for two epochs on ten images per class (6,250 updates).
-- Output: `C:\Users\Van Le\cs604-project\cs604-outputs\prototype-lora-r8-fp32-screen`
+- Output: `cs604-outputs\prototype-lora-r8-fp32-screen`
 
 **Starting accuracy:** **43.900%**, or **21,950 / 50,000**, loss 3.501497850341797.
 `baseline.json` records `passed: true`, `accuracy_delta: 0.0`, and
@@ -251,7 +251,7 @@ smaller than epoch 1's. Do not rerun this config into the same output directory.
 
 ## 2026-09-30 — head-only screen completed
 
-Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch
+Worktree: `cs604-prototype-baseline`, branch
 `prototype-baseline`, commit `929f8f361007a3ba90e08a21d6cd2b7592f12c08`
 (`git_dirty: false`).
 
@@ -259,11 +259,11 @@ Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch
 `scripts/train.py` and the CUDA virtualenv. When this session checked the GPU,
 that command was already the only training process, so no second job was started.
 
-- Input: `C:\Users\Van Le\cs604-project\cs604-outputs\prototype-validate-fp32-head\best.pt`,
+- Input: `cs604-outputs\prototype-validate-fp32-head\best.pt`,
   the original prototypes, and the fixed 50,000-image internal holdout.
   The optimizer saw five training images per class for one epoch (782 updates).
   The backbone stayed frozen and class scores stayed in float32.
-- Output: `C:\Users\Van Le\cs604-project\cs604-outputs\prototype-head-screen`
+- Output: `cs604-outputs\prototype-head-screen`
 
 **Starting accuracy:** **43.900%**, or **21,950 / 50,000**, loss 3.501497850265503.
 `baseline.json` records `passed: true`, `accuracy_delta: 0.0`, and
@@ -291,13 +291,13 @@ Do not rerun this config into the same output directory.
 
 ## 2026-09-30 — starting-point validation completed
 
-Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch
+Worktree: `cs604-prototype-baseline`, branch
 `prototype-baseline`, base commit `010cf39aa28aef6987cdadaa15450e467b33f735`
 with uncommitted implementation changes (`git_dirty: true`).
 
 **First evaluation:** `configs/experiments/prototype_validate.yaml`, using the
 existing prototypes and the exact original 50,000-image internal holdout.
-Output: `C:\Users\Van Le\cs604-project\cs604-outputs\prototype-validate`.
+Output: `cs604-outputs\prototype-validate`.
 Top-1 **43.768%**, zero optimizer updates, 356.51 logged seconds. The check failed
 because the score differed from 43.90% by 0.132 percentage points, outside the
 predeclared 0.10-point tolerance. The diagnostic checkpoint and logs were preserved;
@@ -309,7 +309,7 @@ whereas the cosine classifier previously scored inside bf16 autocast. Added an
 explicit `cosine_head_fp32` option that keeps only the final scoring in float32.
 The backbone remains bf16; model weights, split, prototypes, and tolerance are unchanged.
 
-Output: `C:\Users\Van Le\cs604-project\cs604-outputs\prototype-validate-fp32-head`.
+Output: `cs604-outputs\prototype-validate-fp32-head`.
 Result: **43.900%**, or **21,950 / 50,000 correct**, with **zero optimizer updates**.
 The accuracy gate passed. Logged run time: **351.93 seconds** (5m 52s), peak
 allocated memory **1.0353 GiB**. Evaluation throughput: **142.62 images/second**.
@@ -328,7 +328,7 @@ head-only screen now loads `prototype-validate-fp32-head/best.pt` and retains
 
 ## 2026-09-30 — prototype starting-point protection (implementation)
 
-Worktree: `C:\Users\Van Le\cs604-project\cs604-prototype-baseline`, branch
+Worktree: `cs604-prototype-baseline`, branch
 `prototype-baseline`. The original checkout is unchanged. See `HANDOFF.md` for
 commands and cross-agent continuation instructions.
 
@@ -339,7 +339,7 @@ best-checkpoint selection. Fresh protected runs cannot overwrite existing result
 
 Verification: 13 unit tests passed using tiny CPU models and mocked evaluation
 scores. The five-step synthetic GPU smoke test passed on the RTX 5080 Laptop GPU,
-writing to `C:\Users\Van Le\cs604-project\cs604-outputs\smoke-prototype-baseline`.
+writing to `cs604-outputs\smoke-prototype-baseline`.
 No real-data validation or training was launched, so **43.90% has not yet been
 remeasured** by the new experiment.
 
@@ -353,20 +353,20 @@ Built the experiment pipeline in `cs604-group-project`: a fixed internal holdout
 
 **Throughput check.** `scripts/train.py` with `configs/experiments/benchmark.yaml`.
 
-- Input: `C:\Users\Van Le\cs604-project\cs604-course-data`, 100 optimizer steps, 5 training images per class.
-- Output: `C:\Users\Van Le\cs604-project\cs604-outputs\benchmark\`
+- Input: `cs604-course-data`, 100 optimizer steps, 5 training images per class.
+- Output: `cs604-outputs\benchmark\`
 - Result: about 23 images/second after warm-up on the RTX 5080 Laptop GPU. No accuracy was expected from this short probe.
 
 **Full fine-tune.** `scripts/train.py` with `configs/experiments/full_baseline.yaml`.
 
 - Input: the same dataset. All 40 training images per class. The classifier started from random weights.
-- Output: `C:\Users\Van Le\cs604-project\cs604-outputs\full-baseline\` (`best.pt`, `last.pt`, `metrics.csv`, `run.json`)
+- Output: `cs604-outputs\full-baseline\` (`best.pt`, `last.pt`, `metrics.csv`, `run.json`)
 - Result: internal top-1 **0.93%** after 12,500 steps and 4.45 hours. Peak allocated memory was 1.82 GB.
 
 **Prototype initialization.** `scripts/build_prototypes.py` with `configs/experiments/prototype_init.yaml`.
 
 - Input: the same dataset. Each class prototype is the average pretrained feature of its 40 training images. The 5 held-out images per class were not included in the average.
-- Output: `C:\Users\Van Le\cs604-project\cs604-outputs\prototypes\class_prototypes.pt` and `class_prototypes.json`
+- Output: `cs604-outputs\prototypes\class_prototypes.pt` and `class_prototypes.json`
 - Result: internal top-1 **43.90%** with no training, in 1.35 hours. The course zero-shot reference is 43.7%.
 
 ### Decision

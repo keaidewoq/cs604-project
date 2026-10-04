@@ -47,19 +47,21 @@ experiment order is in `report/INAT2021_STRATEGY.md`.
 
 ## Paths
 
-This git repo is the `prototype-baseline` worktree,
-`C:\Users\Van Le\cs604-project\cs604-prototype-baseline`. All agents work here.
-`C:\Users\Van Le\cs604-project\cs604-group-project` is the original checkout
-on `main` and is out of date.
+Machine-specific paths (this machine's Python interpreter, worktree, GPU)
+live in `AGENTS.local.md`, which is gitignored. Read it first if it exists.
 
 | What | Where |
 | --- | --- |
-| Python (CUDA) | `C:\Users\Van Le\.venvs\cs604\Scripts\python.exe` |
-| Dataset | `C:\Users\Van Le\cs604-project\cs604-course-data` |
-| Checkpoints and logs | `C:\Users\Van Le\cs604-project\cs604-outputs` |
+| Python (CUDA) | a virtualenv with a CUDA build of PyTorch (see `AGENTS.local.md`) |
+| Dataset | `${CS604_DATA}`, default `../cs604-course-data` beside the repo |
+| Checkpoints and logs | `${CS604_OUTPUTS}`, default `../cs604-outputs` beside the repo |
 | CodaBench files | `outputs/submissions/` inside this repo |
 
-The default `python` on this machine is CPU-only and cannot see the RTX 5080. Always call the virtualenv interpreter above. Run commands from the repo root.
+Configs write data and output paths as `${CS604_DATA}/...` and
+`${CS604_OUTPUTS}/...`; `src/cs604/config.py` expands them. Never put an
+absolute, machine-specific path in a committed file. A CPU-only `python`
+cannot see the GPU, so always call the CUDA virtualenv's interpreter. Run
+commands from the repo root.
 
 ## Hard rules
 
@@ -68,7 +70,7 @@ The default `python` on this machine is CPU-only and cannot see the RTX 5080. Al
 - One YAML file per experiment, under `configs/experiments/`. Do not invent ad-hoc config names elsewhere.
 - Write checkpoints only under `cs604-outputs`. Do not commit checkpoints, archives, or prediction dumps.
 - Do not start a real or long training run unless the user asks for that run. A code change is verified with the smoke test and unit tests.
-- The desktop GPU runs one training job at a time. Do not launch `scripts/train.py` on real data while another job is using the GPU.
+- A local GPU runs one training job at a time. Do not launch `scripts/train.py` on real data while another job is using the GPU.
 - In Colab, stage images on `/content`. Do not train directly from the Drive image tree.
 - Edit only the files the current task names. Leave unrelated dirty files alone.
 
@@ -115,22 +117,22 @@ not put its key in a config: unknown keys are silently ignored.
 Smoke test, no dataset required:
 
 ```powershell
-& "C:\Users\Van Le\.venvs\cs604\Scripts\python.exe" scripts\train.py --config configs\smoke.yaml --synthetic
+python scripts\train.py --config configs\smoke.yaml --synthetic
 ```
 
 Unit tests:
 
 ```powershell
-& "C:\Users\Van Le\.venvs\cs604\Scripts\python.exe" -m unittest tests.test_pipeline
+python -m unittest discover -s tests
 ```
 
 A real local run, only when the user asks:
 
 ```powershell
-& "C:\Users\Van Le\.venvs\cs604\Scripts\python.exe" scripts\train.py --config configs\local.yaml
+python scripts\train.py --config configs\local.yaml
 ```
 
-Resume with `--resume C:\Users\Van Le\cs604-project\cs604-outputs\local-full\last.pt` and the same config. Every run should keep its resolved config, git commit, `hardware.json`, parameter counts, timing, and metrics.
+Resume with `--resume ../cs604-outputs/local-full/last.pt` and the same config. Every run should keep its resolved config, git commit, `hardware.json`, parameter counts, timing, and metrics.
 
 ## Workflow
 

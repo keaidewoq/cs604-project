@@ -7,8 +7,8 @@ everywhere:
 | What | Where |
 | --- | --- |
 | Settings | `configs/experiments/<EXPERIMENT>.yaml` (git) |
-| Colab output | `My Drive/cs604/outputs/<EXPERIMENT>/` (`H:\My Drive\cs604\outputs\<EXPERIMENT>` on the laptop) |
-| Permanent copy | `C:\Users\Van Le\cs604-project\cs604-outputs\<EXPERIMENT>\` |
+| Colab output | `My Drive/cs604/outputs/<EXPERIMENT>/` (Google Drive for desktop shows it locally, e.g. `H:\My Drive\cs604\outputs\<EXPERIMENT>`) |
+| Permanent copy | `../cs604-outputs/<EXPERIMENT>/` (or `$CS604_OUTPUTS`) |
 | Submission files | `cs604-outputs\<EXPERIMENT>\submissions\` |
 | CodaBench ID and score | `cs604-outputs\<EXPERIMENT>\leaderboard.json` |
 | One row per run | `report/experiment_index.csv` (git) |
@@ -28,14 +28,15 @@ for its full Colab run.
 
 ## 0. Terminal and virtual environment
 
-The plain `python` on this laptop is CPU-only. Always use the CUDA virtualenv
-at `C:\Users\Van Le\.venvs\cs604` (Python 3.11, PyTorch 2.14 cu130).
+Use a virtualenv with a CUDA build of PyTorch; a CPU-only `python` cannot see
+the GPU. Your own interpreter path belongs in `AGENTS.local.md` (gitignored),
+not in this file.
 
 **PowerShell:**
 
 ```powershell
-cd "C:\Users\Van Le\cs604-project\cs604-prototype-baseline"
-& "C:\Users\Van Le\.venvs\cs604\Scripts\Activate.ps1"
+cd <path-to-this-repo>
+& <path-to-venv>\Scripts\Activate.ps1
 ```
 
 If PowerShell refuses to run `Activate.ps1`, allow scripts for this window only
@@ -45,25 +46,24 @@ again.
 **Git Bash:**
 
 ```bash
-cd "/c/Users/Van Le/cs604-project/cs604-prototype-baseline"
-source "/c/Users/Van Le/.venvs/cs604/Scripts/activate"
+cd <path-to-this-repo>
+source <path-to-venv>/Scripts/activate
 ```
 
-**Check the GPU is visible.** This should print
-`True NVIDIA GeForce RTX 5080 Laptop GPU`:
+**Check the GPU is visible.** This should print `True` and your GPU's name:
 
 ```powershell
 python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
 ```
 
 The `python` commands below assume the virtualenv is active and the current
-folder is the repo root. Without activation, replace `python` with
-`& "C:\Users\Van Le\.venvs\cs604\Scripts\python.exe"`.
+folder is the repo root. Data and outputs are the sibling folders
+`../cs604-course-data` and `../cs604-outputs`, or wherever `CS604_DATA` and
+`CS604_OUTPUTS` point.
 
-**Code and branch:** work in the `prototype-baseline` worktree
-(`cs604-prototype-baseline`), which is the branch Colab checks out. Run
-`git status` before you start; commit or discard leftovers so `run.json`
-records `git_dirty: false`.
+**Code and branch:** work on your own branch, which is the branch Colab checks
+out (`BRANCH` in the notebook's checkout cell). Run `git status` before you
+start; commit or discard leftovers so `run.json` records `git_dirty: false`.
 
 ## 1. Screen an idea on the laptop
 
@@ -75,8 +75,8 @@ change the holdout or replace it with a random subset.
    `configs/experiments/prototype_lora_r8_trainhead_screen.yaml`, to
    `configs/experiments/<EXPERIMENT>.yaml`. Change only what the experiment
    tests, plus `train_per_class` and `epochs`. Write a comment at the top saying
-   what it tests and which screen it is compared against. Keep the local paths
-   (`C:/Users/Van Le/...`).
+   what it tests and which screen it is compared against. Keep the paths as
+   `${CS604_DATA}/...` and `${CS604_OUTPUTS}/...`; never an absolute path.
    - **Train the head** (`train_head: true`, prototype-initialized) in every
      new config. Most older configs have `train_head: false`; copying one
      means changing that line. A frozen head is only for a labelled ablation.
@@ -103,7 +103,7 @@ change the holdout or replace it with a random subset.
    unit tests and a 2-step synthetic LoRA run (about 1 minute):
    ```powershell
    python -m unittest tests.test_budget tests.test_pipeline tests.test_checkpoint_io tests.test_baseline tests.test_stage_data tests.test_workflow
-   python scripts/train.py --config configs/experiments/colab_checkpoint_smoke.yaml --synthetic --max-steps 2 --output-dir "C:/Users/Van Le/cs604-project/cs604-outputs/smoke-check"
+   python scripts/train.py --config configs/experiments/colab_checkpoint_smoke.yaml --synthetic --max-steps 2 --output-dir "../cs604-outputs/smoke-check"
    ```
    Delete `cs604-outputs\smoke-check` afterwards. A config-only change needs no
    smoke test. Configs with `evaluate_before_training: true` refuse synthetic
@@ -113,11 +113,11 @@ change the holdout or replace it with a random subset.
    ```powershell
    git add configs/experiments/<EXPERIMENT>.yaml
    git commit -m "Add <EXPERIMENT> screen"
-   git push origin prototype-baseline
+   git push origin <your-branch>
    ```
 5. **Run the screen.** The output folder is named after the experiment:
    ```powershell
-   python scripts/train.py --config configs/experiments/<EXPERIMENT>.yaml --output-dir "C:/Users/Van Le/cs604-project/cs604-outputs/<EXPERIMENT>"
+   python scripts/train.py --config configs/experiments/<EXPERIMENT>.yaml --output-dir "../cs604-outputs/<EXPERIMENT>"
    ```
    - Prototype-based configs first check that the step-zero score is
      43.90% ± 0.10. If it isn't, the run stops before training.
@@ -125,7 +125,7 @@ change the holdout or replace it with a random subset.
      two-epoch screen takes about 2 hours.
    - The run refuses to write into a folder that already has a baseline.
 6. **Resume after an interruption** with the same command plus
-   `--resume "C:/Users/Van Le/cs604-project/cs604-outputs/<EXPERIMENT>/checkpoints/resume_step_<N>.pt"`.
+   `--resume "../cs604-outputs/<EXPERIMENT>/checkpoints/resume_step_<N>.pt"`.
    If the newest numbered file is damaged, use the one before it.
 7. **Read the result** in `cs604-outputs\<EXPERIMENT>\run.json`
    (`best_internal_accuracy`) and `metrics.csv`. Add the run to the index
@@ -219,14 +219,14 @@ class in about 7 minutes. Staging the data takes 20–40 minutes, once per runti
    ```powershell
    git add configs/experiments/<EXPERIMENT>.yaml
    git commit -m "Add <EXPERIMENT> Colab run"
-   git push origin prototype-baseline
+   git push origin <your-branch>
    ```
    Colab checks out the branch tip, so an unpushed config cannot run.
 3. **Check Drive space.** Keep at least 2 GB free in `My Drive`. With compact
    checkpoints (about 34 MB each), a LoRA or head run needs well under 1 GB.
    Empty the Drive trash after deleting anything.
 4. **Open `notebooks/colab_train.ipynb` in Cursor.** Use Select Kernel → Colab
-   → GPU, signed in as `thv.le.2025@mitb.smu.edu.sg`. Reload the notebook
+   → GPU, signed in with the Google account that has your Colab plan. Reload the notebook
    if it changed in git.
 5. **Run the cells in order** (table below), then read the notes after it.
 
@@ -235,7 +235,7 @@ class in about 7 minutes. Staging the data takes 20–40 minutes, once per runti
 | GPU check | `nvidia-smi`; defines `run_logged` | GPU listed. Re-run it after any kernel restart. |
 | Mount Drive | mounts `/content/drive` | "Mounted" or "already mounted" |
 | GitHub token | reads `cs604/secrets/github_token.txt` | "GitHub token ready" |
-| Checkout | clones or fetches `prototype-baseline` tip; installs requirements | `code ready ... commit <sha>`: your latest push |
+| Checkout | clones or fetches the `BRANCH` tip; installs requirements | `code ready ... commit <sha>`: your latest push |
 | Inputs | copies `class_prototypes.pt` and `internal_val.txt` from Drive and checks their hashes | both "ok" |
 | Stage data | streams `train.tar.gz` into `/content`; fetches `train.txt` | `data ok ... train.txt lines: 450000` |
 | Debug cells (if present) | disk and HF access checks | only if stage data fails |
@@ -281,7 +281,8 @@ class in about 7 minutes. Staging the data takes 20–40 minutes, once per runti
 
 ## 3. Copy the run to the laptop
 
-Google Drive for desktop shows My Drive as `H:\My Drive`. When the training
+Google Drive for desktop shows My Drive as a drive letter (`H:\My Drive` by
+default in `sync_run.py`; set `CS604_DRIVE_OUTPUTS` or `--drive-root` if yours differs). When the training
 cell prints `artifacts`, wait for Drive to finish syncing, then:
 
 ```powershell
@@ -307,7 +308,7 @@ Run this on the laptop, with no training job using the GPU. The 50,000
 validation images take about 6 minutes.
 
 ```powershell
-python scripts/predict.py --checkpoint "C:/Users/Van Le/cs604-project/cs604-outputs/<EXPERIMENT>/best.pt" --data-root "C:/Users/Van Le/cs604-project/cs604-course-data" --split val --output "C:/Users/Van Le/cs604-project/cs604-outputs/<EXPERIMENT>/submissions/val_team_xx.txt"
+python scripts/predict.py --checkpoint "../cs604-outputs/<EXPERIMENT>/best.pt" --data-root "../cs604-course-data" --split val --output "../cs604-outputs/<EXPERIMENT>/submissions/val_team_xx.txt"
 ```
 
 - Replace `xx` with the team number. In Phase 2, use `--split test` and
@@ -330,7 +331,7 @@ python scripts/predict.py --checkpoint "C:/Users/Van Le/cs604-project/cs604-outp
 1. **Upload `val_team_xx.zip` to CodaBench.** Note the submission ID it shows.
 2. **Record it straight away**, even before the score appears:
    ```powershell
-   python scripts/record_submission.py <EXPERIMENT> --submission "C:/Users/Van Le/cs604-project/cs604-outputs/<EXPERIMENT>/submissions/val_team_xx.zip" --submission-id <ID> --phase val
+   python scripts/record_submission.py <EXPERIMENT> --submission "../cs604-outputs/<EXPERIMENT>/submissions/val_team_xx.zip" --submission-id <ID> --phase val
    ```
    When the score is out, run the same command with `--score 0.5123` added.
    Use the accuracy as a fraction: 51.23% is 0.5123. Running it again with the
@@ -344,7 +345,7 @@ python scripts/predict.py --checkpoint "C:/Users/Van Le/cs604-project/cs604-outp
    python scripts/summarize_experiments.py
    git add report/experiment_index.csv
    git commit -m "Record <EXPERIMENT> CodaBench result"
-   git push origin prototype-baseline
+   git push origin <your-branch>
    ```
    `report/experiment_index.csv` has one row per run in `cs604-outputs`: config,
    status, commit, internal accuracy, public accuracy, submission ID,
@@ -358,7 +359,7 @@ python scripts/predict.py --checkpoint "C:/Users/Van Le/cs604-project/cs604-outp
 
 | Kind | Keep in | Notes |
 | --- | --- | --- |
-| Code, configs, notebook, index, logs | git (`prototype-baseline`) | never commit checkpoints, archives, or predictions |
+| Code, configs, notebook, index, logs | git (your branch) | never commit checkpoints, archives, or predictions |
 | Finished runs, checkpoints, submissions | `cs604-outputs` on the laptop | the permanent archive; back it up |
 | Inputs (`cs604/inputs`), tokens (`cs604/secrets`) | Drive | small; needed by every Colab run |
 | Runs in progress | Drive `cs604/outputs` | temporary; sync, then prune |
