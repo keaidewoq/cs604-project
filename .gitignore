@@ -1,0 +1,12 @@
+outputs/*
+!outputs/.gitkeep
+data/
+*.pt
+*.pth
+*.safetensors
+__pycache__/
+.ipynb_checkpoints/
+wandb/
+.env
+*.pyc
+.DS_Store

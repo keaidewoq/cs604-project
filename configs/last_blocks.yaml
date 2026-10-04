@@ -1,0 +1,6 @@
+# Course "Selected Layer Fine-Tuning": last N blocks + head.
+inherits: base.yaml
+method: last_blocks
+last_n_blocks: 2
+lr: 1.0e-4
+epochs: 3
