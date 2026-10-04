@@ -9,9 +9,11 @@ import sys
 from pathlib import Path
 
 import torch
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from cs604.config import load_config  # noqa: E402
 
 
 def _run(cmd: list[str], *, label: str) -> None:
@@ -42,8 +44,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    with args.config.open("r", encoding="utf-8") as handle:
-        cfg = yaml.safe_load(handle)
+    cfg = load_config(args.config)
     output = Path(cfg["output_dir"])
     if args.fresh and output.exists():
         print("removing previous smoke output", output, flush=True)

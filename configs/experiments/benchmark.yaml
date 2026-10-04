@@ -1,6 +1,6 @@
 # Identical real-data throughput probe for local and Colab.
-data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
-output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/benchmark"
+data_root: "${CS604_DATA}"
+output_dir: "${CS604_OUTPUTS}/benchmark"
 timm_checkpoint: "vit_base_patch16_224.augreg2_in21k_ft_in1k"
 num_classes: 10000
 image_size: 224

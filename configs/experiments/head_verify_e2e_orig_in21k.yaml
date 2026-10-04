@@ -5,8 +5,8 @@
 # head_sweep_orig_in21k.yaml (same settings, same seed, so the same images in
 # every batch; only the augmentation draws differ: cached views versus fresh).
 # Expect an identical step-zero score (0.41816) and a close final score.
-data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
-output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/head_verify_e2e_orig_in21k"
+data_root: "${CS604_DATA}"
+output_dir: "${CS604_OUTPUTS}/head_verify_e2e_orig_in21k"
 timm_checkpoint: "vit_base_patch16_224.orig_in21k"
 num_classes: 10000
 image_size: 224
@@ -14,12 +14,12 @@ mode: head
 head_type: cosine
 cosine_head_fp32: true
 train_head: true
-prototype_file: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes_orig_in21k/class_prototypes.pt"
+prototype_file: "${CS604_OUTPUTS}/prototypes_orig_in21k/class_prototypes.pt"
 evaluate_before_training: true
 expected_initial_accuracy: 0.41816
 initial_accuracy_tolerance: 0.001
 expected_initial_samples: 50000
-baseline_reference_split: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/splits/internal_val.txt"
+baseline_reference_split: "${CS604_OUTPUTS}/prototypes/splits/internal_val.txt"
 train_per_class: null
 val_per_class: 5
 split_seed: 604

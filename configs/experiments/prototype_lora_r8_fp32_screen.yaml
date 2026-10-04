@@ -2,8 +2,8 @@
 # validated float32 cosine scores. The frozen head is the existing 40-image
 # prototype file; the optimizer sees 10 images/class. This is not a 10-shot study.
 # LoRA B starts at zero, so step zero should match the 43.90% baseline.
-data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
-output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/prototype-lora-r8-fp32-screen"
+data_root: "${CS604_DATA}"
+output_dir: "${CS604_OUTPUTS}/prototype-lora-r8-fp32-screen"
 timm_checkpoint: "vit_base_patch16_224.augreg2_in21k_ft_in1k"
 num_classes: 10000
 image_size: 224
@@ -14,12 +14,12 @@ lora_dropout: 0.05
 head_type: cosine
 cosine_head_fp32: true
 train_head: false
-prototype_file: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/class_prototypes.pt"
+prototype_file: "${CS604_OUTPUTS}/prototypes/class_prototypes.pt"
 evaluate_before_training: true
 expected_initial_accuracy: 0.439
 initial_accuracy_tolerance: 0.001
 expected_initial_samples: 50000
-baseline_reference_split: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/splits/internal_val.txt"
+baseline_reference_split: "${CS604_OUTPUTS}/prototypes/splits/internal_val.txt"
 batch_size: 32
 eval_batch_size: 64
 grad_accum: 1

@@ -11,8 +11,8 @@
 # Cache: feature_cache_orig_in21k.yaml. train_groups picks the cached views:
 # aug_default (10 views, crop scale [0.08, 1]), aug_crop035 (10 views, [0.35, 1]),
 # clean (1 eval-transform view).
-cache_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/feature_cache/orig_in21k"
-output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/head_sweep_orig_in21k"
+cache_dir: "${CS604_OUTPUTS}/feature_cache/orig_in21k"
+output_dir: "${CS604_OUTPUTS}/head_sweep_orig_in21k"
 base:
   timm_checkpoint: "vit_base_patch16_224.orig_in21k"
   num_classes: 10000
@@ -21,7 +21,7 @@ base:
   cosine_head_fp32: true
   cosine_scale: 20.0
   cosine_scale_trainable: true
-  prototype_file: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes_orig_in21k/class_prototypes.pt"
+  prototype_file: "${CS604_OUTPUTS}/prototypes_orig_in21k/class_prototypes.pt"
   expected_initial_accuracy: 0.41816
   initial_accuracy_tolerance: 0.001
   split_seed: 604

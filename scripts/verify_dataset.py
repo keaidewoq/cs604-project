@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -10,9 +11,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from cs604.config import PATH_DEFAULTS  # noqa: E402
 from cs604.data.dataset import load_split_index  # noqa: E402
 
-DEFAULT_DIR = Path(r"C:\Users\Van Le\cs604-project\cs604-course-data")
+DEFAULT_DIR = Path(os.environ.get("CS604_DATA", PATH_DEFAULTS["CS604_DATA"]))
 EXPECTED = {
     "train": {"samples": 450_000, "labeled": True, "per_class": 45},
     "val": {"samples": 50_000, "labeled": False, "per_class": None},

@@ -9,20 +9,11 @@ from pathlib import Path
 
 os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
-import yaml
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from cs604.config import load_config  # noqa: E402
 from cs604.engine.loop import run_training  # noqa: E402
-
-
-def load_config(path: Path) -> dict:
-    with path.open("r", encoding="utf-8") as handle:
-        cfg = yaml.safe_load(handle)
-    if not isinstance(cfg, dict):
-        raise SystemExit(f"Config must be a mapping: {path}")
-    return cfg
 
 
 def main() -> None:

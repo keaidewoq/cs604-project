@@ -7,17 +7,17 @@
 # training transform from build_transforms (timm is_training=True), seeded per
 # image (see src/cs604/engine/feature_cache.py). The holdout is stored float32 so
 # the cached step-zero score can match the 0.41816 gate exactly; train views float16.
-data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
-cache_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/feature_cache/orig_in21k"
+data_root: "${CS604_DATA}"
+cache_dir: "${CS604_OUTPUTS}/feature_cache/orig_in21k"
 timm_checkpoint: "vit_base_patch16_224.orig_in21k"
 num_classes: 10000
 image_size: 224
 val_per_class: 5
 split_seed: 604
-prototype_file: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes_orig_in21k/class_prototypes.pt"
+prototype_file: "${CS604_OUTPUTS}/prototypes_orig_in21k/class_prototypes.pt"
 reference_splits:
-  train: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes_orig_in21k/splits/prototype_train.txt"
-  holdout: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/splits/internal_val.txt"
+  train: "${CS604_OUTPUTS}/prototypes_orig_in21k/splits/prototype_train.txt"
+  holdout: "${CS604_OUTPUTS}/prototypes/splits/internal_val.txt"
 batch_size: 256
 num_workers: 16
 views:

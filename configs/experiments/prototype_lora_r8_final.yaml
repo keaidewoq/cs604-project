@@ -1,6 +1,6 @@
 # Full-data finalist template; use only if the rank-8 screen wins internally.
-data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
-output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/prototype-lora-r8-final"
+data_root: "${CS604_DATA}"
+output_dir: "${CS604_OUTPUTS}/prototype-lora-r8-final"
 timm_checkpoint: "vit_base_patch16_224.augreg2_in21k_ft_in1k"
 num_classes: 10000
 image_size: 224
@@ -10,7 +10,7 @@ lora_alpha: 16
 lora_dropout: 0.05
 head_type: cosine
 train_head: false
-prototype_file: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/class_prototypes.pt"
+prototype_file: "${CS604_OUTPUTS}/prototypes/class_prototypes.pt"
 prototype_per_class: null
 batch_size: 32
 eval_batch_size: 64

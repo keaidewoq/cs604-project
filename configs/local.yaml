@@ -2,8 +2,8 @@
 # 16 GB is below the course 24 GB / 48 GB examples, so the batch is small
 # and gradients accumulate. Record the GPU name and hours from hardware.json.
 
-data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
-output_dir: "C:/Users/Van Le/cs604-project/cs604-outputs/local-full"
+data_root: "${CS604_DATA}"
+output_dir: "${CS604_OUTPUTS}/local-full"
 timm_checkpoint: "vit_base_patch16_224.augreg2_in21k_ft_in1k"
 num_classes: 10000
 image_size: 224

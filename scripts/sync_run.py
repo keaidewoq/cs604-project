@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from cs604.engine.checkpoint_io import sha256_file  # noqa: E402
 
 DEFAULT_DRIVE = Path(os.environ.get("CS604_DRIVE_OUTPUTS", "H:/My Drive/cs604/outputs"))
-DEFAULT_LOCAL = ROOT.parent / "cs604-outputs"
+DEFAULT_LOCAL = Path(os.environ.get("CS604_OUTPUTS", ROOT.parent / "cs604-outputs"))
 FINISHED = ("completed", "evaluated")
 SKIP_DIRS = ("checkpoints",)
 

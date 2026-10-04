@@ -8,12 +8,14 @@ that were already extracted.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 REPO_ID = "doem1997/cs604-course-data"
-DEFAULT_DIR = Path(r"C:\Users\Van Le\cs604-project\cs604-course-data")
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_DIR = Path(os.environ.get("CS604_DATA", ROOT.parent / "cs604-course-data"))
 ARCHIVES = ("train.tar.gz", "val.tar.gz")
 
 

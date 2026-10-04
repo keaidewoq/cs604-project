@@ -19,12 +19,12 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
-import yaml
 from torch.utils.data import DataLoader
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from cs604.config import load_config  # noqa: E402
 from cs604.data.dataset import (  # noqa: E402
     CS604ImageDataset,
     load_split_index,
@@ -77,7 +77,7 @@ def main() -> None:
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is required")
 
-    cfg = yaml.safe_load(args.config.read_text(encoding="utf-8"))
+    cfg = load_config(args.config)
     if args.output is None:
         if not cfg.get("prototype_output"):
             raise SystemExit("Pass --output or set prototype_output in the config")

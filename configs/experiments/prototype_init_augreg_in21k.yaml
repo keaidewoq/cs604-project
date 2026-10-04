@@ -3,11 +3,11 @@
 # AGENTS.md rule 6. Same split and images as prototype_init.yaml; only the backbone
 # and the output folder differ. build_prototypes.py refuses to overwrite an existing build.
 # The printed internal top-1 picks between orig_in21k and augreg_in21k (IN1k: 43.90%).
-data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
+data_root: "${CS604_DATA}"
 timm_checkpoint: "vit_base_patch16_224.augreg_in21k"
 num_classes: 10000
 image_size: 224
 prototype_per_class: null
 val_per_class: 5
 split_seed: 604
-prototype_output: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes_augreg_in21k/class_prototypes.pt"
+prototype_output: "${CS604_OUTPUTS}/prototypes_augreg_in21k/class_prototypes.pt"

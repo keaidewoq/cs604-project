@@ -6,11 +6,11 @@
 # (about 30% more compute per image). 85.72M parameters vs 85.80M for ViT-B/16.
 # Its own preprocessing (ImageNet mean/std, crop_pct 1.0) applies.
 # Compare: augreg_in21k 50.014%.
-data_root: "C:/Users/Van Le/cs604-project/cs604-course-data"
+data_root: "${CS604_DATA}"
 timm_checkpoint: "vit_base_patch14_dinov2.lvd142m"
 num_classes: 10000
 image_size: 224
 prototype_per_class: null
 val_per_class: 5
 split_seed: 604
-prototype_output: "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes_dinov2/class_prototypes.pt"
+prototype_output: "${CS604_OUTPUTS}/prototypes_dinov2/class_prototypes.pt"

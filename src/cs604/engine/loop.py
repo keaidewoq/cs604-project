@@ -115,8 +115,8 @@ def _save(path: Path, model, optimizer, step: int, cfg: dict) -> None:
 def _run_training_legacy(cfg: dict) -> Path:
     if not torch.cuda.is_available():
         raise SystemExit(
-            "CUDA is not available. On this desktop, use the cu130 virtualenv "
-            r"(C:\Users\Van Le\.venvs\cs604). On Colab, switch the runtime to GPU."
+            "CUDA is not available. Locally, use a virtualenv with a CUDA build of "
+            "PyTorch (see README). On Colab, switch the runtime to GPU."
         )
 
     _seed(int(cfg.get("seed", 0)))

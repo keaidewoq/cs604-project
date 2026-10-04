@@ -21,11 +21,11 @@ import time
 from pathlib import Path
 
 import torch
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from cs604.config import load_config  # noqa: E402
 from cs604.engine.cached_head import CachedFeatures, train_cached_head  # noqa: E402
 from cs604.engine.feature_cache import write_json_atomic  # noqa: E402
 from cs604.engine.loop import _git_metadata  # noqa: E402
@@ -61,7 +61,7 @@ def main() -> None:
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is required")
 
-    sweep = yaml.safe_load(args.config.read_text(encoding="utf-8"))
+    sweep = load_config(args.config)
     output_dir = Path(sweep["output_dir"])
     (output_dir / "points").mkdir(parents=True, exist_ok=True)
     points = resolve_points(sweep)
