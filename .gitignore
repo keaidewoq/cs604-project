@@ -3,8 +3,26 @@
 # Leading slash keeps src/cs604/data/ (the loader code) in git.
 /data/
 
-# Training artifacts
-outputs/
+# Training artifacts. outputs/<run>/ in the repo holds only the small records
+# that scripts/publish_run.py copies (keep this list in sync with its
+# RECORD_PATTERNS); checkpoints, splits and predictions go to the team Drive.
+/outputs/**
+!/outputs/**/
+!/outputs/README.md
+!/outputs/*/run.json
+!/outputs/*/config.json
+!/outputs/*/metrics.csv
+!/outputs/*/baseline.json
+!/outputs/*/hardware.json
+!/outputs/*/checkpoint_audit.json
+!/outputs/*/checkpoint_hashes.jsonl
+!/outputs/*/sync.json
+!/outputs/*/leaderboard.json
+!/outputs/*/class_prototypes.json
+!/outputs/*/artifacts.json
+!/outputs/*/*.log
+!/outputs/*/analysis/*.json
+!/outputs/*/submissions/*.inference.json
 wandb/
 runs/
 

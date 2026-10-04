@@ -1,0 +1,16 @@
+{
+  "checkpoint": "${CS604_OUTPUTS}\\prototype_lora_r8_fp32_budget_40\\best.pt",
+  "checkpoint_sha256": "36a9715735124c8146381be9aaf38080e331a29ced797917f997b8693ba61cb3",
+  "checkpoint_step": 75000,
+  "checkpoint_best_accuracy": 0.52924,
+  "config_file": "configs/experiments/prototype_lora_r8_fp32_budget_40.yaml",
+  "predict_git_commit": "8cb47324cb8cc4bfb651356809c923b2c79ad471",
+  "split": "val",
+  "samples": 50000,
+  "elapsed_sec": 3256.5944296000525,
+  "images_per_sec": 15.353462361028658,
+  "milliseconds_per_image": 65.13188859200105,
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "submission_sha256": "654e4defb50e863b425fcbef71983b58123b3c9e0e204f48bd7a7ed130e4a05a",
+  "zip_sha256": "836f0056aaf7b7b24430c7b12da09281a223bda06d7692ecdf4506233bb9ad6b"
+}

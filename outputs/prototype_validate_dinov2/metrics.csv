@@ -1,0 +1,2 @@
+phase,epoch,step,loss,accuracy,lr,images_per_sec,max_mem_gb,elapsed_sec
+initial_val,0,0,2.601551643295288,0.53758,,762.0195809842097,1.2101335525512695,65.95789190009236

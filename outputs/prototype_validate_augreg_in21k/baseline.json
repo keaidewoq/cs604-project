@@ -1,0 +1,16 @@
+{
+  "val_images": 50000,
+  "internal_val_sha256": "19a10c37a775559f4eee516215ad10c4b906ee50d66f7cbd95bc5ec88f2f2f69",
+  "prototype_file": "${CS604_OUTPUTS}\\prototypes_augreg_in21k\\class_prototypes.pt",
+  "prototype_file_sha256": "744ac61f816cd55a2606fdb07ffc83f21c7c671f853578d8598373c9ca8da9d2",
+  "loss": 4.226992585449219,
+  "accuracy": 0.50014,
+  "images_per_sec": 166.66364205488372,
+  "elapsed_sec": 300.0054444000125,
+  "initial_internal_accuracy": 0.50014,
+  "expected_initial_accuracy": null,
+  "initial_accuracy_tolerance": 0.001,
+  "accuracy_delta": null,
+  "passed": true,
+  "optimizer_steps": 0
+}

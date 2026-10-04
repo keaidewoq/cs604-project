@@ -58,7 +58,7 @@ Resume with `--resume ..\cs604-outputs\local-full\last.pt`.
 configs/          experiment settings
 src/cs604/        data loading, models, training/eval
 scripts/          download and dataset checks
-outputs/          CodaBench submissions
+outputs/          small run records per experiment (see outputs/README.md)
 notebooks/        Colab launcher
 report/           CVPR-format final report
 ```
@@ -125,7 +125,7 @@ python scripts\train.py --config configs\experiments\prototype_head.yaml
 Generate an audited CodaBench file:
 
 ```powershell
-python scripts\predict.py --checkpoint C:\path\to\best.pt --data-root ..\cs604-course-data --split val --output outputs\submissions\val_team_xx.txt
+python scripts\predict.py --checkpoint C:\path\to\best.pt --data-root ..\cs604-course-data --split val --output ..\cs604-outputs\<EXPERIMENT>\submissions\val_team_xx.txt
 ```
 
 In Colab, set `COMMIT`, `CONFIG`, and `RUN_NAME` in
@@ -137,3 +137,11 @@ Summarize local and downloaded Colab artifacts with:
 ```powershell
 python scripts\summarize_experiments.py ..\cs604-outputs
 ```
+
+## What is in git and what is on Drive
+
+Git holds code, configs, the report records, and each run's small records in
+`outputs/<EXPERIMENT>/` (`run.json`, `config.json`, `metrics.csv`, ...), copied
+there by `scripts/publish_run.py`. Checkpoints, split lists, and prediction
+files go to the team Google Drive folder `CS604_RUNS/<EXPERIMENT>/`. The full
+list is in [`outputs/README.md`](outputs/README.md).

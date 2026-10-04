@@ -1,0 +1,19 @@
+{
+  "run": "prototype-validate",
+  "location": "team Drive folder CS604_RUNS/prototype-validate/ (and the owner's cs604-outputs/prototype-validate/)",
+  "note": "Large files are not in git. Numbered checkpoints/*_step_*.pt copies are omitted.",
+  "files": [
+    {
+      "path": "baseline.pt",
+      "bytes": 373975725
+    },
+    {
+      "path": "splits/internal_train.txt",
+      "bytes": 3144450
+    },
+    {
+      "path": "splits/internal_val.txt",
+      "bytes": 3144450
+    }
+  ]
+}

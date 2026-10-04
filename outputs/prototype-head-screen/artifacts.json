@@ -1,0 +1,27 @@
+{
+  "run": "prototype-head-screen",
+  "location": "team Drive folder CS604_RUNS/prototype-head-screen/ (and the owner's cs604-outputs/prototype-head-screen/)",
+  "note": "Large files are not in git. Numbered checkpoints/*_step_*.pt copies are omitted.",
+  "files": [
+    {
+      "path": "baseline.pt",
+      "bytes": 373975853
+    },
+    {
+      "path": "best.pt",
+      "bytes": 435407063
+    },
+    {
+      "path": "last.pt",
+      "bytes": 435407063
+    },
+    {
+      "path": "splits/internal_train.txt",
+      "bytes": 3144450
+    },
+    {
+      "path": "splits/internal_val.txt",
+      "bytes": 3144450
+    }
+  ]
+}

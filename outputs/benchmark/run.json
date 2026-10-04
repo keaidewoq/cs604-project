@@ -1,0 +1,21 @@
+{
+  "git_commit": "be70be0111b5933431949e08fa2dcc0d4a1d7bb5",
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "vram_gb": 15.92,
+  "precision": "bf16",
+  "mode": "full",
+  "batch_size": 8,
+  "grad_accum": 4,
+  "effective_batch_size": 32,
+  "total_params": 93488656,
+  "trainable_params": 93488656,
+  "trainable_pct": 100.0,
+  "classifier_params": 7690000,
+  "classifier_trainable_params": 7690000,
+  "backbone_trainable_params": 85798656,
+  "elapsed_sec": 196.60179420001805,
+  "gpu_hours": 0.054611609500005015,
+  "optimizer_steps": 100,
+  "best_internal_accuracy": null,
+  "max_mem_gb": 1.822141170501709
+}

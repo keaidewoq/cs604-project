@@ -1,0 +1,9 @@
+{
+  "timm_checkpoint": "vit_base_patch14_dinov2.lvd142m",
+  "train_images": 400000,
+  "val_images": 50000,
+  "internal_top1_accuracy": 0.53758,
+  "elapsed_sec": 1713.9001222001389,
+  "images_per_sec": 262.5590570717351,
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU"
+}

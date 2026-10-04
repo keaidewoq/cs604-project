@@ -1,0 +1,23 @@
+{
+  "run": "prototype-validate-fp32-head",
+  "location": "team Drive folder CS604_RUNS/prototype-validate-fp32-head/ (and the owner's cs604-outputs/prototype-validate-fp32-head/)",
+  "note": "Large files are not in git. Numbered checkpoints/*_step_*.pt copies are omitted.",
+  "files": [
+    {
+      "path": "baseline.pt",
+      "bytes": 373975725
+    },
+    {
+      "path": "best.pt",
+      "bytes": 373965429
+    },
+    {
+      "path": "splits/internal_train.txt",
+      "bytes": 3144450
+    },
+    {
+      "path": "splits/internal_val.txt",
+      "bytes": 3144450
+    }
+  ]
+}

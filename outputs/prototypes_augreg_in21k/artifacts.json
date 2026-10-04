@@ -1,0 +1,19 @@
+{
+  "run": "prototypes_augreg_in21k",
+  "location": "team Drive folder CS604_RUNS/prototypes_augreg_in21k/ (and the owner's cs604-outputs/prototypes_augreg_in21k/)",
+  "note": "Large files are not in git. Numbered checkpoints/*_step_*.pt copies are omitted.",
+  "files": [
+    {
+      "path": "class_prototypes.pt",
+      "bytes": 30762029
+    },
+    {
+      "path": "splits/internal_val.txt",
+      "bytes": 3144450
+    },
+    {
+      "path": "splits/prototype_train.txt",
+      "bytes": 25155600
+    }
+  ]
+}

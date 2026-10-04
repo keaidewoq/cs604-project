@@ -56,7 +56,8 @@ live in `AGENTS.local.md`, which is gitignored. Read it first if it exists.
 | Python (CUDA) | a virtualenv with a CUDA build of PyTorch (see `AGENTS.local.md`) |
 | Dataset | `${CS604_DATA}`, default `../cs604-course-data` beside the repo |
 | Checkpoints and logs | `${CS604_OUTPUTS}`, default `../cs604-outputs` beside the repo |
-| CodaBench files | `outputs/submissions/` inside this repo |
+| CodaBench files | `${CS604_OUTPUTS}/<EXPERIMENT>/submissions/` |
+| Run records for git | `outputs/<EXPERIMENT>/`, copied by `scripts/publish_run.py` (see `outputs/README.md`) |
 
 Configs write data and output paths as `${CS604_DATA}/...` and
 `${CS604_OUTPUTS}/...`; `src/cs604/config.py` expands them. Never put an
@@ -69,7 +70,7 @@ commands from the repo root.
 - Validation and test labels are withheld. Do not hand-label those images, train on them, or infer labels from filenames.
 - Keep the internal split fixed: the same five images per class. Screening configs use fewer training images per class (5, then 10, then 20). Never replace that with an ordinary random subset.
 - One YAML file per experiment, under `configs/experiments/`. Do not invent ad-hoc config names elsewhere.
-- Write checkpoints only under `cs604-outputs`. Do not commit checkpoints, archives, or prediction dumps.
+- Write checkpoints only under `cs604-outputs`. Do not commit checkpoints, archives, or prediction dumps. The repo's `outputs/` takes only the small records `publish_run.py` copies; large files are shared through the team Drive folder `CS604_RUNS`.
 - Do not start a real or long training run unless the user asks for that run. A code change is verified with the smoke test and unit tests.
 - A local GPU runs one training job at a time. Do not launch `scripts/train.py` on real data while another job is using the GPU.
 - In Colab, stage images on `/content`. Do not train directly from the Drive image tree.
@@ -84,7 +85,7 @@ src/cs604/                data, models, training, prediction
 scripts/                  train, predict, prototypes, dataset checks
 tests/                    unit tests
 notebooks/                Colab launcher
-outputs/submissions/      audited CodaBench files
+outputs/<EXPERIMENT>/     run records (run.json, metrics.csv, ...)
 report/                   experiment record and final report
 ```
 

@@ -1,0 +1,18 @@
+{
+  "source": "H:\\My Drive\\cs604\\outputs\\prototype_lora_r8_fp32_budget_40",
+  "synced_at": "2026-10-03T09:23:35+0800",
+  "status": "completed",
+  "files": {
+    "baseline.json": "cc39a4b4203aeebe118f5d0370f028260e13d4116d3a8dd18a690372a185a2c7",
+    "baseline.pt": "94f2b1742e199c4f700ec391fe5b60dabdc8e2b7dfd94ffc93ee3296fe43ece9",
+    "best.pt": "36a9715735124c8146381be9aaf38080e331a29ced797917f997b8693ba61cb3",
+    "checkpoint_hashes.jsonl": "c6c4b4a6829dd2f899ed577a67653846639261cb35352d72215daf3e0a6b0796",
+    "config.json": "deaca5be060f073ed4eaa0a99698eeff9eec3040fa36d62524f4795f6cc4e281",
+    "last.pt": "93de58f4050a69d4806c8209e6f342fe78d6ed7f68e091ba05145cb03cd79724",
+    "metrics.csv": "66dd470e087314c4b433572e058bf901da21a5e3837edb9990458d801a4e0010",
+    "run.json": "728c295021bd4e9eeaecbcaba0616a3018c9529cf887148f7969a2a5fd1b9344",
+    "splits/internal_train.txt": "6a018ce87c6a625297c746fec8adc44b8165c8199aa59cc152a26ee79b644138",
+    "splits/internal_val.txt": "19a10c37a775559f4eee516215ad10c4b906ee50d66f7cbd95bc5ec88f2f2f69",
+    "train.log": "2142e60f6b0abc9998bd597b773bbce6cc1aced9f2c10d8608553920b551bec9"
+  }
+}

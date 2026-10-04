@@ -1,0 +1,19 @@
+{
+  "run": "benchmark",
+  "location": "team Drive folder CS604_RUNS/benchmark/ (and the owner's cs604-outputs/benchmark/)",
+  "note": "Large files are not in git. Numbered checkpoints/*_step_*.pt copies are omitted.",
+  "files": [
+    {
+      "path": "last.pt",
+      "bytes": 1122021069
+    },
+    {
+      "path": "splits/internal_train.txt",
+      "bytes": 3144450
+    },
+    {
+      "path": "splits/internal_val.txt",
+      "bytes": 3144450
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "vram_gb": 15.92,
+  "precision": "bf16",
+  "mode": "head",
+  "batch_size": 64,
+  "total_params": 93478657,
+  "trainable_params": 7680001,
+  "trainable_pct": 8.2157802074542,
+  "max_mem_gb": 1.0329484939575195,
+  "cosine_head_fp32": false
+}

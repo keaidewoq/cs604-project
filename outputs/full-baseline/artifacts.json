@@ -1,0 +1,23 @@
+{
+  "run": "full-baseline",
+  "location": "team Drive folder CS604_RUNS/full-baseline/ (and the owner's cs604-outputs/full-baseline/)",
+  "note": "Large files are not in git. Numbered checkpoints/*_step_*.pt copies are omitted.",
+  "files": [
+    {
+      "path": "best.pt",
+      "bytes": 1122021197
+    },
+    {
+      "path": "last.pt",
+      "bytes": 1122021197
+    },
+    {
+      "path": "splits/internal_train.txt",
+      "bytes": 25155600
+    },
+    {
+      "path": "splits/internal_val.txt",
+      "bytes": 3144450
+    }
+  ]
+}

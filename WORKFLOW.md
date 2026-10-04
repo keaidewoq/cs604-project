@@ -9,6 +9,7 @@ everywhere:
 | Settings | `configs/experiments/<EXPERIMENT>.yaml` (git) |
 | Colab output | `My Drive/cs604/outputs/<EXPERIMENT>/` (Google Drive for desktop shows it locally, e.g. `H:\My Drive\cs604\outputs\<EXPERIMENT>`) |
 | Permanent copy | `../cs604-outputs/<EXPERIMENT>/` (or `$CS604_OUTPUTS`) |
+| Shared with the team | records in `outputs/<EXPERIMENT>/` (git); checkpoints and predictions in Drive `CS604_RUNS/<EXPERIMENT>/` |
 | Submission files | `cs604-outputs\<EXPERIMENT>\submissions\` |
 | CodaBench ID and score | `cs604-outputs\<EXPERIMENT>\leaderboard.json` |
 | One row per run | `report/experiment_index.csv` (git) |
@@ -343,14 +344,19 @@ python scripts/predict.py --checkpoint "../cs604-outputs/<EXPERIMENT>/best.pt" -
 3. **Rebuild the index and commit it:**
    ```powershell
    python scripts/summarize_experiments.py
-   git add report/experiment_index.csv
+   python scripts/publish_run.py <EXPERIMENT>
+   git add report/experiment_index.csv outputs/<EXPERIMENT>
    git commit -m "Record <EXPERIMENT> CodaBench result"
    git push origin <your-branch>
    ```
    `report/experiment_index.csv` has one row per run in `cs604-outputs`: config,
    status, commit, internal accuracy, public accuracy, submission ID,
-   trainable parameters, and GPU hours.
-4. **Write it up.** Add a dated entry at the top of `report/progress_log.md`
+   trainable parameters, and GPU hours. `publish_run.py` copies the run's small
+   records (`run.json`, `metrics.csv`, `leaderboard.json`, ...) into
+   `outputs/<EXPERIMENT>/`; see `outputs/README.md` for the full list.
+4. **Share the large files.** Copy `cs604-outputs/<EXPERIMENT>/` without its
+   `checkpoints/` folder to the team Drive folder `CS604_RUNS/<EXPERIMENT>/`.
+5. **Write it up.** Add a dated entry at the top of `report/progress_log.md`
    saying what ran, the result, and the decision. Update `report/EXPERIMENTS.md`
    for runs that go in the report. Copy numbers from `run.json`,
    `metrics.csv`, `.inference.json`, and `leaderboard.json`; never from memory.
@@ -360,7 +366,9 @@ python scripts/predict.py --checkpoint "../cs604-outputs/<EXPERIMENT>/best.pt" -
 | Kind | Keep in | Notes |
 | --- | --- | --- |
 | Code, configs, notebook, index, logs | git (your branch) | never commit checkpoints, archives, or predictions |
-| Finished runs, checkpoints, submissions | `cs604-outputs` on the laptop | the permanent archive; back it up |
+| Run records (`run.json`, `config.json`, `metrics.csv`, ...) | git, `outputs/<EXPERIMENT>/` | copied by `publish_run.py`; list in `outputs/README.md` |
+| Finished runs, checkpoints, submissions | `cs604-outputs` on your machine | your own archive; back it up |
+| Checkpoints and submissions to share | team Drive `CS604_RUNS/<EXPERIMENT>/` | everything except `checkpoints/`; never tokens |
 | Inputs (`cs604/inputs`), tokens (`cs604/secrets`) | Drive | small; needed by every Colab run |
 | Runs in progress | Drive `cs604/outputs` | temporary; sync, then prune |
 | Course images | `cs604-course-data` on the laptop; `/content` on Colab | never on Drive |
@@ -372,5 +380,6 @@ python scripts/predict.py --checkpoint "../cs604-outputs/<EXPERIMENT>/best.pt" -
 - [ ] `sync_run.py <EXPERIMENT> --prune-drive` (Colab runs), then Drive trash emptied
 - [ ] `predict.py` → `submissions/val_team_xx.zip`
 - [ ] Uploaded; `record_submission.py` with the ID, and later the score
-- [ ] `summarize_experiments.py`; index committed
+- [ ] `summarize_experiments.py` and `publish_run.py`; index and `outputs/<EXPERIMENT>/` committed
+- [ ] Run folder (without `checkpoints/`) copied to Drive `CS604_RUNS/<EXPERIMENT>/`
 - [ ] `progress_log.md` entry

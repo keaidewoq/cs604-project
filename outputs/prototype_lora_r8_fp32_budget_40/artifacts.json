@@ -1,0 +1,39 @@
+{
+  "run": "prototype_lora_r8_fp32_budget_40",
+  "location": "team Drive folder CS604_RUNS/prototype_lora_r8_fp32_budget_40/ (and the owner's cs604-outputs/prototype_lora_r8_fp32_budget_40/)",
+  "note": "Large files are not in git. Numbered checkpoints/*_step_*.pt copies are omitted.",
+  "files": [
+    {
+      "path": "analysis/diagnose_fit.py",
+      "bytes": 3771
+    },
+    {
+      "path": "baseline.pt",
+      "bytes": 31912149
+    },
+    {
+      "path": "best.pt",
+      "bytes": 34293933
+    },
+    {
+      "path": "last.pt",
+      "bytes": 34293933
+    },
+    {
+      "path": "splits/internal_train.txt",
+      "bytes": 25155600
+    },
+    {
+      "path": "splits/internal_val.txt",
+      "bytes": 3144450
+    },
+    {
+      "path": "submissions/val_team_08.txt",
+      "bytes": 1294409
+    },
+    {
+      "path": "submissions/val_team_08.zip",
+      "bytes": 260182
+    }
+  ]
+}
