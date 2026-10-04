@@ -7,3 +7,7 @@ date,person,source_branch,config_or_run,backbone,codabench_acc,internal_acc,trai
 2026-10-03,Van,van,prototype_validate_augreg_in21k,augreg_in21k,,0.500,0,,,,"+6pp vs course default before any training"
 2026-10-03,Van,van,prototype_validate_dinov2,dinov2 ViT-B/14 @224,,0.538,0,,,,"stronger; confirm with prof before using as official number"
 2026-10-04,Van,van,prototype_lora_r8_fp32_budget_40,augreg2_in21k_ft_in1k,,0.529,0.31 (excl. head),2.09,1.15,,prototype + LoRA r8; A100; internal holdout not CodaBench
+2026-10-03,Anastasia,ana-branch,cs604_linear_probe_dinov2 notebook (frozen probe),dinov2 ViT-B/14 @336,0.742,0.737,0 (head only),,,,"not valid for submission (prof requires augreg2); holdout tracked CodaBench"
+2026-10-03,Anastasia,ana-branch,cs604_linear_probe_augreg2 notebook (frozen probe),augreg2_in21k_ft_in1k @224,0.625,,0 (head only),,,,frozen baseline for PEFT runs
+2026-10-04,Anastasia,ana-branch,cs604_linear_probe_augreg2 notebook (frozen probe),augreg2_in21k_ft_in1k @336,0.620,0.611,0 (head only),,0.23,,"best lr 1e-3 of 1e-3..3e-2 sweep; 11.3 min features + 2.4 min probe"
+2026-10-04,Anastasia,ana-branch,cs604_lora_augreg2 notebook (LoRA r16),augreg2_in21k_ft_in1k @336,,0.719,~2.5 (excl. head),,2.4,,"qkv/proj/fc1/fc2 all blocks; lr 3e-4; 145 min A100; CodaBench TBC"
