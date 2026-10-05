@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -128,6 +129,12 @@ def evaluate(model, loader, loss_fn, device, use_bf16):
 
 
 def train(cfg):
+    max_train_minutes = cfg.get("max_train_minutes")
+    max_train_seconds = None
+    if max_train_minutes is not None:
+        max_train_seconds = float(max_train_minutes) * 60
+        if not math.isfinite(max_train_seconds) or max_train_seconds <= 0:
+            raise ValueError("max_train_minutes must be finite and positive")
     set_seed(int(cfg.seed))
     device = get_device()
     print(f"[train] device={device} method={cfg.method} model={cfg.model_name}")
@@ -190,6 +197,10 @@ def train(cfg):
 
     best_acc = -1.0
     global_step = 0
+    training_seconds = 0.0
+    time_limit_reached = False
+    if max_train_seconds is not None:
+        print(f"[train] training-only time limit={max_train_minutes} minutes")
 
     try:
         for epoch in range(1, int(cfg.epochs) + 1):
@@ -199,9 +210,20 @@ def train(cfg):
             seen = 0
             optimizer.zero_grad(set_to_none=True)
 
+            # Count training batch loading and updates, excluding setup,
+            # prototype loading, validation, and checkpoint saving.
+            if max_train_seconds is not None and device.type == "cuda":
+                torch.cuda.synchronize(device)
+            training_start = time.monotonic()
             pbar = tqdm(loaders["train"], desc=f"epoch {epoch}/{cfg.epochs}", leave=True)
             n_batches = len(loaders["train"])
             for i, (images, labels, _) in enumerate(pbar, start=1):
+                if (max_train_seconds is not None and
+                        training_seconds + time.monotonic() - training_start >= max_train_seconds):
+                    time_limit_reached = True
+                    # Discard any incomplete gradient accumulation group.
+                    optimizer.zero_grad(set_to_none=True)
+                    break
                 images = images.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
                 with amp_context(device, use_bf16):
@@ -224,6 +246,12 @@ def train(cfg):
                 )
                 pbar.set_postfix(loss=f"{loss_val:.4f}", lr=f"{lr:.2e}")
 
+            pbar.close()
+            if max_train_seconds is not None and device.type == "cuda":
+                torch.cuda.synchronize(device)
+            training_seconds += time.monotonic() - training_start
+            if max_train_seconds is not None and training_seconds >= max_train_seconds:
+                time_limit_reached = True
             step_f.flush()
 
             row = {
@@ -251,11 +279,17 @@ def train(cfg):
             epoch_w.writerow(row)
             epoch_f.flush()
             save_checkpoint(run_dir / "last.pt", model, cfg, epoch, {"train_loss": row["train_loss"]})
+            if time_limit_reached:
+                print(f"[train] time limit reached after {training_seconds / 60:.2f} training minutes")
+                break
     finally:
         step_f.close()
         epoch_f.close()
 
     stats = log_run_stats("end", model, timer, vram)
+    stats["training_seconds"] = round(training_seconds, 2)
+    stats["training_minutes"] = round(training_seconds / 60, 2)
+    stats["time_limit_reached"] = time_limit_reached
     with (run_dir / "run_stats.txt").open("w", encoding="utf-8") as f:
         for k, v in stats.items():
             f.write(f"{k}={v}\n")
