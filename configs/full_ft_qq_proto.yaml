@@ -1,5 +1,0 @@
-# Qian's 62.1% run: same split LRs + class-mean head init.
-inherits: full_ft_qq.yaml
-head_init: prototype
-prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes.pt
-evaluate_before_training: true
