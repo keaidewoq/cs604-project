@@ -14,12 +14,22 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-06 — Van — full FT recipe tuned on a laptop (`configs/van_full_ft_proto_llrd.yaml`)
+
+- run_dir: laptop screens in Van's own pipeline (RTX 5080 laptop); the Colab run of this config (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` at f5d654a) is under `CS604_RUNS`, folder name TBC
+- val acc (ours / CodaBench): internal holdout (5 training images/class held out, trained on the other 40) **72.98%** after 3 epochs, **73.97%** after 6 / **CodaBench 0.757** (ID 963899, 2026-10-06; all 45 images/class, 144 training minutes, plain center crop 0.9, no test-time augmentation)
+- trainable % / peak VRAM / GPU-hours: 100% / 5.8 GB at batch 64 / 6 epochs = 2.1 laptop hours (about 0.7 of the 48 GB-hour budget)
+- what changed vs `full_ft_proto.yaml`: prototype-initialized **cosine** head; backbone lr 4e-4 with **layer-wise lr decay 0.75** (block i gets lr x 0.75^(12 - i)); head lr 4e-3; 5% warmup then cosine to zero **fitted to the time limit**; label smoothing 0.1; drop_path 0.1; gradient clipping 1.0; batch 256.
+- findings (one change at a time, 3 epochs): without layer decay 63.1% (vs 69.8%); head lr 10x the backbone +1.5 points; prototype start beats first training a linear probe (LP-FT) by 1.6–2.0 points; crop scale, colour jitter and head lr 30x no difference; seed-to-seed spread 0.33 points.
+- trainer additions (all off by default, so existing configs run exactly as before): `layer_decay`, `drop_path_rate`, `clip_grad_norm`, `schedule_fit_time` (with `max_train_minutes`, the cosine reaches zero at the time limit instead of being cut off mid-decay).
+- next: fill in epochs reached, peak VRAM, GPU-hours and latency from the run folder. Re-predict the same `last.pt` with a center crop of 0.7 plus flip averaging (`--crop_pct 0.7 --tta_flip`), which added +1.5 to +1.9 points on the internal holdout; no retraining needed.
+
 ## Carry-overs (from other branches; not rerun in this trainer yet)
 
 ### Qian — full FT CodaBench (`qq_branch`)
 
 - Official backbone `vit_base_patch16_224.augreg2_in21k_ft_in1k`, batch 32, bf16, AdamW, no scheduler.
-- **Two LRs:** backbone `1e-5`, head `1e-3` (now `configs/full_ft_qq.yaml` + `head_lr` in the trainer).
+- **Two LRs:** backbone `1e-5`, head `1e-3` (now `configs/full_ft_proto.yaml` + `head_lr` in the trainer).
 - 120 min → **CodaBench 0.610**. 144 min (~2.4 GPU-hours on A100) → **0.613**.
 - Same + class-mean head init → **0.621**. Latency ~**7.15 ms/image** (batch 1, A100).
 - Peak PyTorch alloc ~**3.35 GiB**. Submission name she used: `val_team_08.txt`.
@@ -122,3 +132,20 @@ Frozen features + linear probe, internal holdout accuracy:
 - what changed: resolution 224 → 336; LoRA LR 1e-3 → 3e-4 (head LR 1e-4, weight decay 1e-4, AdamW, 5% warmup then cosine to zero over the time budget)
 - results: ~371 img/s, ~7.5 epochs. Holdout top-1 0.678 after epoch 1, then +1.2, +1.0, +0.9, +0.4, +0.5, +0.2, 0.0 points. Holdout loss flat from epoch 6 (~2.66) vs train loss ~1.50. Gains flatten as the cosine LR approaches zero, so the plateau is at least partly the schedule.
 - next: submit to CodaBench (holdout tracked CodaBench closely before, so expect roughly 0.72). Compare with probes (0.620 / 0.625) and Qian's full FT (0.621). Candidate follow-ups: LR 5e-4, FixRes (224 then 336) for more epochs in the same budget, and smaller ranks / placements from Cluster 4.
+
+
+### 2026-10-05 — Qian — Prototype-initialized full fine-tuning (shared trainer)
+
+- branch / config: `qq_branch_v2` / `configs/full_ft_proto.yaml`; launcher: `notebooks/colab_launcher_qq.ipynb`
+- run_dir: `full_ft_20261005_074553_id962394` under Drive `CS604_RUNS`; renamed after submission. The latency JSON retains the original checkpoint path; it refers to this same run’s `last.pt`.
+- CodaBench top-1 accuracy: **0.663 (66.3%)**; submission ID: **962394**
+- backbone / head: `vit_base_patch16_224.augreg2_in21k_ft_in1k` at 224px / linear classifier initialized from normalized training-class prototypes
+- settings: AdamW; backbone LR `1e-5`; head LR `1e-3`; cosine decay; no warmup; weight decay 0.05; batch 32; gradient accumulation 1; BF16; seed 42
+- trainable parameters: **93,488,656 / 93,488,656 (100%)**, including the classifier head.
+- budget: 144 training minutes or 11 epochs, whichever comes first; excludes setup, prototype loading, validation and checkpoint saving
+- actual training: **8,640.15 seconds (144 minutes), 2.40004 training GPU-hours** on one GPU; stopped at the time limit (`time_limit_reached=True`). Total recorded wall time: 8,648.13 seconds (2.40226 hours), including setup and other operations.
+- peak allocated VRAM: **3.349857 GiB** (saved as `peak_vram_gb`).
+- inference latency: **6.522547 ms/image at batch size 1**; **0.277780 ms/image at batch size 64** (17.777900 ms/batch). BF16, 224px, 30 warm-ups and 200 timed iterations; forward pass on synthetic inputs, excluding loading, preprocessing and transfers. PyTorch `2.11.0+cu130`; results saved in `inference_latency.json`.
+- hardware: **NVIDIA A100-SXM4-40GB**, reported capacity 39.493530 GiB; one GPU; **High-RAM off** (confirmed by Qian).
+- loss curves: saved in the run’s `figures/` folder (confirmed by Qian); raw training losses are retained in the CSV logs.
+- result: **+4.2 percentage points** over the previous prototype full-FT result (0.621). This run uses the shared trainer's cosine schedule; multiple implementation/runtime differences prevent attributing the gain to one change.

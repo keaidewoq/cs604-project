@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -58,8 +59,44 @@ def _split_decay(params, weight_decay, lr):
     return groups
 
 
-def adamw_param_groups(model, weight_decay, lr, head_lr=None):
+def _vit_depth(name, num_blocks):
+    """0 for embeddings, i + 1 for blocks.i, num_blocks + 1 for the final norm."""
+    if name.startswith(("patch_embed.", "cls_token", "pos_embed", "reg_token")):
+        return 0
+    if name.startswith("blocks."):
+        return int(name.split(".")[1]) + 1
+    return num_blocks + 1
+
+
+def layer_decay_param_groups(model, weight_decay, lr, head_lr, layer_decay):
+    """Layer-wise lr decay (`layer_decay` set): block i gets lr * layer_decay ** (blocks - i).
+
+    The final norm keeps `lr`, the embeddings get the smallest rate, and the
+    classifier gets `head_lr` (or `lr`). The top backbone group comes first, so
+    the logged lr is the top backbone rate.
+    """
+    num_blocks = len(model.blocks)
+    head_ids = {id(p) for p in model.get_classifier().parameters()}
+    by_depth = {}
+    head = []
+    for name, param in model.named_parameters():
+        if id(param) in head_ids:
+            head.append(param)
+        else:
+            by_depth.setdefault(_vit_depth(name, num_blocks), []).append(param)
+    groups = []
+    for depth in sorted(by_depth, reverse=True):
+        scale = float(layer_decay) ** (num_blocks + 1 - depth)
+        groups.extend(_split_decay(by_depth[depth], weight_decay, lr * scale))
+    groups.extend(_split_decay(head, weight_decay, float(head_lr if head_lr is not None else lr)))
+    print(f"[optim] layer_decay={layer_decay} top lr={lr} bottom lr={lr * float(layer_decay) ** (num_blocks + 1):.2e} head_lr={head_lr}")
+    return groups
+
+
+def adamw_param_groups(model, weight_decay, lr, head_lr=None, layer_decay=None):
     """One lr for everything, or backbone `lr` + classifier `head_lr` (Qian's FT)."""
+    if layer_decay is not None:
+        return layer_decay_param_groups(model, weight_decay, lr, head_lr, layer_decay)
     if head_lr is None:
         return _split_decay(model.parameters(), weight_decay, lr)
     head_ids = {id(p) for p in model.get_classifier().parameters()}
@@ -73,8 +110,17 @@ def adamw_param_groups(model, weight_decay, lr, head_lr=None):
     return groups
 
 
-def build_scheduler(optimizer, warmup_steps, total_steps):
+def build_scheduler(optimizer, warmup_steps, total_steps, clock=None):
+    """Warmup then cosine to zero over `total_steps`.
+
+    With `clock` (schedule_fit_time), the position is the larger of the step
+    count and the fraction of max_train_minutes used, so the cosine still
+    reaches zero when the time limit stops training before `epochs`.
+    """
+
     def lr_lambda(step):
+        if clock is not None:
+            step = max(step, min(clock["fraction"], 1.0) * total_steps)
         if step < warmup_steps:
             return float(step) / float(max(1, warmup_steps))
         progress = (step - warmup_steps) / float(max(1, total_steps - warmup_steps))
@@ -128,6 +174,12 @@ def evaluate(model, loader, loss_fn, device, use_bf16):
 
 
 def train(cfg):
+    max_train_minutes = cfg.get("max_train_minutes")
+    max_train_seconds = None
+    if max_train_minutes is not None:
+        max_train_seconds = float(max_train_minutes) * 60
+        if not math.isfinite(max_train_seconds) or max_train_seconds <= 0:
+            raise ValueError("max_train_minutes must be finite and positive")
     set_seed(int(cfg.seed))
     device = get_device()
     print(f"[train] device={device} method={cfg.method} model={cfg.model_name}")
@@ -147,7 +199,8 @@ def train(cfg):
     loss_fn = build_loss(cfg)
 
     groups = adamw_param_groups(
-        model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get("head_lr")
+        model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get("head_lr"),
+        layer_decay=cfg.get("layer_decay"),
     )
     optimizer = AdamW(groups, lr=float(cfg.lr))
 
@@ -155,7 +208,13 @@ def train(cfg):
     steps_per_epoch = math.ceil(len(loaders["train"]) / accum)
     total_steps = max(steps_per_epoch * int(cfg.epochs), 1)
     warmup_steps = int(float(cfg.warmup) * steps_per_epoch)
-    scheduler = build_scheduler(optimizer, warmup_steps, total_steps)
+    clock = None
+    if bool(cfg.get("schedule_fit_time", False)):
+        if max_train_seconds is None:
+            raise ValueError("schedule_fit_time needs max_train_minutes")
+        clock = {"fraction": 0.0}
+    scheduler = build_scheduler(optimizer, warmup_steps, total_steps, clock)
+    clip_grad_norm = cfg.get("clip_grad_norm")
 
     log_run_stats("start", model, timer, vram)
     vram.reset()
@@ -190,6 +249,10 @@ def train(cfg):
 
     best_acc = -1.0
     global_step = 0
+    training_seconds = 0.0
+    time_limit_reached = False
+    if max_train_seconds is not None:
+        print(f"[train] training-only time limit={max_train_minutes} minutes")
 
     try:
         for epoch in range(1, int(cfg.epochs) + 1):
@@ -199,9 +262,20 @@ def train(cfg):
             seen = 0
             optimizer.zero_grad(set_to_none=True)
 
+            # Count training batch loading and updates, excluding setup,
+            # prototype loading, validation, and checkpoint saving.
+            if max_train_seconds is not None and device.type == "cuda":
+                torch.cuda.synchronize(device)
+            training_start = time.monotonic()
             pbar = tqdm(loaders["train"], desc=f"epoch {epoch}/{cfg.epochs}", leave=True)
             n_batches = len(loaders["train"])
             for i, (images, labels, _) in enumerate(pbar, start=1):
+                if (max_train_seconds is not None and
+                        training_seconds + time.monotonic() - training_start >= max_train_seconds):
+                    time_limit_reached = True
+                    # Discard any incomplete gradient accumulation group.
+                    optimizer.zero_grad(set_to_none=True)
+                    break
                 images = images.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
                 with amp_context(device, use_bf16):
@@ -210,7 +284,14 @@ def train(cfg):
                 (loss / accum).backward()
 
                 if i % accum == 0 or i == n_batches:
+                    if clip_grad_norm is not None:
+                        torch.nn.utils.clip_grad_norm_(
+                            [p for p in model.parameters() if p.requires_grad], float(clip_grad_norm)
+                        )
                     optimizer.step()
+                    if clock is not None:
+                        used = training_seconds + time.monotonic() - training_start
+                        clock["fraction"] = used / max_train_seconds
                     scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
                     global_step += 1
@@ -224,6 +305,12 @@ def train(cfg):
                 )
                 pbar.set_postfix(loss=f"{loss_val:.4f}", lr=f"{lr:.2e}")
 
+            pbar.close()
+            if max_train_seconds is not None and device.type == "cuda":
+                torch.cuda.synchronize(device)
+            training_seconds += time.monotonic() - training_start
+            if max_train_seconds is not None and training_seconds >= max_train_seconds:
+                time_limit_reached = True
             step_f.flush()
 
             row = {
@@ -251,11 +338,17 @@ def train(cfg):
             epoch_w.writerow(row)
             epoch_f.flush()
             save_checkpoint(run_dir / "last.pt", model, cfg, epoch, {"train_loss": row["train_loss"]})
+            if time_limit_reached:
+                print(f"[train] time limit reached after {training_seconds / 60:.2f} training minutes")
+                break
     finally:
         step_f.close()
         epoch_f.close()
 
     stats = log_run_stats("end", model, timer, vram)
+    stats["training_seconds"] = round(training_seconds, 2)
+    stats["training_minutes"] = round(training_seconds / 60, 2)
+    stats["time_limit_reached"] = time_limit_reached
     with (run_dir / "run_stats.txt").open("w", encoding="utf-8") as f:
         for k, v in stats.items():
             f.write(f"{k}={v}\n")

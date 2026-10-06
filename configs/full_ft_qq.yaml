@@ -1,8 +1,0 @@
-# Qian's CodaBench full-FT recipe (~61–62%). Backbone slow, head fast. No warmup.
-inherits: full_ft.yaml
-lr: 1.0e-5
-head_lr: 1.0e-3
-epochs: 11
-batch_size: 32
-grad_accum_steps: 1
-warmup: 0

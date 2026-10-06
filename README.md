@@ -70,7 +70,7 @@ Shared defaults live in `configs/base.yaml`. A method file only lists what it **
 
 Extra knobs: `head_type` / `head_init` / `prototype_file` (Van), `head_lr` (Qian: backbone keeps `lr`, classifier uses `head_lr`), `last_n_blocks`, `evaluate_before_training`.
 
-Replay recipes: `configs/full_ft_qq.yaml` (her ~61% FT), `full_ft_qq_proto.yaml` (~62%), `augreg_in21k.yaml` (Van’s stronger 21k-only prototype backbone). Team numbers live in `report/experiment_index.csv`.
+Experiment recipes: `configs/full_ft_proto.yaml` (Qian’s prototype-initialized full FT), `augreg_in21k.yaml` (Van’s stronger 21k-only prototype backbone). Team numbers live in `report/experiment_index.csv`.
 
 On Colab, `colab_launcher.ipynb` also prints the **resolved** config for your chosen `METHOD` as a table before training. After a run, add a line to `report/experiment_index.csv` and a note in `report/progress_log.md`.
 
