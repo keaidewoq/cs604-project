@@ -38,11 +38,16 @@ def apply_method(model, cfg):
 
 
 def build_model(cfg):
+    # Optional stochastic depth; unset keeps timm's default (none).
+    extra = {}
+    if cfg.get("drop_path_rate"):
+        extra["drop_path_rate"] = float(cfg.drop_path_rate)
     model = timm.create_model(
         cfg.model_name,
         pretrained=bool(cfg.get("pretrained", True)),
         num_classes=int(cfg.num_classes),
         img_size=int(cfg.img_size),
+        **extra,
     )
     replace_head(model, cfg)
     return apply_method(model, cfg)
