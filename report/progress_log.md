@@ -16,13 +16,13 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 
 ### 2026-10-06 — Van — full FT recipe tuned on a laptop (`configs/van_full_ft_proto_llrd.yaml`)
 
-- run_dir: laptop screens in Van's own pipeline (RTX 5080 laptop); this config is the port to this trainer, not yet run on Colab
-- val acc (ours / CodaBench): internal holdout (5 training images/class held out, trained on the other 40) **72.98%** after 3 epochs, **73.97%** after 6 / CodaBench TBC
+- run_dir: laptop screens in Van's own pipeline (RTX 5080 laptop); the Colab run of this config (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` at f5d654a) is under `CS604_RUNS`, folder name TBC
+- val acc (ours / CodaBench): internal holdout (5 training images/class held out, trained on the other 40) **72.98%** after 3 epochs, **73.97%** after 6 / **CodaBench 0.757** (ID 963899, 2026-10-06; all 45 images/class, 144 training minutes, plain center crop 0.9, no test-time augmentation)
 - trainable % / peak VRAM / GPU-hours: 100% / 5.8 GB at batch 64 / 6 epochs = 2.1 laptop hours (about 0.7 of the 48 GB-hour budget)
 - what changed vs `full_ft_proto.yaml`: prototype-initialized **cosine** head; backbone lr 4e-4 with **layer-wise lr decay 0.75** (block i gets lr x 0.75^(12 - i)); head lr 4e-3; 5% warmup then cosine to zero **fitted to the time limit**; label smoothing 0.1; drop_path 0.1; gradient clipping 1.0; batch 256.
 - findings (one change at a time, 3 epochs): without layer decay 63.1% (vs 69.8%); head lr 10x the backbone +1.5 points; prototype start beats first training a linear probe (LP-FT) by 1.6–2.0 points; crop scale, colour jitter and head lr 30x no difference; seed-to-seed spread 0.33 points.
 - trainer additions (all off by default, so existing configs run exactly as before): `layer_decay`, `drop_path_rate`, `clip_grad_norm`, `schedule_fit_time` (with `max_train_minutes`, the cosine reaches zero at the time limit instead of being cut off mid-decay).
-- next: run on a 40 GB A100 with `METHOD = "van_full_ft_proto_llrd"` (about 830 img/s, so roughly 16 epochs in 144 minutes), then CodaBench.
+- next: fill in epochs reached, peak VRAM, GPU-hours and latency from the run folder. Re-predict the same `last.pt` with a center crop of 0.7 plus flip averaging (`--crop_pct 0.7 --tta_flip`), which added +1.5 to +1.9 points on the internal holdout; no retraining needed.
 
 ## Carry-overs (from other branches; not rerun in this trainer yet)
 
