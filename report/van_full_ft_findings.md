@@ -1,7 +1,8 @@
 # Full fine-tuning (Task 1): what Van tested and what worked
 
-Author: Van. Written 2026-10-06. Status: final Colab run done, **CodaBench 0.757**
-(submission ID 963899). A 12-epoch laptop check is still running (section 9).
+Author: Van. Written 2026-10-06. Status: final Colab run done, **CodaBench 0.773**
+with crop 0.7 + flip prediction (ID 964799); 0.757 with plain prediction (ID
+963899), same checkpoint. The 12-epoch laptop check is done (section 9).
 
 This document is written so that a teammate, or a teammate's coding agent, can
 read it alone and understand: what the recipe is, why each setting was chosen,
@@ -11,9 +12,10 @@ from logged runs; nothing is estimated unless it says so.
 ## 1. Summary
 
 - **Result.** `configs/van_full_ft_proto_llrd.yaml`, trained for 144 minutes on
-  a Colab A100 40 GB on all 450,000 training images, scored **0.757 on
-  CodaBench** (plain center-crop prediction, no test-time augmentation). The
-  previous best full fine-tune in the team was 0.663.
+  a Colab A100 40 GB on all 450,000 training images, scored **0.773 on
+  CodaBench** when predicted with a center crop of 0.7 plus flip averaging
+  (0.757 with the plain 0.9 center crop, same checkpoint). The previous best
+  full fine-tune in the team was 0.663.
 - **The recipe in one line.** Start the classifier from class prototypes (a
   cosine head), fine-tune everything with AdamW at lr 4e-4 for the top
   transformer block and smaller rates for lower blocks (layer-wise lr decay
@@ -29,12 +31,13 @@ from logged runs; nothing is estimated unless it says so.
      first training a linear probe (LP-FT).
   5. A head learning rate 10x the backbone's, when starting from a linear
      probe: +1.5 points (from prototypes, 10x and 30x tied).
-  6. Training longer: 3 to 6 epochs added +1.0 point.
+  6. Training longer: 3 to 6 epochs added +1.0 point; 6 to 12 only +0.5.
 - **What did not matter** (within noise): crop-scale augmentation range,
   colour jitter, head lr 30x vs 10x from prototypes.
-- **Free extra gain at prediction time** (not yet used on CodaBench): a tighter
-  center crop (0.7 instead of 0.9) plus flip averaging added **+1.5 to +1.9
-  points** on the internal holdout, with no retraining (section 8).
+- **Free extra gain at prediction time:** a tighter center crop (0.7 instead
+  of 0.9) plus flip averaging added **+1.5 to +1.9 points** on the internal
+  holdout and **+1.6 on CodaBench** (0.757 to 0.773), with no retraining
+  (section 8).
 
 ## 2. Background: the starting point
 
@@ -214,8 +217,9 @@ the roughly 16 epochs of the Colab run start to overfit (section 9).
 - Training: 144 minutes, with the cosine schedule fitted to that limit.
   Expected about 16 epochs at about 830 img/s (throughput measured by
   Anastasia for this model on this GPU; the run's own epoch count is TBC).
-- Prediction: `last.pt`, plain center crop 0.9.
-- **CodaBench: 0.757** (submission ID 963899, 2026-10-06).
+- Prediction: `last.pt`. Plain center crop 0.9: **CodaBench 0.757** (ID
+  963899). Same checkpoint with `--crop_pct 0.7 --tta_flip`: **CodaBench
+  0.773** (ID 964799, 2026-10-06).
 - Run folder, peak VRAM, GPU-hours and latency: to be added from the run folder
   on Drive.
 
@@ -319,20 +323,31 @@ evaluation crops, plus flip averaging:
   training than the 0.9 center crop does at test time.
 - Flip averaging adds +0.1 to +0.4 on top, but doubles inference cost.
   Crop 0.7 alone gets most of the gain at no extra cost.
-- Chosen: **crop 0.7 + flip** (+1.54 at 6 epochs, +1.87 at 3 epochs). The best
-  crop did not move between 3 and 6 epochs; the 12-epoch run checks it again.
-- The 0.757 CodaBench score did **not** use this. Re-predicting the same
-  checkpoint with `--crop_pct 0.7 --tta_flip` takes minutes, not a new training
-  run.
+- Chosen: **crop 0.7 + flip** (+1.54 at 6 epochs, +1.87 at 3 epochs, +1.51 at
+  12 epochs). The best crop stays at 0.65 to 0.7 from 3 to 12 epochs; the plain
+  crop gain shrinks slowly with length (+1.58, +1.41, +1.23 points at 3, 6, 12
+  epochs, 0.9 to 0.7).
+- 12 epochs, plain / + flip: crop 0.9 74.47 / 74.74%; 0.8 75.44 / 75.62%;
+  0.75 75.51 / 75.78%; 0.7 75.70 / **76.00%**; 0.65 75.84 / 76.01%; 0.6
+  75.57 / 75.73%.
+- **Confirmed on CodaBench:** re-predicting the final run's `last.pt` with
+  `--crop_pct 0.7 --tta_flip` raised the score from 0.757 to **0.773** (+1.6,
+  ID 964799), matching the holdout estimate. It took minutes, not a new
+  training run.
+- Averaging several crops (each with its flip) scores higher still on the
+  holdout (six crops 0.6 to 0.9 at 12 epochs: 77.43%, vs 76.00% for crop 0.7 +
+  flip), but costs about 6x the inference of a single crop; not adopted.
 
 ## 9. Open questions and next steps
 
-- **12-epoch laptop run (in progress):** does accuracy keep rising past 6
-  epochs, and does the best eval crop stay near 0.7? This tells whether the
-  ~16-epoch Colab run is near the optimum length.
-- **CodaBench with crop 0.7 + flip** on the same checkpoint.
+- **12-epoch laptop run (done):** holdout 56.28, 62.28, 64.65, 66.44, 68.15,
+  69.65, 70.85, 72.13, 73.25, 74.09, 74.40, **74.49%**: only +0.5 over 6
+  epochs for twice the compute. Holdout loss was lowest at epoch 8 (1.377)
+  and rose to 1.410 while accuracy crept up (more confident, not less
+  accurate). Length is close to saturated for the ~16-epoch Colab run.
+- **CodaBench with crop 0.7 + flip (done):** 0.773, up from 0.757.
 - **More regularization in long runs** (drop_path 0.2, crop scale 0.35, weight
-  averaging/EMA): untested beyond 3 epochs.
+  averaging/EMA): the remaining lever on length; untested beyond 3 epochs.
 - **Task 2** on the same recipe (section 6.4).
 
 ## 10. Glossary
