@@ -75,8 +75,12 @@ class ImageListDataset(Dataset):
         return image, label, rel_path
 
 
-def build_transforms(cfg):
-    """Train/eval transforms from the chosen timm model's data config."""
+def build_transforms(cfg, eval_crop_pct=None):
+    """Train/eval transforms from the chosen timm model's data config.
+
+    ``eval_crop_pct`` overrides the eval center-crop fraction (default: the
+    model's own, 0.9 for the team backbone); used by ``src.predict --crop_pct``.
+    """
     pretrained_cfg = get_pretrained_cfg(cfg.model_name)
     if pretrained_cfg is not None and hasattr(pretrained_cfg, "to_dict"):
         pretrained_cfg = pretrained_cfg.to_dict()
@@ -85,6 +89,8 @@ def build_transforms(cfg):
         pretrained_cfg=pretrained_cfg,
     )
     train_tf = create_transform(**data_config, is_training=True)
+    if eval_crop_pct is not None:
+        data_config = {**data_config, "crop_pct": float(eval_crop_pct)}
     eval_tf = create_transform(**data_config, is_training=False)
     return train_tf, eval_tf
 
