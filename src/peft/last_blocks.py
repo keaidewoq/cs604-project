@@ -13,11 +13,21 @@ def apply_last_blocks(model, cfg):
     total = len(model.blocks)
     if not 1 <= n <= total:
         raise ValueError(f"last_n_blocks must be in [1, {total}], got {n}")
+    scope = cfg.get("train_scope", "full")
+    if scope not in {"full", "qkv", "attention"}:
+        raise ValueError("train_scope must be full, qkv, or attention")
     for block in model.blocks[-n:]:
-        for param in block.parameters():
-            param.requires_grad = True
-    if hasattr(model, "norm"):
+        if scope == "full":
+            modules = [block]
+        else:
+            modules = [block.attn.qkv]
+            if scope == "attention":
+                modules.append(block.attn.proj)
+        for module in modules:
+            for param in module.parameters():
+                param.requires_grad = True
+    if scope == "full" and hasattr(model, "norm"):
         for param in model.norm.parameters():
             param.requires_grad = True
-    print(f"[last_blocks] unfroze last {n}/{total} blocks + norm (head already trainable)")
+    print(f"[last_blocks] last {n}/{total}, scope={scope}, final norm trained={scope == 'full'} (head already trainable)")
     return model

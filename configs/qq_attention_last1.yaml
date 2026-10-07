@@ -1,0 +1,5 @@
+inherits: linear_probe.yaml
+method: last_blocks
+last_n_blocks: 1
+train_scope: attention
+epochs: 5
