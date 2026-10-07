@@ -47,7 +47,7 @@ def _split_decay(params, weight_decay, lr):
     for param in params:
         if not param.requires_grad:
             continue
-        if param.ndim < 2:
+        if param.ndim < 2 or getattr(param, "_no_weight_decay", False):
             no_decay.append(param)
         else:
             decay.append(param)

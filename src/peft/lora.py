@@ -1,4 +1,8 @@
-"""Hand-written LoRA on the fused qkv Linear of each ViT block."""
+"""Hand-written LoRA on the Linear layers of each ViT block.
+
+`lora_targets` picks the layers (default: the fused attention qkv only).
+Valid names: qkv, proj (attention output), fc1, fc2 (MLP).
+"""
 
 from __future__ import annotations
 
@@ -38,18 +42,33 @@ class LoRALinear(nn.Module):
         return base + lora * self.scaling
 
 
+LORA_TARGETS = {"qkv": "attn", "proj": "attn", "fc1": "mlp", "fc2": "mlp"}
+
+
 def apply_lora(model, cfg):
     rank = int(cfg.get("lora_rank", 8))
     alpha = float(cfg.get("lora_alpha", 16))
     dropout = float(cfg.get("lora_dropout", 0.0))
+    targets = list(cfg.get("lora_targets", ["qkv"]))
+    unknown = [t for t in targets if t not in LORA_TARGETS]
+    if unknown:
+        raise ValueError(f"Unknown lora_targets {unknown}; choose from {list(LORA_TARGETS)}")
     if not hasattr(model, "blocks"):
         raise TypeError("LoRA expects a ViT with `model.blocks`")
 
     n = 0
+    params = 0
     for block in model.blocks:
-        if not hasattr(block, "attn") or not hasattr(block.attn, "qkv"):
-            raise TypeError("LoRA expects each block to have `attn.qkv`")
-        block.attn.qkv = LoRALinear(block.attn.qkv, rank=rank, alpha=alpha, dropout=dropout)
-        n += 1
-    print(f"[lora] wrapped qkv in {n} blocks (rank={rank}, alpha={alpha}, dropout={dropout})")
+        for name in targets:
+            parent = getattr(block, LORA_TARGETS[name], None)
+            if parent is None or not isinstance(getattr(parent, name, None), nn.Linear):
+                raise TypeError(f"LoRA expects each block to have `{LORA_TARGETS[name]}.{name}`")
+            wrapped = LoRALinear(getattr(parent, name), rank=rank, alpha=alpha, dropout=dropout)
+            setattr(parent, name, wrapped)
+            params += wrapped.lora_A.weight.numel() + wrapped.lora_B.weight.numel()
+            n += 1
+    print(
+        f"[lora] wrapped {n} layers ({', '.join(targets)} in {len(model.blocks)} blocks), "
+        f"rank={rank}, alpha={alpha}, dropout={dropout}: {params:,} params"
+    )
     return model
