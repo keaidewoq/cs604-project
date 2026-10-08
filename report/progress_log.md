@@ -184,3 +184,25 @@ Frozen features + linear probe, internal holdout accuracy:
 - results: **+5.0 points over 224 at the same time budget**, despite ~8.5 epochs (~17 min/epoch, ~440 img/s) vs Van's ~16 at 224. Far beyond seed noise (~0.3). Train loss still falling at the end (1.90 → 1.87 over the last epoch). Consistent with the earlier resolution ablation (+3.7 at 336 when fine-tuned) and with frozen probes showing no gain at 336: higher resolution pays off when the backbone adapts. Crop 0.7 + flip added +0.6 (smaller than Van's +1.5–1.9 at 224 on the internal holdout; the best crop at 336 may differ from 0.7).
 - cost: latency **7.94 ms/image** at batch 1 (0.64 ms/image at batch 64), forward only, bf16; only ~20% above the team's 224 full-FT batch-1 numbers (6.5–7.2 ms), since batch 1 leaves the GPU underused. TTA needs two forward passes (~2× latency, not measured). Prototype build at 336 is outside the training budget, as for Van's run.
 - next: team best so far. Candidate follow-ups: other eval crops at 336 on the same checkpoint (no retraining); Task 2 methods at 336 with the same recipe pieces.
+
+
+### 2026-10–08 — Qian — selected-attention internal-validation ablation
+
+- source branch / launcher: `qq_selected_layer_validation` / `notebooks/colab_qq_selected_layer_validation.ipynb`; saved notebook commit `1be03d8`.
+- purpose: select which attention parameters to adapt while training <5% of backbone parameters, excluding the classifier.
+- data: fixed internal split of the labelled training set, 40 fitting + 5 validation images/class across all 10,000 classes (400,000 fitting / 50,000 holdout); split seed 42. This holdout is distinct from official CodaBench validation. Split manifests and raw run artifacts are retained under Drive `CS604_RUNS/qq_selected_layer_<split-id>/`.
+- shared recipe: `configs/linear_probe.yaml` (inheriting `base.yaml`); augreg2 ViT-B/16 at 224; random linear classifier initialization, no prototypes; AdamW LR 1e-3 for all trainable parameters, weight decay 0, batch 64, accumulation 1, 1-epoch warmup followed by cosine decay, BF16, training seed 42, 2 data-loader workers. Each arm completed 5 epochs; no training-minute cutoff. GPU model/session equivalence is not established by the supplied summary.
+- selective scopes: QKV includes weights and biases; complete attention includes QKV and the output projection. MLPs and all LayerNorms remain frozen in the selective arms. The 7,690,000-parameter classifier is trained in every arm and excluded from the backbone cap; backbone denominator is 85,798,656.
+
+| Arm | Run folder | Best / final holdout top-1 | Best epoch | Trainable backbone % | Peak VRAM (GiB) | Training minutes | Wall GPU-hours |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Classifier only | `linear_probe_20261007_083325` | 0.62700 | 5 | 0.000000 | 0.787727 | 109.97 | 2.052532 |
+| QKV in last block | `last_blocks_20261007_120432` | 0.64914 | 5 | 2.065039 | 0.888645 | 115.26 | 2.144944 |
+| QKV in last two blocks | `last_blocks_20261008_013844` | 0.64056 | 5 | 4.130079 | 1.151424 | 112.62 | 2.094281 |
+| Complete attention in last block | `last_blocks_20261008_034512` | **0.65410** | 5 | 2.753386 | 0.894388 | 109.94 | 2.048139 |
+
+- results: all selective arms outperform classifier-only training. QKV in one block adds 2.214 percentage points; complete attention adds 2.710 points. Training the output projection alongside QKV adds 0.496 points over QKV-only in the same block, with nearly identical measured VRAM. QKV in two blocks is 0.858 points worse than one-block QKV and uses more memory under this recipe.
+- selected configuration: **complete attention in the last block** for the next all-data experiment, based on the highest holdout accuracy while using 2.753386% of backbone parameters. This is a selection under a shared five-epoch recipe, not a claim of each method's optimized performance.
+- loss-curve observation: for the selected arm, screenshot-derived validation loss falls from approximately 3.07 at epoch 1 to 1.60 at epoch 4 and 1.59 at epoch 5, while training loss falls from about 4.87 to 1.33. Validation loss nearly plateaus; there is no visible validation-loss increase. These approximate readings do not replace the raw CSV.
+- limitations: best accuracy occurs at epoch 5 in all four arms; convergence is not established. One seed per arm does not establish the robustness of the 0.496-point lead. Cosine LR approaches zero at the five-epoch endpoint, which may contribute to flattening. Timing differences across sessions do not establish a speed advantage. Wall GPU-hours include overhead and are distinct from training-only duration. No CodaBench score or inference-latency result is recorded for these development runs.
+- next: retrain the selected scope from the pretrained model on all 450,000 labelled training images using a predeclared final-run schedule and resource limit, then evaluate official predictions. The existing 66.3% full-FT run uses a different recipe (prototype initialization, learning rates, batch size, regularization, and schedule), so it is an additional reference rather than a fully controlled adaptation comparison.
