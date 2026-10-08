@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import itertools
 import math
 import time
 from datetime import datetime
@@ -160,9 +161,27 @@ def train(cfg):
 
     accum = max(int(cfg.grad_accum_steps), 1)
     steps_per_epoch = math.ceil(len(loaders["train"]) / accum)
-    total_steps = max(steps_per_epoch * int(cfg.epochs), 1)
-    warmup_steps = int(float(cfg.warmup) * steps_per_epoch)
-    scheduler = build_scheduler(optimizer, warmup_steps, total_steps)
+    time_only = cfg.get("epochs") is None
+    elapsed_training = [0.0]
+    if time_only:
+        if max_train_seconds is None:
+            raise ValueError("epochs: null requires max_train_minutes")
+        warmup_fraction = float(cfg.get("time_warmup_fraction", 0.0))
+        if not 0 <= warmup_fraction < 1:
+            raise ValueError("time_warmup_fraction must be in [0, 1)")
+        def time_lr(_step):
+            progress = min(max(elapsed_training[0] / max_train_seconds, 0.0), 1.0)
+            if warmup_fraction and progress < warmup_fraction:
+                return progress / warmup_fraction
+            decay = (progress - warmup_fraction) / (1 - warmup_fraction)
+            return 0.5 * (1 + math.cos(math.pi * decay))
+        scheduler = LambdaLR(optimizer, time_lr)
+    else:
+        total_steps = max(steps_per_epoch * int(cfg.epochs), 1)
+        warmup_steps = int(float(cfg.warmup) * steps_per_epoch)
+        scheduler = build_scheduler(optimizer, warmup_steps, total_steps)
+    if len(loaders["train"]) == 0:
+        raise ValueError("Training loader has no batches; reduce batch_size")
 
     log_run_stats("start", model, timer, vram)
     vram.reset()
@@ -203,7 +222,8 @@ def train(cfg):
         print(f"[train] training-only time limit={max_train_minutes} minutes")
 
     try:
-        for epoch in range(1, int(cfg.epochs) + 1):
+        epochs = itertools.count(1) if time_only else range(1, int(cfg.epochs) + 1)
+        for epoch in epochs:
             model.train()
             epoch_timer = Timer()
             running = 0.0
@@ -233,6 +253,8 @@ def train(cfg):
 
                 if i % accum == 0 or i == n_batches:
                     optimizer.step()
+                    if time_only:
+                        elapsed_training[0] = training_seconds + time.monotonic() - training_start
                     scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
                     global_step += 1
