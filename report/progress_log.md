@@ -22,7 +22,8 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - what it is: `method: van_adaptformer` (new, opt-in; the team's `adaptformer.py` stub is untouched): a parallel bottleneck (768 -> 192 -> 768, ReLU) beside every block's MLP, output zero at the start, trained at lr 1e-3; prototype cosine head at 4e-3; label smoothing 0.1; clip 1.0; batch 256; 5% warmup + cosine fitted to 144 min. No layer decay or drop_path (full-FT only).
 - findings, one change at a time against a plain AdaptFormer (71.49% at 1 epoch): adapter lr 3e-4 / 1e-3 / 3e-3 / 1e-2 = 70.56 / 71.49 / 71.49 / 70.45; **loss design**: CosFace margin 0.1 (`cosine_margin`) **+0.60** (margin 0.2 -0.54; no label smoothing -0.32); **initialization/design**: adapter reads norm2(x) instead of the residual stream +0.24, learned per-block scale +0.15, PCA init of the down projection (`adapter_init: pca`) +0.08; width 64 (1.38%) -0.56. All four positive changes together, 3 epochs: **76.26% vs 75.27%** for the plain control (+0.99, ahead at every epoch).
 - learned scales rise with depth (blocks 1-11: 0.03-0.09, block 12: 0.15): the model wants more adaptation in deep blocks.
-- next: batch-1 latency for the report; later runs of this recipe go through `notebooks/van_colab_launcher.ipynb` (METHOD `van_adaptformer_final`).
+- latency (forward only, synthetic 336 px, bf16, 30 warm-ups + 200 iterations, **RTX 5080 laptop**, not A100): 5.60 ms at batch 1 (10.58 ms with flip), 1.83 ms/image at batch 64; the same ViT-B without adapters 4.04 / 1.70 ms. Adapters cannot be merged like LoRA: +39% at batch 1, +7% at batch 64.
+- next: an A100 latency to compare with the team's numbers; later runs of this recipe go through `notebooks/van_colab_launcher.ipynb` (METHOD `van_adaptformer_final`).
 
 ### 2026-10-06 — Van — full FT recipe tuned on a laptop (`configs/van_full_ft_proto_llrd.yaml`)
 
