@@ -1,0 +1,30 @@
+inherits: base.yaml
+method: prefix
+img_size: 336
+head_type: linear
+head_init: prototype
+evaluate_before_training: false  # Ablation helper saves the initial evaluation.
+prefix_length: 20
+prefix_placement: all
+prefix_init_std: 0.02
+max_adaptation_pct: 5.0
+lr: 3.0e-4
+head_lr: 1.0e-3
+weight_decay: 0.0
+epochs: 5
+max_train_minutes: null
+warmup: 0.25
+batch_size: 64
+grad_accum_steps: 1
+num_workers: 8
+seed: 42
+
+ablation:
+  split_seed: 42
+  holdout_per_class: 5
+  lengths: [5, 20, 50]
+  placements: [last1, last4, all]
+  pilot_classes: 1000
+  pilot_epochs: 3
+  pilot_lrs: [1.0e-4, 3.0e-4, 1.0e-3]
+  tie_tolerance: 0.003
