@@ -228,3 +228,20 @@ Frozen features + linear probe, internal holdout accuracy:
 - cost: latency TBC ms/image at batch 1 (LoRA not merged, so slightly above the base model; merged LoRA adds no inference cost). Crop 0.7 + flip needs two forward passes.
 - trainer additions (all off by default): `lora_targets` (qkv, proj, fc1, fc2), `unfreeze_extra` (norm, bias, pos_embed, cls_token; no weight decay on these), and a per-run `[params]` line giving trainable % of the original backbone with the head excluded(repo default LoRA r8 on qkv prints 0.34%, matching the brief).
 - next: ablate the changes (extras, rank, head init, head lr) at pilot scale; Adapter (width 96) and AdaptFormer (width 192) atthe same ~4.7% budget and setup.
+
+### 2026-10-09 — Qian — prefix tuning ablation test
+
+- run_dir: `CS604_RUNS/qq_prefix_ablation_336_seed42_v1/runs/screen/` (`qq_prefix_tuning_ablation`; `colab_launcher_qq.ipynb`).
+- val acc (internal): best **0.71688** (`all_p50`). All arms' best accuracy occurred at epoch 5; one seed, convergence unconfirmed.
+- trainable % / peak VRAM / GPU-hours: selected arm **1.071792%** backbone (classifier excluded) / **7.97 GiB** / **1.188 wall GPU-hours**, including **64.80 training minutes** on A100 40GB. All six runs below.
+- what changed: frozen augreg2 at 336 with fit-only prototype linear head; 40 fit + 5 holdout images/class, seed 42. Five epochs/arm; AdamW prefix/head LR 1e-3, weight decay 0, batch 64, BF16, 5% warmup + cosine. Compared placements at length 5, then lengths 20/50 at all blocks. `all_p50` adds **8.36 points** over baseline; its **0.04-point** lead over `all_p5` is inconclusive with one seed.
+- next: Qian selected **all blocks, length 50**. Rebuild all-data prototypes and train from pretrained weights on all 450,000 images for **144 training minutes**, then evaluate CodaBench (planned 2026-10-10).
+
+| Arm | Holdout top-1 | Backbone trainable % | Peak VRAM (GiB) | Training min | Wall GPU-hours |
+|---|---:|---:|---:|---:|---:|
+| Classifier only | 0.63328 | 0 | 1.24 | 61.86 | 1.141 |
+| Last block, length 5 | 0.65136 | 0.008932 | 1.45 | 61.40 | 1.130 |
+| Last 4 blocks, length 5 | 0.68996 | 0.035726 | 3.68 | 61.89 | 1.139 |
+| All blocks, length 5 | 0.71648 | 0.107179 | 8.35 | 63.79 | 1.170 |
+| All blocks, length 20 | 0.71634 | 0.428717 | 7.90 | 65.40 | 1.202 |
+| All blocks, length 50 | **0.71688** | 1.071792 | 7.97 | 64.80 | 1.188 |
