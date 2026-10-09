@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import itertools
 import math
 import time
 from datetime import datetime
@@ -206,15 +207,40 @@ def train(cfg):
 
     accum = max(int(cfg.grad_accum_steps), 1)
     steps_per_epoch = math.ceil(len(loaders["train"]) / accum)
-    total_steps = max(steps_per_epoch * int(cfg.epochs), 1)
-    warmup_steps = int(float(cfg.warmup) * steps_per_epoch)
+    time_only = cfg.get("epochs") is None
+    elapsed_training = [0.0]
     clock = None
-    if bool(cfg.get("schedule_fit_time", False)):
+    if time_only:
         if max_train_seconds is None:
-            raise ValueError("schedule_fit_time needs max_train_minutes")
-        clock = {"fraction": 0.0}
-    scheduler = build_scheduler(optimizer, warmup_steps, total_steps, clock)
+            raise ValueError("epochs: null requires max_train_minutes")
+        warmup_fraction = float(cfg.get("time_warmup_fraction", 0.0))
+        if not 0 <= warmup_fraction < 1:
+            raise ValueError("time_warmup_fraction must be in [0, 1)")
+        def time_lr(_step):
+            progress = min(max(elapsed_training[0] / max_train_seconds, 0.0), 1.0)
+            if warmup_fraction and progress < warmup_fraction:
+                return progress / warmup_fraction
+            decay = (progress - warmup_fraction) / (1 - warmup_fraction)
+            return 0.5 * (1 + math.cos(math.pi * decay))
+        scheduler = LambdaLR(optimizer, time_lr)
+    else:
+        total_steps = max(steps_per_epoch * int(cfg.epochs), 1)
+        warmup_steps = int(float(cfg.warmup) * steps_per_epoch)
+        if bool(cfg.get("schedule_fit_time", False)):
+            if max_train_seconds is None:
+                raise ValueError("schedule_fit_time needs max_train_minutes")
+            clock = {"fraction": 0.0}
+        scheduler = build_scheduler(optimizer, warmup_steps, total_steps, clock)
     clip_grad_norm = cfg.get("clip_grad_norm")
+    if len(loaders["train"]) == 0:
+        raise ValueError("Training loader has no batches; reduce batch_size")
+    print(f"[train] images={len(loaders['train'].dataset)}, batches_per_epoch={len(loaders['train'])}, "
+          f"batch_size={cfg.batch_size}, workers={cfg.num_workers}")
+    if device.type == "cuda":
+        print(f"[train] GPU={torch.cuda.get_device_name(device)}")
+    else:
+        print("[train] WARNING: running on CPU")
+    print(f"[train] stopping={'training-time budget only' if time_only else 'epoch ceiling or time budget'}")
 
     log_run_stats("start", model, timer, vram)
     vram.reset()
@@ -242,7 +268,8 @@ def train(cfg):
     epoch_f = epoch_path.open("w", newline="", encoding="utf-8")
     step_w = csv.DictWriter(step_f, fieldnames=["step", "epoch", "loss", "lr"])
     epoch_w = csv.DictWriter(
-        epoch_f, fieldnames=["epoch", "train_loss", "val_loss", "val_acc", "epoch_time_s"]
+        epoch_f, fieldnames=["epoch", "train_loss", "val_loss", "val_acc", "epoch_time_s",
+                             "batches_processed", "batches_total", "images_processed", "epoch_complete"]
     )
     step_w.writeheader()
     epoch_w.writeheader()
@@ -255,11 +282,13 @@ def train(cfg):
         print(f"[train] training-only time limit={max_train_minutes} minutes")
 
     try:
-        for epoch in range(1, int(cfg.epochs) + 1):
+        epochs = itertools.count(1) if time_only else range(1, int(cfg.epochs) + 1)
+        for epoch in epochs:
             model.train()
             epoch_timer = Timer()
             running = 0.0
             seen = 0
+            batches_processed = 0
             optimizer.zero_grad(set_to_none=True)
 
             # Count training batch loading and updates, excluding setup,
@@ -267,7 +296,8 @@ def train(cfg):
             if max_train_seconds is not None and device.type == "cuda":
                 torch.cuda.synchronize(device)
             training_start = time.monotonic()
-            pbar = tqdm(loaders["train"], desc=f"epoch {epoch}/{cfg.epochs}", leave=True)
+            label = f"epoch {epoch} (time budget)" if time_only else f"epoch {epoch}/{cfg.epochs}"
+            pbar = tqdm(loaders["train"], desc=label, leave=True)
             n_batches = len(loaders["train"])
             for i, (images, labels, _) in enumerate(pbar, start=1):
                 if (max_train_seconds is not None and
@@ -292,6 +322,8 @@ def train(cfg):
                     if clock is not None:
                         used = training_seconds + time.monotonic() - training_start
                         clock["fraction"] = used / max_train_seconds
+                    if time_only:
+                        elapsed_training[0] = training_seconds + time.monotonic() - training_start
                     scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
                     global_step += 1
@@ -299,6 +331,7 @@ def train(cfg):
                 loss_val = float(loss.item())
                 running += loss_val * labels.size(0)
                 seen += labels.size(0)
+                batches_processed += 1
                 lr = scheduler.get_last_lr()[0]
                 step_w.writerow(
                     {"step": global_step, "epoch": epoch, "loss": loss_val, "lr": lr}
@@ -319,6 +352,10 @@ def train(cfg):
                 "val_loss": "",
                 "val_acc": "",
                 "epoch_time_s": round(epoch_timer.elapsed(), 2),
+                "batches_processed": batches_processed,
+                "batches_total": n_batches,
+                "images_processed": seen,
+                "epoch_complete": int(batches_processed == n_batches),
             }
             if has_val:
                 metrics = evaluate(model, loaders["val"], loss_fn, device, use_bf16)
