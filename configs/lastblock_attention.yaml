@@ -1,0 +1,12 @@
+# Use the internal-validation recipe, with prototype initialization for the final run.
+inherits: linear_probe.yaml
+method: last_blocks
+last_n_blocks: 1
+train_scope: attention
+max_backbone_trainable_fraction: 0.05
+# Time-only training: no epoch ceiling; cosine decay over the training budget.
+epochs: null
+max_train_minutes: 144
+time_warmup_fraction: 0.05
+head_init: prototype
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes.pt
