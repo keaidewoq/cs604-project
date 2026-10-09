@@ -14,6 +14,14 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-09 — Van — zoomed second view at prediction (`src.predict --zoom`)
+
+- run_dir: no training; prediction-only option for any trained checkpoint (`src/van_zoom.py`, launcher section 6c)
+- val acc (ours / CodaBench): internal holdout (5 training images/class held out), eval crop 0.75, 2 forward passes each: plain + zoom vs plain + flip **77.95 vs 77.10%** (AdaptFormer, 3 laptop epochs) and **79.59 vs 78.97%** (full FT at 336, 3 laptop epochs); 4 passes (with both flips) 78.08 / 79.63% / CodaBench TBC
+- trainable % / peak VRAM / GPU-hours: unchanged (inference only); 2 passes per image, like crop + flip
+- what it is: after the usual pass, the patch tokens most similar to the predicted class's head weight mark where the model found its evidence; the smallest square holding 70% of that map is cut from a 2x-resolution copy of the image, enlarged to the input size and classified again; the softmaxes are averaged. A centred square of the same size scored 77.67 / 79.43%: most of the gain is the close-up itself, the rest is zooming to the right place (largest for small subjects: +2.5 vs +0.9 on the 691 images with the tightest boxes, full FT).
+- next: CodaBench for the AdaptFormer final and the full FT at 336 re-predicted with `--crop_pct 0.75 --zoom`.
+
 ### 2026-10-09 — Van — AdaptFormer (Task 2) tuned on a laptop (`configs/van_adaptformer_final.yaml`)
 
 - run_dir: laptop screens in Van's own pipeline (RTX 5080 laptop, 336 px, 1 epoch per arm unless noted); final run `af_final_45` on Colab A100 40 GB from Van's personal pipeline (same recipe as `configs/van_adaptformer_final.yaml`, which is the team-trainer port: identical logits on a trained checkpoint)
