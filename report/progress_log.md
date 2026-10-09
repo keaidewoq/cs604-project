@@ -218,3 +218,21 @@ Frozen features + linear probe, internal holdout accuracy:
 - latency: **7.693 ms/image** at batch 1; **0.289 ms/image** at batch 64, synthetic forward-only BF16 (30 warmups, 200 iterations).
 - loss: epoch-average training loss 3.165 → 1.325 over complete epochs 1–5; partial epoch 6: 1.157. Raw logs retained; plots saved in `figures/`.
 - comparison: **+0.5 percentage points** over Qian's 66.3% full-FT reference, with fewer trainable backbone parameters and lower measured peak VRAM. Training recipes differ, so this is not an isolated adaptation-method comparison. Scope selection used random-head internal validation; this final run used prototypes.
+
+
+### 2026-10-09 — Qian — prefix tuning ablation test
+
+- run_dir: `CS604_RUNS/qq_prefix_ablation_336_seed42_v1/runs/screen/` (`qq_prefix_tuning_ablation`; `colab_launcher_qq.ipynb`).
+- val acc (internal): best **0.71688** (`all_p50`). All arms' best accuracy occurred at epoch 5; one seed, convergence unconfirmed.
+- trainable % / peak VRAM / GPU-hours: selected arm **1.071792%** backbone (classifier excluded) / **7.97 GiB** / **1.188 wall GPU-hours**, including **64.80 training minutes** on A100 40GB. All six runs below.
+- what changed: frozen augreg2 at 336 with fit-only prototype linear head; 40 fit + 5 holdout images/class, seed 42. Five epochs/arm; AdamW prefix/head LR 1e-3, weight decay 0, batch 64, BF16, 5% warmup + cosine. Compared placements at length 5, then lengths 20/50 at all blocks. `all_p50` adds **8.36 points** over baseline; its **0.04-point** lead over `all_p5` is inconclusive with one seed.
+- next: Qian selected **all blocks, length 50**. Rebuild all-data prototypes and train from pretrained weights on all 450,000 images for **144 training minutes**, then evaluate CodaBench (planned 2026-10-10).
+
+| Arm | Holdout top-1 | Backbone trainable % | Peak VRAM (GiB) | Training min | Wall GPU-hours |
+|---|---:|---:|---:|---:|---:|
+| Classifier only | 0.63328 | 0 | 1.24 | 61.86 | 1.141 |
+| Last block, length 5 | 0.65136 | 0.008932 | 1.45 | 61.40 | 1.130 |
+| Last 4 blocks, length 5 | 0.68996 | 0.035726 | 3.68 | 61.89 | 1.139 |
+| All blocks, length 5 | 0.71648 | 0.107179 | 8.35 | 63.79 | 1.170 |
+| All blocks, length 20 | 0.71634 | 0.428717 | 7.90 | 65.40 | 1.202 |
+| All blocks, length 50 | **0.71688** | 1.071792 | 7.97 | 64.80 | 1.188 |
