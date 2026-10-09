@@ -17,10 +17,10 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 ### 2026-10-09 — Van — zoomed second view at prediction (`src.predict --zoom`)
 
 - run_dir: no training; prediction-only option for any trained checkpoint (`src/van_zoom.py`, launcher section 6c)
-- val acc (ours / CodaBench): internal holdout (5 training images/class held out), eval crop 0.75, 2 forward passes each: plain + zoom vs plain + flip **77.95 vs 77.10%** (AdaptFormer, 3 laptop epochs) and **79.59 vs 78.97%** (full FT at 336, 3 laptop epochs); 4 passes (with both flips) 78.08 / 79.63% / CodaBench TBC
+- val acc (ours / CodaBench): internal holdout (5 training images/class held out), eval crop 0.75, 2 forward passes each: plain + zoom vs plain + flip **77.95 vs 77.10%** (AdaptFormer, 3 laptop epochs) and **79.59 vs 78.97%** (full FT at 336, 3 laptop epochs); 4 passes (with both flips) 78.08 / 79.63% / **CodaBench 0.797** for the AdaptFormer final (ID 972126; was 0.790 with crop 0.75 + flip) and **0.819** for Anastasia's full FT at 336 `full_ft_20261006_122039` (ID 972132; was 0.813 with crop 0.7 + flip): +0.7 and +0.6, as the holdout predicted. Same checkpoints, no retraining, predicted with `--crop_pct 0.75 --zoom`.
 - trainable % / peak VRAM / GPU-hours: unchanged (inference only); 2 passes per image, like crop + flip
 - what it is: after the usual pass, the patch tokens most similar to the predicted class's head weight mark where the model found its evidence; the smallest square holding 70% of that map is cut from a 2x-resolution copy of the image, enlarged to the input size and classified again; the softmaxes are averaged. A centred square of the same size scored 77.67 / 79.43%: most of the gain is the close-up itself, the rest is zooming to the right place (largest for small subjects: +2.5 vs +0.9 on the 691 images with the tightest boxes, full FT).
-- next: CodaBench for the AdaptFormer final and the full FT at 336 re-predicted with `--crop_pct 0.75 --zoom`.
+- next: use `--zoom` for the Phase 2 test predictions; the launcher's section 6c does it for new runs.
 
 ### 2026-10-09 — Van — AdaptFormer (Task 2) tuned on a laptop (`configs/van_adaptformer_final.yaml`)
 
