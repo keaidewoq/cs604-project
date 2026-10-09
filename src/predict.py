@@ -28,6 +28,11 @@ def parse_args():
                    help="Eval center-crop fraction (default: the model's own, 0.9). Off unless given.")
     p.add_argument("--tta_flip", action="store_true",
                    help="Average the softmax of each image and its horizontal flip. Off unless given.")
+    p.add_argument("--zoom", action="store_true",
+                   help="Van: add a zoomed view of the region the model used (src/van_zoom.py) and "
+                        "average the softmax; with --tta_flip the zoom is flipped too. Off unless given.")
+    p.add_argument("--zoom_mass", type=float, default=None,
+                   help="Share of the saliency map the zoom box holds (default 0.7).")
     return p.parse_args()
 
 
@@ -47,9 +52,15 @@ def load_checkpoint(model, ckpt_path, device):
 
 
 @torch.no_grad()
-def run_predict(cfg, ckpt_path, split, team, out_dir, crop_pct=None, tta_flip=False):
+def run_predict(cfg, ckpt_path, split, team, out_dir, crop_pct=None, tta_flip=False,
+                zoom=False, zoom_mass=None):
     device = get_device()
     _, eval_tf = build_transforms(cfg, eval_crop_pct=crop_pct)
+    if zoom:
+        from src import van_zoom
+
+        eval_tf = van_zoom.two_view_transform(cfg, crop_pct)
+        zoom_mass = van_zoom.DEFAULT_MASS if zoom_mass is None else float(zoom_mass)
     dataset = ImageListDataset(cfg.data_root, split, transform=eval_tf)
     loader = DataLoader(
         dataset,
@@ -72,6 +83,11 @@ def run_predict(cfg, ckpt_path, split, team, out_dir, crop_pct=None, tta_flip=Fa
 
     with out_path.open("w", encoding="utf-8") as f:
         for images, _, paths in tqdm(loader, desc=f"predict {split}"):
+            if zoom:
+                preds = _predict_zoom(model, images, device, amp_dtype, use_bf16, tta_flip, zoom_mass)
+                for rel_path, pred in zip(paths, preds):
+                    f.write(f"{rel_path} {pred}\n")
+                continue
             images = images.to(device, non_blocking=True)
             with torch.autocast(device_type=device.type, dtype=amp_dtype, enabled=use_bf16):
                 logits = model(images)
@@ -83,8 +99,28 @@ def run_predict(cfg, ckpt_path, split, team, out_dir, crop_pct=None, tta_flip=Fa
             for rel_path, pred in zip(paths, preds):
                 f.write(f"{rel_path} {pred}\n")
 
-    print(f"[predict] wrote {out_path} ({len(dataset)} lines; crop_pct={crop_pct or 'model default'}, tta_flip={tta_flip})")
+    zoom_note = f", zoom mass {zoom_mass}" if zoom else ""
+    print(f"[predict] wrote {out_path} ({len(dataset)} lines; crop_pct={crop_pct or 'model default'}, "
+          f"tta_flip={tta_flip}{zoom_note})")
     return out_path
+
+
+def _predict_zoom(model, batch, device, amp_dtype, use_bf16, tta_flip, zoom_mass):
+    """Plain view (+ flip) + zoomed view (+ its flip), softmax averaged (src/van_zoom.py)."""
+    from src import van_zoom
+
+    images = batch[0].to(device, non_blocking=True)
+    big = batch[1].to(device, non_blocking=True)
+    with torch.autocast(device_type=device.type, dtype=amp_dtype, enabled=use_bf16):
+        tokens = model.forward_features(images)
+        logits = model.forward_head(tokens).float()
+        views = [van_zoom.zoom_view(model, tokens, logits, big, mass=zoom_mass)]
+        if tta_flip:
+            views += [torch.flip(images, dims=[3]), torch.flip(views[0], dims=[3])]
+        probs = logits.softmax(dim=1)
+        for view in views:
+            probs = probs + model(view).float().softmax(dim=1)
+    return probs.argmax(dim=1).cpu().tolist()
 
 
 def main():
@@ -92,7 +128,8 @@ def main():
     cfg = load_config(args.config)
     apply_overrides(cfg, data_root=args.data_root, batch_size=args.batch_size)
     run_predict(cfg, args.ckpt, args.split, args.team, args.out_dir,
-                crop_pct=args.crop_pct, tta_flip=args.tta_flip)
+                crop_pct=args.crop_pct, tta_flip=args.tta_flip,
+                zoom=args.zoom, zoom_mass=args.zoom_mass)
 
 
 if __name__ == "__main__":
