@@ -25,6 +25,10 @@ def build_peft(model, cfg):
         from .adaptformer import apply_adaptformer
 
         return apply_adaptformer(model, cfg)
+    if method == "van_adaptformer":
+        from .van_adaptformer import apply_van_adaptformer
+
+        return apply_van_adaptformer(model, cfg)
     if method == "last_blocks":
         from .last_blocks import apply_last_blocks
 

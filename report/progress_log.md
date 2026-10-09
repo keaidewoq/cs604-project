@@ -14,6 +14,16 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-09 — Van — AdaptFormer (Task 2) tuned on a laptop (`configs/van_adaptformer_final.yaml`)
+
+- run_dir: laptop screens in Van's own pipeline (RTX 5080 laptop, 336 px, 1 epoch per arm unless noted); Colab run of this config TBC
+- val acc (ours / CodaBench): internal holdout (5 training images/class held out, trained on the other 40) **76.26%** after 3 epochs, **77.13%** with `--crop_pct 0.75 --tta_flip` / CodaBench TBC
+- trainable % / peak VRAM / GPU-hours: 3,550,476 backbone params = **4.13%** of ViT-B (head excluded) / 7.6 GB at batch 64 on the laptop / 3 epochs = 1.9 laptop hours (0.63 of the 48 GB-hour budget)
+- what it is: `method: van_adaptformer` (new, opt-in; the team's `adaptformer.py` stub is untouched): a parallel bottleneck (768 -> 192 -> 768, ReLU) beside every block's MLP, output zero at the start, trained at lr 1e-3; prototype cosine head at 4e-3; label smoothing 0.1; clip 1.0; batch 256; 5% warmup + cosine fitted to 144 min. No layer decay or drop_path (full-FT only).
+- findings, one change at a time against a plain AdaptFormer (71.49% at 1 epoch): adapter lr 3e-4 / 1e-3 / 3e-3 / 1e-2 = 70.56 / 71.49 / 71.49 / 70.45; **loss design**: CosFace margin 0.1 (`cosine_margin`) **+0.60** (margin 0.2 -0.54; no label smoothing -0.32); **initialization/design**: adapter reads norm2(x) instead of the residual stream +0.24, learned per-block scale +0.15, PCA init of the down projection (`adapter_init: pca`) +0.08; width 64 (1.38%) -0.56. All four positive changes together, 3 epochs: **76.26% vs 75.27%** for the plain control (+0.99, ahead at every epoch).
+- learned scales rise with depth (blocks 1-11: 0.03-0.09, block 12: 0.15): the model wants more adaptation in deep blocks.
+- next: Colab A100 run of this config with `notebooks/van_colab_launcher.ipynb` (METHOD `van_adaptformer_final`, crop 0.75 + flip for the second prediction).
+
 ### 2026-10-06 — Van — full FT recipe tuned on a laptop (`configs/van_full_ft_proto_llrd.yaml`)
 
 - run_dir: laptop screens in Van's own pipeline (RTX 5080 laptop); the Colab run of this config (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` at f5d654a) is under `CS604_RUNS`, folder name TBC

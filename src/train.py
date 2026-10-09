@@ -197,7 +197,7 @@ def train(cfg):
     loaders = build_dataloaders(cfg)
     model = build_model(cfg).to(device)
     load_prototypes(cfg, model)
-    loss_fn = build_loss(cfg)
+    loss_fn = build_loss(cfg, model)
 
     groups = adamw_param_groups(
         model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get("head_lr"),
@@ -277,6 +277,22 @@ def train(cfg):
     best_acc = -1.0
     global_step = 0
     training_seconds = 0.0
+    if str(cfg.get("adapter_init", "lora")) == "pca":
+        # Opt-in (Van, method van_adaptformer): data-driven adapter init. Its time counts
+        # as training time, so it comes out of the time limit.
+        from src.peft.van_adaptformer import calibrate_adapters_pca
+
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        pca_start = time.monotonic()
+        n_pca = int(cfg.get("adapter_init_batches", 16))
+        pca = calibrate_adapters_pca(
+            model, (images for _, (images, _, _) in zip(range(n_pca), loaders["train"])),
+            device, use_bf16,
+        )
+        training_seconds = time.monotonic() - pca_start
+        print(f"[van_adaptformer] pca init: {n_pca} batches, {training_seconds:.1f}s, variance "
+              "explained per block " + " ".join(f"{v:.2f}" for v in pca["variance_explained"]))
     time_limit_reached = False
     if max_train_seconds is not None:
         print(f"[train] training-only time limit={max_train_minutes} minutes")

@@ -1,0 +1,35 @@
+# Van's AdaptFormer (Task 2) for the 2.4 h budget on a 40 GB A100
+# (Colab: notebooks/van_colab_launcher.ipynb, METHOD = "van_adaptformer_final").
+# Tuned on a laptop on a fixed 5-image/class holdout at 336 px (report/progress_log.md,
+# Van, 2026-10-09): 76.26% after 3 epochs, 77.13% with crop 0.75 + flip.
+# vs a plain AdaptFormer control (residual input, Kaiming init, fixed scale, no margin):
+# 75.27% after 3 epochs, so +0.99 for the four changes below together.
+# Trainable backbone: 12 parallel adapters, width 192 = 3,550,476 params (incl. 12 scales)
+# = 4.13% of the backbone, head excluded.
+# Trains on all 45 images/class; the cosine is fitted to the time limit, `epochs` is a ceiling.
+inherits: base.yaml
+method: van_adaptformer
+img_size: 336
+adapter_dim: 192
+adapter_scale: 0.1
+adapter_scale_trainable: true   # learned per block (+0.15 at 1 epoch)
+adapter_dropout: 0.0
+adapter_input: norm             # adapter reads norm2(x) (+0.24 at 1 epoch)
+adapter_init: pca               # down from the input's whitened principal directions (+0.08)
+adapter_init_batches: 8         # 8 x 128 = 1,024 images, as on the laptop (16 x 64)
+head_type: cosine
+head_init: prototype
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+cosine_margin: 0.1              # CosFace margin (+0.60 at 1 epoch; 0.2 lost 0.5)
+lr: 1.0e-3                      # adapters (screen: 3e-4 70.56, 1e-3 71.49, 3e-3 71.49, 1e-2 70.45)
+head_lr: 4.0e-3
+weight_decay: 0.05
+label_smoothing: 0.1            # 0 lost 0.3
+clip_grad_norm: 1.0
+batch_size: 128
+grad_accum_steps: 2             # effective batch 256
+num_workers: 8
+epochs: 30            # ceiling only
+warmup: 1.5           # epochs: 5% of the 30-epoch ceiling, i.e. about 5% of the time budget
+max_train_minutes: 144
+schedule_fit_time: true
