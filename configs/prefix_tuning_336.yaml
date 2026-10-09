@@ -8,7 +8,7 @@ prefix_init_std: 0.02
 max_adaptation_pct: 5.0  # Strictly below 5%, excluding the classifier.
 head_type: linear
 head_init: prototype
-prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_prefix_all_data_336.pt
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
 evaluate_before_training: false
 lr: 1.0e-3
 head_lr: 1.0e-3
