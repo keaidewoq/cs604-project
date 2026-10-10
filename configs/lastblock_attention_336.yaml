@@ -1,0 +1,7 @@
+# Qian's last-block attention (CodaBench 0.668 @ 224) at Ana's 336 resolution.
+# Hypothesis: 336 helped when the backbone adapts (full FT +5, LoRA +6.8);
+# frozen probe did not. This method adapts last-block attention (~2.75%).
+# Rebuild prototypes at 336 before training — do not reuse prototypes.pt (224).
+inherits: lastblock_attention.yaml
+img_size: 336
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
