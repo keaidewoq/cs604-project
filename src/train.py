@@ -16,7 +16,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from tqdm import tqdm
 
 from src.data import build_dataloaders
-from src.heads import load_prototypes
+from src.heads import load_probe_head, load_prototypes
 from src.losses import build_loss
 from src.model import build_model
 from src.utils import (
@@ -197,6 +197,7 @@ def train(cfg):
     loaders = build_dataloaders(cfg)
     model = build_model(cfg).to(device)
     load_prototypes(cfg, model)
+    load_probe_head(cfg, model)
     loss_fn = build_loss(cfg)
 
     groups = adamw_param_groups(

@@ -1,0 +1,40 @@
+# Ablation of the LoRA r24 recipe (CodaBench 0.785) at pilot scale: which changes
+# from the 0.717 LoRA r16 run made the difference?
+# Run: python scripts/ablation.py --spec configs/ablation_lora_r24.yaml --data_root /content/data \
+#        --output_dir /content/drive/MyDrive/CS604_RUNS
+# Launcher: notebooks/colab_launcher_ana_ablation.ipynb
+#
+# Every arm trains on the same 1,000-class pilot subset (40 fit images/class) and is
+# scored on the same labelled holdout (5/class). Both starting heads are rebuilt from
+# the fit images only, so no arm's head has seen the holdout: prototypes for the 1,000
+# pilot classes are recomputed (other classes keep their prototypes_336.pt rows), and
+# the linear probe for arms D and F is trained on the same fit images.
+# Not ablated (differ between the 0.717 and 0.785 runs too): batch 128 -> 256 and
+# weight decay 1e-4 -> 0.05; F keeps the new values for both.
+base: lora_r24_336_recipe.yaml          # relative to this file
+base_prototypes: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+pilot:
+  num_classes_subset: 1000
+  holdout_per_class: 5
+  subset_seed: 0
+  epochs: 3
+  warmup: 0.15                          # 5% of 3 epochs, as in the full run
+arms:
+  A_full_recipe: {}
+  B_no_extras:
+    unfreeze_extra: []
+  C_rank16:
+    lora_rank: 16
+    lora_alpha: 16
+  D_probe_head:
+    head_type: linear
+    head_init: probe
+  E_head_lr_1e-4:
+    head_lr: 1.0e-4
+  F_all_four_off:                       # ~ the 0.717 run's setup
+    unfreeze_extra: []
+    lora_rank: 16
+    lora_alpha: 16
+    head_type: linear
+    head_init: probe
+    head_lr: 1.0e-4
