@@ -220,12 +220,12 @@ Frozen features + linear probe, internal holdout accuracy:
 - comparison: **+0.5 percentage points** over Qian's 66.3% full-FT reference, with fewer trainable backbone parameters and lower measured peak VRAM. Training recipes differ, so this is not an isolated adaptation-method comparison. Scope selection used random-head internal validation; this final run used prototypes.
 ### 2026-10-07 — Anastasia — LoRA r24 + extras @ 336 with Van'srecipe (`configs/lora_r24_336_recipe.yaml`)
 
-- run_dir: `CS604_RUNS/lora_TBC` (launcher `notebooks/colab_launcher_ana_lora336.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/lora_20261007_051926` (launcher `notebooks/colab_launcher_ana_lora336.ipynb`, `ana-branch`)
 - val acc (ours / CodaBench): no internal holdout (trained on all 45 images/class) / **0.785** plain center crop 0.9; **0.793**with crop 0.7 + flip TTA
 - trainable % / peak VRAM / GPU-hours: **4.65% of the backbone** (4.00M / 85.99M, head excluded) / 19.40 GB / 2.40 (144.0 training min, time limit reached; A100 40 GB)
 - what changed vs the 0.717 LoRA r16 run: rank 16 → 24; also trained LayerNorms, all biases, pos_embed and cls_token (0.46M, noweight decay); prototype cosine head (`prototypes_336.pt`) instead of a linear-probe head; head lr 1e-4 → 3e-3 (10× the LoRA lr); effective batch 128 → 256; weight decay 1e-4 → 0.05. Unchanged: LoRA on qkv/proj/fc1/fc2, LoRA lr 3e-4, alpha = rank, label smoothing 0.1, 5% warmup + cosine fitted to 144 min.
 - results: **+6.8 points over the 0.717 LoRA**; within 2.2 points of full FT @336 (0.807) with 4.65% of the backbone trained; above Van's full FT @224 (0.757) and Qian's last-block attention (0.668, 2.75%). Several changes at once, so the gain is not yet attributed to any one of them. **~6.8 epochs** (~1,270 s/epoch, ~355 img/s) vs ~8.5 for full FT @336: LoRA was ~25% slower per epoch than full FT (many small unmerged matmuls) and used nearly the same peak memory (19.40 vs 20.05 GB), so here it saved parameters, not training time or VRAM.
-- cost: latency TBC ms/image at batch 1 (LoRA not merged, so slightly above the base model; merged LoRA adds no inference cost). Crop 0.7 + flip needs two forward passes.
+- cost: latency measured **unmerged 14.44–14.98 ms/image at batch 1** (1.07 ms/image at batch 64): +89% vs full FT, because the 48 LoRA layers run as ~96 extra small matmuls. **Merged** into the base weights (`scripts/latency_merged.py`, `inference_latency_merged.json`, same A100 session): **7.68 ms at batch 1, 0.650 ms at batch 64**, the same as a plain ViT-B with the same head (7.58 / 0.651 ms), i.e. no inference cost. Merge check: 0 LoRA layers left, fp32 max logit difference 1.5e-5, 100% fp32 top-1 agreement (bf16 96.5% on synthetic noise inputs, from rounding at near-ties). Submitted predictions used the unmerged model. Crop 0.7 + flip needs two forward passes.
 - trainer additions (all off by default): `lora_targets` (qkv, proj, fc1, fc2), `unfreeze_extra` (norm, bias, pos_embed, cls_token; no weight decay on these), and a per-run `[params]` line giving trainable % of the original backbone with the head excluded(repo default LoRA r8 on qkv prints 0.34%, matching the brief).
 - next: ablate the changes (extras, rank, head init, head lr) at pilot scale; Adapter (width 96) and AdaptFormer (width 192) atthe same ~4.7% budget and setup.
 
@@ -268,3 +268,14 @@ Frozen features + linear probe, internal holdout accuracy:
 | Attention biases + head | 0.8746 | 0.042872 | 6.88 | 3.92 | 0.073 |
 | MLP biases + head | 0.8722 | 0.053590 | 6.63 | 3.85 | 0.071 |
 | LayerNorm biases + head | 0.8724 | 0.022329 | 6.97 | 3.90 | 0.072 |
+
+### 2026-10-09 — Anastasia — Adapter w96 + extras @ 336 with Van's recipe (`configs/adapter_w96_336_recipe.yaml`)
+
+- run_dir: `CS604_RUNS/adapter_20261009_131150`; lr pilot `CS604_RUNS/pilot_adapter_336_20261009_125653` (launcher `notebooks/colab_launcher_ana_peft336.ipynb`, `ana-branch`)
+- val acc (ours / CodaBench): no internal holdout (trained on all 45 images/class) / **0.776** plain center crop 0.9; **0.785** with crop 0.7 + flip TTA
+- trainable % / peak VRAM / GPU-hours: **4.68% of the backbone** (4.02M / 85.99M, head excluded) / 15.54 GB / 2.40 (144.0 training min, time limit reached; A100 40 GB)
+- what it is: 24 serial bottleneck adapters (after attention and after the MLP in all 12 blocks, 768 → 96 → 768, ReLU, up-projection zero-initialised) plus LayerNorms, all biases, pos_embed and cls_token (no weight decay), sized to the LoRA r24 budget. Same setup as the LoRA r24 run: prototype cosine head, head lr 3e-3, weight decay 0.05, label smoothing 0.1, clip 1.0, effective batch 256, 5% warmup + cosine fitted to 144 min.
+- lr pilot (1,000 classes, 3 epochs, holdout 5/class): 3e-4 / 1e-3 / 3e-3 = 0.8938 / **0.8958** / 0.8840, no early dips. Best lr is inside the sweep; the tie rule (within 0.3 points → lower lr) chose **3e-4**. Consistent with Van's AdaptFormer sweep (1e-3 ≈ 3e-3 best).
+- results: **0.9 points below LoRA r24** at the same budget, both plain (0.776 vs 0.785) and with crop + flip (0.785 vs 0.793), despite more epochs (**~9.1** vs ~6.8). Crop + flip added +0.9, the largest TTA gain so far (full FT +0.6, LoRA +0.8).
+- cost: fastest training of all 336 runs: **~951 s/epoch (~473 img/s)** vs 1,017 s full FT and 1,272 s LoRA; lowest peak VRAM (15.54 vs 20.05 GB full FT). Adapters cannot be merged into the weights: latency **11.60 ms/image at batch 1 (+46% vs full FT's 7.94)**, 0.73 ms/image at batch 64 (+15%). LoRA, once merged, has no extra latency (7.68 ms), so Adapter is cheaper to train but slower to run.
+- next: AdaptFormer covered by Van's run (0.779 / 0.790, 4.13%). Try Van's CosFace margin (0.1) on LoRA r24; measure merged-LoRA latency.
