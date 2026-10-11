@@ -19,9 +19,14 @@ Config keys (method: van_adaptformer):
     adapter_init             lora (Kaiming down, default) | pca (see calibrate_adapters_pca;
                              src/train.py runs it before training)
     adapter_init_batches     training batches for the pca init (default 16)
+    adapter_train_bias       also train every pretrained backbone bias: Linear, patch-embedding
+                             conv and LayerNorm (102,912 on ViT-B; default false)
+    adapter_train_norm       also train every pretrained LayerNorm weight (19,200; default false)
 
 Params: 12 x (2 x 768 x width + width + 768); width 192 -> 3,550,464 = 4.13% of
-ViT-B (head excluded). Building refuses a backbone share of 5% or more.
+ViT-B (head excluded); with both options and learned scales 3,672,588 = 4.27%.
+Building refuses a backbone share of 5% or more. The biases and norms start at their
+pretrained values, train at `lr` and, being 1-D, get no weight decay in src/train.py.
 """
 
 from __future__ import annotations
@@ -81,6 +86,26 @@ def van_adapters(model):
     return [b.van_adaptformer for b in getattr(model, "blocks", ()) if hasattr(b, "van_adaptformer")]
 
 
+def _unfreeze_bias_and_norm(model, bias, norm):
+    """Unfreeze pretrained biases (`bias`) and LayerNorm weights (`norm`); returns the count."""
+    skip = {id(p) for p in model.get_classifier().parameters()}
+    skip |= {id(p) for a in van_adapters(model) for p in a.parameters()}
+    count = 0
+    for module in model.modules():
+        if not isinstance(module, (nn.Linear, nn.Conv2d, nn.LayerNorm)):
+            continue
+        chosen = []
+        if bias and module.bias is not None:
+            chosen.append(module.bias)
+        if norm and isinstance(module, nn.LayerNorm) and module.weight is not None:
+            chosen.append(module.weight)
+        for p in chosen:
+            if id(p) not in skip and not p.requires_grad:
+                p.requires_grad = True
+                count += p.numel()
+    return count
+
+
 def apply_van_adaptformer(model, cfg):
     head_ids = {id(p) for p in model.get_classifier().parameters()}
     backbone_total = sum(p.numel() for p in model.parameters() if id(p) not in head_ids)
@@ -97,6 +122,11 @@ def apply_van_adaptformer(model, cfg):
         for p in adapter.parameters():
             p.requires_grad = True
             added += p.numel()
+    unfrozen = _unfreeze_bias_and_norm(
+        model, bool(cfg.get("adapter_train_bias", False)), bool(cfg.get("adapter_train_norm", False))
+    )
+    if unfrozen:
+        print(f"[van_adaptformer] also training {unfrozen:,} pretrained biases/LayerNorm weights")
     trainable_backbone = sum(
         p.numel() for p in model.parameters() if p.requires_grad and id(p) not in head_ids
     )
