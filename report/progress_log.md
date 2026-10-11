@@ -245,3 +245,10 @@ Frozen features + linear probe, internal holdout accuracy:
 | All blocks, length 5 | 0.71648 | 0.107179 | 8.35 | 63.79 | 1.170 |
 | All blocks, length 20 | 0.71634 | 0.428717 | 7.90 | 65.40 | 1.202 |
 | All blocks, length 50 | **0.71688** | 1.071792 | 7.97 | 64.80 | 1.188 |
+
+### 2026-10-10 — Qian — configs/prefix_tuning_336.yaml
+
+- run_dir: `CS604_RUNS/prefix_20261010_000404_id974631` (`last.pt`; `qq_branch_v2`).
+- val acc (ours / CodaBench): **0.71688** (selection ablation, `all_p50`) / **0.721** (final run), submission **974631**.
+- trainable % / peak VRAM / GPU-hours: **1.071792%** backbone (classifier excluded) / **7.97 GiB** / **2.402807 wall GPU-hours**; 144 training minutes on A100 40GB. Latency: **9.644 ms/image**, batch 1, BF16 synthetic forward-only.
+- what changed: final prefix-tuning run at 336, all blocks with length 50; prototype-initialized linear head using `prototypes_336.pt`; batch 64, prefix/head LR 1e-3, weight decay 0, seed 42; 5% time warmup + cosine, no epoch ceiling.
