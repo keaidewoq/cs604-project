@@ -252,3 +252,19 @@ Frozen features + linear probe, internal holdout accuracy:
 - val acc (ours / CodaBench): **0.71688** (selection ablation, `all_p50`) / **0.721** (final run), submission **974631**.
 - trainable % / peak VRAM / GPU-hours: **1.071792%** backbone (classifier excluded) / **7.97 GiB** / **2.402807 wall GPU-hours**; 144 training minutes on A100 40GB. Latency: **9.644 ms/image**, batch 1, BF16 synthetic forward-only.
 - what changed: final prefix-tuning run at 336, all blocks with length 50; prototype-initialized linear head using `prototypes_336.pt`; batch 64, prefix/head LR 1e-3, weight decay 0, seed 42; 5% time warmup + cosine, no epoch ceiling.
+
+### 2026-10-11 — Qian — BitFit ablation test
+
+- run_dir: `CS604_RUNS/qq_bitfit_ablation_336_subset_seed42_v2/` (`qq_bitfit_ablation`; `colab_launcher_qq.ipynb`). Selected arm reused from `runs/pilot/all_biases_lr0.001/seed42/`; other arms under `runs/screen/`.
+- val acc (internal subset / CodaBench): **0.8810** (`all_biases`) / not submitted. All arms' best accuracy occurred at epoch 3; one seed, convergence unconfirmed.
+- trainable % / peak VRAM / GPU-hours: selected arm **0.119683%** backbone (classifier excluded) / **7.01 GiB** / **0.074 wall GPU-hours**, including **4.02 training minutes** on A100-SXM4-40GB.
+- what changed: augreg2 at 336, fit-only prototype linear head; same 1,000-class subset, 40 fit + 5 holdout images/class, seed 42. Three epochs/arm; AdamW bias/head LR 1e-3, weight decay 0, batch 64, BF16, 5% warmup + cosine. Compared bias scopes after an all-bias LR pilot; matching pilot run reused. All biases adds **6.18 points** over head-only and **0.64 points** over attention biases. Subset scores are not directly comparable to full-scale results.
+- next: selected **all biases**, bias/head LR **1e-3**. Returned to `qq_branch_v2`; rebuild all-data prototypes at 336 and train from pretrained weights on all 450,000 images for **144 training minutes**, then evaluate CodaBench.
+
+| Arm | Holdout top-1 | Backbone trainable % | Peak VRAM (GiB) | Training min | Wall GPU-hours |
+|---|---:|---:|---:|---:|---:|
+| Head only | 0.8192 | 0 | 1.24 | 3.73 | 0.071 |
+| All biases + head | **0.8810** | 0.119683 | 7.01 | 4.02 | 0.074 |
+| Attention biases + head | 0.8746 | 0.042872 | 6.88 | 3.92 | 0.073 |
+| MLP biases + head | 0.8722 | 0.053590 | 6.63 | 3.85 | 0.071 |
+| LayerNorm biases + head | 0.8724 | 0.022329 | 6.97 | 3.90 | 0.072 |
