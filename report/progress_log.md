@@ -286,3 +286,12 @@ Frozen features + linear probe, internal holdout accuracy:
 - val acc (CodaBench): **0.734**, submission **976355**.
 - trainable % / peak VRAM / GPU-hours: **0.119683%** backbone (102,912 biases; classifier excluded) / **7.01 GiB** / **2.402 wall GPU-hours**; 144 training minutes on A100 40GB. Latency: **7.403 ms/image** at batch 1, **0.641 ms/image** at batch 64, BF16 synthetic forward-only.
 - what changed: final all-bias BitFit at 336 on all 450,000 training images; prototype linear head using `prototypes_336.pt`; bias/head LR 1e-3, weight decay 0, batch 64, seed 42; 5% time warmup + cosine, no epoch ceiling.
+
+### 2026-10-10 — Wenqi — last-block attention @ 336 (`configs/lastblock_attention_336.yaml`)
+
+- run_dir: `CS604_RUNS/last_blocks_20261010_022115`; submission file `val_team_08.txt`
+- val acc (ours / CodaBench): no internal holdout / **0.679260** (macro F1 0.673014)
+- trainable % / peak VRAM / GPU-hours: **2.7474%** backbone (classifier excluded) / **1.43 GiB** / **2.40** (144.01 training minutes, time limit reached)
+- what changed: Qian's last-block attention recipe (CodaBench 0.668 @ 224) with `img_size: 336` and prototypes rebuilt as `prototypes_336.pt`. Same otherwise: last-block QKV + output projection, prototype linear head, AdamW lr 1e-3, weight decay 0, batch 64, 5% time warmup + cosine over 144 minutes.
+- result: **+1.13 points** over Qian's 0.668 at 224, with fewer epochs in the same budget (3 complete epochs + 56% of epoch 4; train loss 3.20 → 1.33). Still below Anastasia's LoRA r16 @ 336 (0.717) and full FT @ 336 (0.807). The Colab session was a T4 when training started; Qian's reference was an A100, so this is not a same-GPU comparison. No inference latency measured.
+- next: same-GPU rerun on A100 if the +1.13 should be attributed to resolution alone.
