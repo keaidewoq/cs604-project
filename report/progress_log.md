@@ -293,5 +293,5 @@ Frozen features + linear probe, internal holdout accuracy:
 - val acc (ours / CodaBench): no internal holdout / **0.679260** (macro F1 0.673014)
 - trainable % / peak VRAM / GPU-hours: **2.7474%** backbone (classifier excluded) / **1.43 GiB** / **2.40** (144.01 training minutes, time limit reached)
 - what changed: Qian's last-block attention recipe (CodaBench 0.668 @ 224) with `img_size: 336` and prototypes rebuilt as `prototypes_336.pt`. Same otherwise: last-block QKV + output projection, prototype linear head, AdamW lr 1e-3, weight decay 0, batch 64, 5% time warmup + cosine over 144 minutes.
-- result: **+1.13 points** over Qian's 0.668 at 224, with fewer epochs in the same budget (3 complete epochs + 56% of epoch 4; train loss 3.20 → 1.33). Still below Anastasia's LoRA r16 @ 336 (0.717) and full FT @ 336 (0.807). The Colab session was a T4 when training started; Qian's reference was an A100, so this is not a same-GPU comparison. No inference latency measured.
-- next: same-GPU rerun on A100 if the +1.13 should be attributed to resolution alone.
+- result: **+1.13 points** over Qian's 0.668 at 224, both on A100 with a 144-minute budget. Fewer epochs at 336 (3 complete epochs + 56% of epoch 4; train loss 3.20 → 1.33) than Qian's ~6 at 224. Still below Anastasia's LoRA r16 @ 336 (0.717) and full FT @ 336 (0.807). No inference latency measured.
+- next: do not rerun this method. The gap is the adaptation scope, not the GPU.
