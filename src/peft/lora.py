@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 
+import torch
 import torch.nn as nn
 
 
@@ -41,6 +42,19 @@ class LoRALinear(nn.Module):
         lora = self.lora_B(self.lora_A(self.dropout(x)))
         return base + lora * self.scaling
 
+    @torch.no_grad()
+    def merged(self):
+        """A plain Linear with W + scaling * B @ A folded in (same outputs in eval mode)."""
+        base = self.linear
+        delta = (self.lora_B.weight.float() @ self.lora_A.weight.float()) * self.scaling
+        out = nn.Linear(base.in_features, base.out_features, bias=base.bias is not None,
+                        device=base.weight.device, dtype=base.weight.dtype)
+        out.weight.copy_(base.weight.float() + delta)
+        if base.bias is not None:
+            out.bias.copy_(base.bias)
+        out.requires_grad_(False)
+        return out
+
 
 LORA_TARGETS = {"qkv": "attn", "proj": "attn", "fc1": "mlp", "fc2": "mlp"}
 
@@ -71,4 +85,20 @@ def apply_lora(model, cfg):
         f"[lora] wrapped {n} layers ({', '.join(targets)} in {len(model.blocks)} blocks), "
         f"rank={rank}, alpha={alpha}, dropout={dropout}: {params:,} params"
     )
+    return model
+
+
+def merge_lora(model):
+    """Fold every LoRALinear into a plain Linear, for inference only.
+
+    The merged model is a standard ViT, so it runs as fast as the base model.
+    LoRA dropout is ignored, which matches eval mode. Do not train after merging.
+    """
+    n = 0
+    for module in list(model.modules()):
+        for name, child in list(module.named_children()):
+            if isinstance(child, LoRALinear):
+                setattr(module, name, child.merged())
+                n += 1
+    print(f"[lora] merged {n} LoRA layers into their base weights")
     return model
