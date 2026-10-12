@@ -17,7 +17,7 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 ### 2026-10-12 — Van — AdaptFormer + trainable biases and LayerNorms (`configs/van_adaptformer_bias_final.yaml`)
 
 - run_dir: `CS604_RUNS/van_adaptformer_20261012_060248` (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev`)
-- val acc (ours / CodaBench): internal holdout (laptop, 3 epochs) **76.76%** vs 76.26% without the biases/norms, **78.48%** vs 77.95% with crop 0.75 + zoom / **CodaBench 0.802** with crop 0.75 + zoom (ID 980309), +0.5 over the AdaptFormer final without them (0.797, ID 972126), matching the holdout's +0.53
+- val acc (ours / CodaBench): internal holdout (laptop, 3 epochs) **76.76%** vs 76.26% without the biases/norms, **78.48%** vs 77.95% with crop 0.75 + zoom / **CodaBench 0.802** with crop 0.75 + zoom (ID 980309), +0.5 over the AdaptFormer final without them (0.797, ID 972126), matching the holdout's +0.53; **0.794** with crop 0.75 + flip (ID 980317; 0.790 without them), so zoom beats flip by +0.8 as on the holdout (+0.79)
 - trainable % / peak VRAM / GPU-hours: 3,672,588 backbone params = **4.27%** of ViT-B (head excluded; 11.68% with it) / 15.61 GB / 2.40 (144 training minutes, time limit reached)
 - what changed vs `van_adaptformer_final.yaml`: `adapter_train_bias: true` and `adapter_train_norm: true`, so the pretrained backbone's biases (BitFit) and LayerNorm weights also train, at the adapter lr, with no weight decay (122,112 extra parameters). They cost about 10% throughput on the laptop; on the A100 the run did ~462 img/s, 8.9 epochs at batch 128 x 2.
 - training loss rose over epochs 2-6 (5.34 -> 5.65) and then fell to 4.57: the CosFace margin times the learned cosine scale, not a fault.
