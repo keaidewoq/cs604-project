@@ -1,0 +1,21 @@
+# Van's full FT at 336 (the recipe of configs/full_ft_336_llrd.yaml on ana-branch,
+# CodaBench 0.807 plain / 0.819 with zoom) with two speed-only options, so more
+# epochs fit in the 144-minute limit. The training math is unchanged.
+#
+#   fused_adamw: true    fused CUDA AdamW kernel (same update rule)
+#   torch_compile: true  torch.compile on the training forward/backward; the first
+#                        steps compile (about a minute), counted as training time
+#
+# That run was GPU-bound at about 440 img/s (about 8.5 epochs); data loading was
+# not the limit (images are already about 500 px, staged on /content). Compare
+# epoch_time_s in epoch_log.csv with its ~1,018 s per epoch.
+#
+# Colab: METHOD = "van_full_ft_336_fast", PROTO_PT = f"{DRIVE_OUT}/prototypes_336.pt",
+# TTA_CROP = 0.75.
+inherits: van_full_ft_proto_llrd.yaml
+img_size: 336
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+batch_size: 128
+grad_accum_steps: 2   # effective batch 256, as in the 0.807 run
+fused_adamw: true
+torch_compile: true
