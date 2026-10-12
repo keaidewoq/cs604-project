@@ -295,3 +295,19 @@ Frozen features + linear probe, internal holdout accuracy:
 - what changed: Qian's last-block attention recipe (CodaBench 0.668 @ 224) with `img_size: 336` and prototypes rebuilt as `prototypes_336.pt`. Same otherwise: last-block QKV + output projection, prototype linear head, AdamW lr 1e-3, weight decay 0, batch 64, 5% time warmup + cosine over 144 minutes.
 - result: **+1.13 points** over Qian's 0.668 at 224, both on A100 with a 144-minute budget. Fewer epochs at 336 (3 complete epochs + 56% of epoch 4; train loss 3.20 → 1.33) than Qian's ~6 at 224. Still below Anastasia's LoRA r16 @ 336 (0.717) and full FT @ 336 (0.807). No inference latency measured.
 - next: do not rerun this method. The gap is the adaptation scope, not the GPU.
+
+### 2026-10-12 — Wenqi — eval crops 0.80 and 0.60 on full FT @ 336
+
+- run_dir: no training. Rescored `CS604_RUNS/full_ft_20261006_122039/last.pt` with `src.predict` on `ana-branch`.
+- val acc (CodaBench): crop 0.80 + flip **0.813**, submission **980303**, file `val_team_08_80.zip`; crop 0.60 + flip **0.806**, submission **980302**, file `val_team_08_60.zip`.
+- trainable % / peak VRAM / GPU-hours: same checkpoint as the 2026-10-06 full FT (100% / 20.05 GB / 2.40). Prediction only, so no new training cost.
+- what changed: `--crop_pct 0.80 --tta_flip` and `--crop_pct 0.60 --tta_flip` on Anastasia's full fine-tune at 336. Crop 0.75 was not rerun.
+- result: crop 0.80 ties her crop 0.7 + flip score (0.813). Crop 0.60 is 0.7 points lower. Both are below Van's crop 0.75 + zoom on this same checkpoint (0.819, submission 972132).
+
+### 2026-10-12 — Wenqi — zoom on LoRA r24 @ 336
+
+- run_dir: no training. Rescored `CS604_RUNS/lora_20261007_051926/last.pt` with `src.predict --crop_pct 0.75 --zoom` (`ana-branch` plus `src/van_zoom.py` from `van-zoom`).
+- val acc (CodaBench): **0.799**, submission **980328**, file `val_team_08_zoomcrop_075.zip`.
+- trainable % / peak VRAM / GPU-hours: same checkpoint as the 2026-10-07 LoRA r24 run (4.65% of the backbone / 19.40 GB / 2.40). Prediction only.
+- what changed: Van's zoom (crop 0.75, second view on the region the model used, softmax averaged). No flip.
+- result: **+0.6** over this checkpoint's crop 0.7 + flip score (0.793). Same size gain Van measured on the full fine-tune (0.813 → 0.819). This is the best under-5% score so far, 0.2 points above his AdaptFormer zoom (0.797, submission 972126), and 2.0 points below the full fine-tune zoom (0.819).
