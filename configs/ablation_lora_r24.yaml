@@ -38,3 +38,15 @@ arms:
     head_type: linear
     head_init: probe
     head_lr: 1.0e-4
+  # Added after A-F: complete the head start x head lr table (A, D, E, G) and
+  # separate head type from head start (A vs H vs D).
+  G_probe_head_slow_lr:                 # D with the 0.717 run's head lr
+    head_type: linear
+    head_init: probe
+    head_lr: 1.0e-4
+  H_linear_prototype_head:              # linear head started from prototypes (A's start, D's head type)
+    head_type: linear
+    head_init: prototype
+  # Extension, not part of the recipe ablation: DoRA instead of LoRA (+0.10% params, 4.75% total).
+  I_dora:
+    lora_dora: true
