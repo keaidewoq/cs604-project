@@ -1,0 +1,39 @@
+# LoRA at 336 using most of the 5% PEFT budget, with the pieces of Van's full FT
+# recipe that she lists as transferable to PEFT (report/van_full_ft_findings.md 6.4).
+# Launcher: notebooks/colab_launcher_ana_lora336.ipynb (prototypes_336.pt is reused).
+#
+# Trainable backbone: 4.00M / 85.99M = 4.65% (head excluded, as the brief counts it)
+#   LoRA r24 on qkv, proj, fc1, fc2 in all 12 blocks   3.54M
+#   LayerNorm weights/biases, all Linear biases, pos_embed, cls_token   0.46M
+#
+# vs the 0.717 LoRA r16 run (Ana's notebook): rank 16 -> 24 plus the extras above
+# (2.8% -> 4.65%); prototype cosine head instead of a linear-probe head (LP-FT was
+# ~2 points worse in both head-init tests); head lr 1e-4 -> 3e-3 (10x the LoRA lr,
+# as in Van's recipe); effective batch 128 -> 256; weight decay 1e-4 -> 0.05.
+# Unchanged: LoRA lr 3e-4, alpha = rank (scaling 1.0), no LoRA dropout, label
+# smoothing 0.1, 5% warmup + cosine to zero at 144 min.
+# Not carried over: layer_decay (it would nearly freeze LoRA in early blocks) and
+# drop_path (Van tuned it for full FT only).
+inherits: base.yaml
+method: lora
+img_size: 336
+lora_targets: [qkv, proj, fc1, fc2]
+lora_rank: 24
+lora_alpha: 24
+lora_dropout: 0.0
+unfreeze_extra: [norm, bias, pos_embed, cls_token]
+head_type: cosine
+head_init: prototype
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+lr: 3.0e-4            # LoRA and the unfrozen extras
+head_lr: 3.0e-3       # 10x, as in Van's recipe
+weight_decay: 0.05    # not applied to norms, biases or embeddings
+label_smoothing: 0.1
+clip_grad_norm: 1.0
+batch_size: 128
+grad_accum_steps: 2   # effective batch 256
+num_workers: 8
+epochs: 30            # ceiling only; keep warmup / epochs = 5%
+warmup: 1.5
+max_train_minutes: 144
+schedule_fit_time: true

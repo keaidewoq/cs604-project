@@ -16,7 +16,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from tqdm import tqdm
 
 from src.data import build_dataloaders
-from src.heads import load_prototypes
+from src.heads import load_probe_head, load_prototypes
 from src.losses import build_loss
 from src.model import build_model
 from src.utils import (
@@ -48,7 +48,7 @@ def _split_decay(params, weight_decay, lr):
     for param in params:
         if not param.requires_grad:
             continue
-        if param.ndim < 2:
+        if param.ndim < 2 or getattr(param, "_no_weight_decay", False):
             no_decay.append(param)
         else:
             decay.append(param)
@@ -60,8 +60,44 @@ def _split_decay(params, weight_decay, lr):
     return groups
 
 
-def adamw_param_groups(model, weight_decay, lr, head_lr=None):
+def _vit_depth(name, num_blocks):
+    """0 for embeddings, i + 1 for blocks.i, num_blocks + 1 for the final norm."""
+    if name.startswith(("patch_embed.", "cls_token", "pos_embed", "reg_token")):
+        return 0
+    if name.startswith("blocks."):
+        return int(name.split(".")[1]) + 1
+    return num_blocks + 1
+
+
+def layer_decay_param_groups(model, weight_decay, lr, head_lr, layer_decay):
+    """Layer-wise lr decay (`layer_decay` set): block i gets lr * layer_decay ** (blocks - i).
+
+    The final norm keeps `lr`, the embeddings get the smallest rate, and the
+    classifier gets `head_lr` (or `lr`). The top backbone group comes first, so
+    the logged lr is the top backbone rate.
+    """
+    num_blocks = len(model.blocks)
+    head_ids = {id(p) for p in model.get_classifier().parameters()}
+    by_depth = {}
+    head = []
+    for name, param in model.named_parameters():
+        if id(param) in head_ids:
+            head.append(param)
+        else:
+            by_depth.setdefault(_vit_depth(name, num_blocks), []).append(param)
+    groups = []
+    for depth in sorted(by_depth, reverse=True):
+        scale = float(layer_decay) ** (num_blocks + 1 - depth)
+        groups.extend(_split_decay(by_depth[depth], weight_decay, lr * scale))
+    groups.extend(_split_decay(head, weight_decay, float(head_lr if head_lr is not None else lr)))
+    print(f"[optim] layer_decay={layer_decay} top lr={lr} bottom lr={lr * float(layer_decay) ** (num_blocks + 1):.2e} head_lr={head_lr}")
+    return groups
+
+
+def adamw_param_groups(model, weight_decay, lr, head_lr=None, layer_decay=None):
     """One lr for everything, or backbone `lr` + classifier `head_lr` (Qian's FT)."""
+    if layer_decay is not None:
+        return layer_decay_param_groups(model, weight_decay, lr, head_lr, layer_decay)
     if head_lr is None:
         return _split_decay(model.parameters(), weight_decay, lr)
     head_ids = {id(p) for p in model.get_classifier().parameters()}
@@ -75,8 +111,17 @@ def adamw_param_groups(model, weight_decay, lr, head_lr=None):
     return groups
 
 
-def build_scheduler(optimizer, warmup_steps, total_steps):
+def build_scheduler(optimizer, warmup_steps, total_steps, clock=None):
+    """Warmup then cosine to zero over `total_steps`.
+
+    With `clock` (schedule_fit_time), the position is the larger of the step
+    count and the fraction of max_train_minutes used, so the cosine still
+    reaches zero when the time limit stops training before `epochs`.
+    """
+
     def lr_lambda(step):
+        if clock is not None:
+            step = max(step, min(clock["fraction"], 1.0) * total_steps)
         if step < warmup_steps:
             return float(step) / float(max(1, warmup_steps))
         progress = (step - warmup_steps) / float(max(1, total_steps - warmup_steps))
@@ -152,10 +197,12 @@ def train(cfg):
     loaders = build_dataloaders(cfg)
     model = build_model(cfg).to(device)
     load_prototypes(cfg, model)
+    load_probe_head(cfg, model)
     loss_fn = build_loss(cfg)
 
     groups = adamw_param_groups(
-        model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get("head_lr")
+        model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get("head_lr"),
+        layer_decay=cfg.get("layer_decay"),
     )
     optimizer = AdamW(groups, lr=float(cfg.lr))
 
@@ -163,6 +210,7 @@ def train(cfg):
     steps_per_epoch = math.ceil(len(loaders["train"]) / accum)
     time_only = cfg.get("epochs") is None
     elapsed_training = [0.0]
+    clock = None
     if time_only:
         if max_train_seconds is None:
             raise ValueError("epochs: null requires max_train_minutes")
@@ -179,7 +227,12 @@ def train(cfg):
     else:
         total_steps = max(steps_per_epoch * int(cfg.epochs), 1)
         warmup_steps = int(float(cfg.warmup) * steps_per_epoch)
-        scheduler = build_scheduler(optimizer, warmup_steps, total_steps)
+        if bool(cfg.get("schedule_fit_time", False)):
+            if max_train_seconds is None:
+                raise ValueError("schedule_fit_time needs max_train_minutes")
+            clock = {"fraction": 0.0}
+        scheduler = build_scheduler(optimizer, warmup_steps, total_steps, clock)
+    clip_grad_norm = cfg.get("clip_grad_norm")
     if len(loaders["train"]) == 0:
         raise ValueError("Training loader has no batches; reduce batch_size")
     print(f"[train] images={len(loaders['train'].dataset)}, batches_per_epoch={len(loaders['train'])}, "
@@ -189,6 +242,7 @@ def train(cfg):
     else:
         print("[train] WARNING: running on CPU")
     print(f"[train] stopping={'training-time budget only' if time_only else 'epoch ceiling or time budget'}")
+
 
     log_run_stats("start", model, timer, vram)
     vram.reset()
@@ -262,7 +316,14 @@ def train(cfg):
                 (loss / accum).backward()
 
                 if i % accum == 0 or i == n_batches:
+                    if clip_grad_norm is not None:
+                        torch.nn.utils.clip_grad_norm_(
+                            [p for p in model.parameters() if p.requires_grad], float(clip_grad_norm)
+                        )
                     optimizer.step()
+                    if clock is not None:
+                        used = training_seconds + time.monotonic() - training_start
+                        clock["fraction"] = used / max_train_seconds
                     if time_only:
                         elapsed_training[0] = training_seconds + time.monotonic() - training_start
                     scheduler.step()
