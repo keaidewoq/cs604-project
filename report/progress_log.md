@@ -311,3 +311,13 @@ Frozen features + linear probe, internal holdout accuracy:
 - trainable % / peak VRAM / GPU-hours: same checkpoint as the 2026-10-07 LoRA r24 run (4.65% of the backbone / 19.40 GB / 2.40). Prediction only.
 - what changed: Van's zoom (crop 0.75, second view on the region the model used, softmax averaged). No flip.
 - result: **+0.6** over this checkpoint's crop 0.7 + flip score (0.793). Same size gain Van measured on the full fine-tune (0.813 → 0.819). This is the best under-5% score so far, 0.2 points above his AdaptFormer zoom (0.797, submission 972126), and 2.0 points below the full fine-tune zoom (0.819).
+
+
+### 2026-10-14 — Qian — BitFit head, resolution and crop/flip ablations
+
+- run_dir: `CS604_RUNS/qq_bitfit_heads_crop_336_seed42_v1/` and `CS604_RUNS/qq_bitfit_resolution_336_384_448_seed42_v1/` (`qq_bitfit_ablation`; head/crop and resolution Colab launchers, saved commits `9f1f1de` / `166df46`). Full results retained in each run root's CSVs.
+- val acc (internal subset / CodaBench): at 336, linear **0.8792** vs cosine **0.8904** with standard crop; cosine crop 0.75 + flip **0.8980**. Resolution comparison at crop 0.75 + flip: 336 / 384 / 448 = **0.8976 / 0.8972 / 0.8990** / not submitted.
+- trainable % / peak VRAM / GPU-hours: ~**0.12%** backbone (classifier excluded). Head ablation: **7.01 GiB**, ~**0.074** wall GPU-hours/arm. Resolution runs (336 / 384 / 448): **7.01 / 8.94 / 11.94 GiB**, **0.0745 / 0.0958 / 0.1323** wall GPU-hours, **4.03 / 5.23 / 7.30** training minutes on A100 40GB.
+- what changed: compared prototype linear/cosine heads at 336, then cosine heads at 336/384/448; same 1,000 classes, 40 fit + 5 holdout images/class, fitting-only prototypes rebuilt per resolution, three epochs/arm, seed 42. Bias/head LR 1e-3, weight decay 0, batch 64, BF16, 5% warmup + cosine. Selected `best.pt` using crop 0.9 without flip; evaluated crop/flip variants on the same holdout.
+- result: cosine wins every matching inference setting at 336 (+1.12 points at standard crop). Best resolution setting: **448 + crop 0.75 + flip, 0.8990** (NLL 0.418256), only +0.14 points over 336 in that comparison, with 1.81× training time. All best epochs are epoch 3; one seed, convergence unconfirmed. Subset scores do not establish full-data performance under the 144-minute budget.
+- next: train BitFit with a prototype cosine head at **448** from pretrained weights on all **450,000** training images for **144 minutes**; rebuild all-data prototypes at 448, then predict with **crop 0.75 + horizontal-flip TTA** and evaluate on CodaBench.
