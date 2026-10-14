@@ -1,0 +1,5 @@
+# Compare prototype linear and cosine heads; all backbone biases remain trainable.
+inherits: bitfit_ablation_336.yaml
+lr: 1.0e-3
+head_lr: 1.0e-3
+cosine_scale: 20.0
