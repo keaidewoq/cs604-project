@@ -130,7 +130,7 @@ def stage_config(base, experiment, root, stage, arm, seed, lr):
     cfg.seed = seed
     cfg.lr = lr
     cfg.data_root = str(root)
-    cfg.prototype_file = str(Path(experiment) / f"prototypes_{root.name}_336.pt")
+    cfg.prototype_file = str(Path(experiment) / f"prototypes_{root.name}_{int(cfg.img_size)}.pt")
     cfg.output_dir = str(Path(experiment) / "runs" / stage / arm["arm"] / f"seed{seed}")
     cfg.max_train_minutes = None
     cfg.evaluate_before_training = False  # Wrapper records the initial evaluation.
