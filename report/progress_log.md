@@ -329,3 +329,11 @@ Frozen features + linear probe, internal holdout accuracy:
 - trainable % / peak VRAM / GPU-hours: **0.119318%** backbone (102,912 biases; classifier excluded) / **11.95 GiB** / **2.401 wall GPU-hours**; 144 training minutes on A100 40GB. Single-view latency: **7.787 ms/image** at batch 1, **1.179 ms/image** at batch 64, BF16 synthetic forward-only; excludes flip TTA and preprocessing.
 - what changed: full-data BitFit at 448 with prototype cosine head (initial scale 20), all-data `prototypes_448.pt`; all 450,000 training images, bias/head LR 1e-3, weight decay 0, batch 64, seed 42, BF16, 5% time warmup + cosine. Reached epoch 6 before the time limit.
 - result: **+2.8 percentage points** over the previous 336 linear-head BitFit (0.734). Resolution, head and inference settings changed together, so the gain cannot be attributed to one change.
+
+### 2026-10-16 — Qian — last-block attention, cosine head @ 448
+
+- run_dir: `CS604_RUNS/last_blocks_20261015_120404/last.pt` (`qq_branch_v2`; `configs/lastblock_attention_cosine_448.yaml`).
+- val acc (CodaBench): **0.685**, submission **990367**; crop 0.75 + horizontal-flip TTA per launcher. No internal holdout.
+- trainable % / peak VRAM / GPU-hours: **2.738970%** backbone (2,362,368 parameters; classifier excluded) / **2.23 GiB** / **2.402 wall GPU-hours**; 144 training minutes on A100 40GB. Single-view latency: **8.681 ms/image** at batch 1, **1.166 ms/image** at batch 64, BF16 synthetic forward-only; excludes flip TTA and preprocessing.
+- what changed: final-block QKV + output projection only, prototype cosine head (initial scale 20), `prototypes_448.pt`, all 450,000 training images at 448; attention/head LR 1e-4 / 3e-3, weight decay 0.05 (excluding biases/norms), label smoothing 0.1, clipping 1.0, batch 64 × accumulation 4, seed 42, BF16, 5% time warmup + cosine. Reached epoch 7 before the time limit.
+- result: **+0.57 percentage points** over last-block attention at 336 (0.679260), but **7.7 points below** BitFit cosine at 448 (0.762). Multiple recipe changes prevent attributing the difference to one factor; this run does not establish the method's optimized accuracy.
