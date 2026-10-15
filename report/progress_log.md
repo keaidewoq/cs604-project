@@ -321,3 +321,11 @@ Frozen features + linear probe, internal holdout accuracy:
 - what changed: compared prototype linear/cosine heads at 336, then cosine heads at 336/384/448; same 1,000 classes, 40 fit + 5 holdout images/class, fitting-only prototypes rebuilt per resolution, three epochs/arm, seed 42. Bias/head LR 1e-3, weight decay 0, batch 64, BF16, 5% warmup + cosine. Selected `best.pt` using crop 0.9 without flip; evaluated crop/flip variants on the same holdout.
 - result: cosine wins every matching inference setting at 336 (+1.12 points at standard crop). Best resolution setting: **448 + crop 0.75 + flip, 0.8990** (NLL 0.418256), only +0.14 points over 336 in that comparison, with 1.81× training time. All best epochs are epoch 3; one seed, convergence unconfirmed. Subset scores do not establish full-data performance under the 144-minute budget.
 - next: train BitFit with a prototype cosine head at **448** from pretrained weights on all **450,000** training images for **144 minutes**; rebuild all-data prototypes at 448, then predict with **crop 0.75 + horizontal-flip TTA** and evaluate on CodaBench.
+
+### 2026-10-15 — Qian — BitFit cosine head @ 448
+
+- run_dir: `CS604_RUNS/bitfit_20261015_015001/last.pt` (`qq_branch_v2`; `configs/bitfit_cosine_448.yaml`).
+- val acc (CodaBench): **0.762**, submission **988896**; crop 0.75 + horizontal-flip TTA. No internal holdout.
+- trainable % / peak VRAM / GPU-hours: **0.119318%** backbone (102,912 biases; classifier excluded) / **11.95 GiB** / **2.401 wall GPU-hours**; 144 training minutes on A100 40GB. Single-view latency: **7.787 ms/image** at batch 1, **1.179 ms/image** at batch 64, BF16 synthetic forward-only; excludes flip TTA and preprocessing.
+- what changed: full-data BitFit at 448 with prototype cosine head (initial scale 20), all-data `prototypes_448.pt`; all 450,000 training images, bias/head LR 1e-3, weight decay 0, batch 64, seed 42, BF16, 5% time warmup + cosine. Reached epoch 6 before the time limit.
+- result: **+2.8 percentage points** over the previous 336 linear-head BitFit (0.734). Resolution, head and inference settings changed together, so the gain cannot be attributed to one change.
