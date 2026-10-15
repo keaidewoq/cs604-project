@@ -14,6 +14,25 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-15 — Van — speed check for 336 px training (`scripts/van_speed_check.py`)
+
+- run_dir: no training; timing only, Colab A100 40 GB (12 CPUs, torch 2.11), launcher section 4a with `SPEED_CHECK = True`; results `CS604_RUNS/van_speed_check_20261015_051624.json`
+- question: every 336 px run trains at about 440-475 img/s whatever the method (full FT ~442, AdaptFormer ~462, adapter ~473), although AdaptFormer is 1.3x faster than full FT on a laptop. What sets the pace?
+- results (img/s; full FT 336 / AdaptFormer + biases/norms, batch 128 x 2):
+
+| Measurement | Full FT | AdaptFormer |
+|---|---|---|
+| Data loader alone, 8 / 10 / 12 workers (colour jitter on) | 507 / 767 / 865 | 568 / 838 / 938 |
+| Data loader alone, 8 / 10 / 12 workers, no colour jitter | 856 / 1,143 / 1,242 | 1,078 / 1,292 / 1,461 |
+| GPU step alone (synthetic images): plain / fused AdamW / fused + `torch.compile` | 475 / 477 / **600** | 500 / 500 / **670** |
+| GPU step alone at batch 256 x 1 (plain / fused + compile) | 486 / 610, 38 GB peak | 517 / 684, 31 GB peak |
+| Both together as configured (8 workers, plain) | **447** (the real run: ~442) | **467** (the real run: ~462) |
+| Both together, 12 workers + fused + compile | **554 (+24%)** | **622 (+33%)** |
+
+- conclusion: with 8 workers the loader and the GPU step are both near 450-500, so fixing either alone gains little; compile (+26-34% on the GPU step) plus 12 workers removes both. Fused AdamW is +0.4%; colour jitter need not go once 10-12 workers load. 256 x 1 adds only 2% and peaks at 38 GB, so 128 x 2 stays.
+- effect: in 144 minutes full FT goes from ~8.5 to ~10.5 epochs, AdaptFormer from ~8.9 to ~11.9. Configs: `configs/van_full_ft_336_fast.yaml` and `configs/van_adaptformer_bias_fast.yaml` (`fused_adamw`, `torch_compile`, `num_workers: 12`; training math unchanged).
+- next: final runs of both configs; compare `epoch_time_s` with ~1,018 s (full FT) and ~972 s (AdaptFormer) per epoch.
+
 ### 2026-10-12 — Van — AdaptFormer + trainable biases and LayerNorms (`configs/van_adaptformer_bias_final.yaml`)
 
 - run_dir: `CS604_RUNS/van_adaptformer_20261012_060248` (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev`)
