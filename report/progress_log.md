@@ -14,6 +14,17 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-16 — Van — full FT at 384 px (`configs/van_full_ft_384_fast.yaml`)
+
+- run_dir: `CS604_RUNS/full_ft_20261016_052544` (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` 7e05162); prototypes `CS604_RUNS/prototypes_384.pt` (built on Van's laptop with `scripts/build_prototypes.py`, all 45 images/class)
+- val acc (ours / CodaBench): no internal holdout (all 45 images/class) / **0.817 plain** (ID 992465), **0.821** crop 0.75 + flip (ID 992482), **0.824 crop 0.75 + zoom** (ID 992449). Against the same recipe at 336 (Anastasia's `full_ft_20261006_122039`): 0.807 plain, 0.813 crop 0.7 + flip, 0.819 crop 0.75 + zoom, so **+1.0 plain**, +0.8 flip, +0.5 zoom.
+- trainable % / peak VRAM / GPU-hours: 100% (93,770,497 incl. head) / 25.34 GB / 2.41 (144.0 training minutes, time limit reached)
+- what changed vs `van_full_ft_336_fast.yaml`: `img_size` 336 → **384** and 384 prototypes; everything else identical (lr 4e-4 with layer decay 0.75, head lr 4e-3, label smoothing 0.1, drop_path 0.1, batch 128 x 2, fused AdamW + torch.compile, 12 workers). ~412 img/s, **7.9 epochs**.
+- why: on Van's laptop screen at equal compute (10 images/class, same time budget per arm, fixed 5/class holdout) 384 beat 336 by +0.86 at the default crop with 30% fewer epochs; training at 224 then switching to 384 for the last quarter lost 4.3 points. CodaBench (+1.0 plain) agrees with the screen.
+- latency (A100, forward only, synthetic 384 px, bf16): 7.02 ms at batch 1, 0.83 ms/image at batch 64.
+- side note: holdout error analysis on the 336 laptop checkpoint: top-5 is 93% vs 79% top-1, and 46% of errors predict a class within ±10 class ids of the truth (0.14% by chance), so ids seem to follow the taxonomy and the remaining errors are mostly look-alike neighbours. Label smoothing aimed at those neighbours had no effect on the screen.
+- next: **Task 1 final candidate** (best: crop 0.75 + zoom, 0.824). Tighter crops help less at 384 than at 336 (+0.4 flip and +0.7 zoom over plain, vs +0.6 and +1.2).
+
 ### 2026-10-15 — Van — speed check for 336 px training (`scripts/van_speed_check.py`)
 
 - run_dir: no training; timing only, Colab A100 40 GB (12 CPUs, torch 2.11), launcher section 4a with `SPEED_CHECK = True`; results `CS604_RUNS/van_speed_check_20261015_051624.json`
