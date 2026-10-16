@@ -75,17 +75,19 @@ class ImageListDataset(Dataset):
         return image, label, rel_path
 
 
-def build_transforms(cfg, eval_crop_pct=None):
+def build_transforms(cfg, eval_crop_pct=None, img_size=None):
     """Train/eval transforms from the chosen timm model's data config.
 
     ``eval_crop_pct`` overrides the eval center-crop fraction (default: the
     model's own, 0.9 for the team backbone); used by ``src.predict --crop_pct``.
+    ``img_size`` overrides ``cfg.img_size`` (the low-res phase of progressive resizing).
     """
+    size = int(img_size or cfg.img_size)
     pretrained_cfg = get_pretrained_cfg(cfg.model_name)
     if pretrained_cfg is not None and hasattr(pretrained_cfg, "to_dict"):
         pretrained_cfg = pretrained_cfg.to_dict()
     data_config = resolve_data_config(
-        {"input_size": (3, cfg.img_size, cfg.img_size)},
+        {"input_size": (3, size, size)},
         pretrained_cfg=pretrained_cfg,
     )
     train_tf = create_transform(**data_config, is_training=True)
@@ -95,7 +97,7 @@ def build_transforms(cfg, eval_crop_pct=None):
     return train_tf, eval_tf
 
 
-def _make_loader(dataset, cfg, shuffle, drop_last):
+def _make_loader(dataset, cfg, shuffle, drop_last, persistent=True):
     pin = bool(getattr(cfg, "pin_memory", True))
     return DataLoader(
         dataset,
@@ -104,7 +106,7 @@ def _make_loader(dataset, cfg, shuffle, drop_last):
         num_workers=cfg.num_workers,
         pin_memory=pin,
         drop_last=drop_last,
-        persistent_workers=cfg.num_workers > 0,
+        persistent_workers=persistent and cfg.num_workers > 0,
     )
 
 
@@ -119,7 +121,15 @@ def build_dataloaders(cfg):
         "test": None,
         "has_val_labels": False,
         "has_test_labels": False,
+        "train_low": None,
     }
+    # Progressive resizing: the same training images at low_res_size, for the
+    # first low_res_fraction of training (src/train.py switches loaders).
+    if cfg.get("low_res_size"):
+        low_tf, _ = build_transforms(cfg, img_size=int(cfg.low_res_size))
+        low_ds = ImageListDataset(root, "train", transform=low_tf)
+        # not persistent: its workers exit once the low-res phase is over
+        loaders["train_low"] = _make_loader(low_ds, cfg, shuffle=True, drop_last=True, persistent=False)
 
     for split in ("val", "test"):
         list_file = root / f"{split}.txt"

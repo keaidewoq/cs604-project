@@ -125,12 +125,19 @@ def build_pilot_root(data_root, pilot_dir, n_classes, holdout_per_class, seed):
     return root, info
 
 
+def _number_or_text(v):
+    try:
+        return float(v)
+    except ValueError:
+        return v  # e.g. img_size "224->336" on the epoch progressive resizing switches
+
+
 def read_epoch_log(run_dir):
     rows = []
     with (Path(run_dir) / "epoch_log.csv").open("r", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             if r["val_acc"] != "":
-                rows.append({k: float(v) for k, v in r.items() if v != ""})
+                rows.append({k: _number_or_text(v) for k, v in r.items() if v != ""})
     return rows
 
 

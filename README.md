@@ -68,7 +68,7 @@ Shared defaults live in `configs/base.yaml`. A method file only lists what it **
 | `adapter_dim` | Bottleneck width | — | | | | | `64` | `64` |
 | `adaptformer_scale` | Parallel FFN scale `s` | — | | | | | | `0.1` |
 
-Extra knobs: `head_type` / `head_init` / `prototype_file` (Van), `head_lr` (Qian: backbone keeps `lr`, classifier uses `head_lr`), `last_n_blocks`, `evaluate_before_training`.
+Extra knobs: `head_type` / `head_init` / `prototype_file` (Van), `head_lr` (Qian: backbone keeps `lr`, classifier uses `head_lr`), `last_n_blocks`, `evaluate_before_training`, `first_trainable_block` (LoRA and `unfreeze_extra` only from that block up; backward stops there), `low_res_size` / `low_res_fraction` (progressive resizing: train at the low size first, finish at `img_size`). Screened in `configs/ablation_lora_depth_res.yaml`.
 
 Experiment recipes: `configs/full_ft_proto.yaml` (Qian’s prototype-initialized full FT), `augreg_in21k.yaml` (Van’s stronger 21k-only prototype backbone). Team numbers live in `report/experiment_index.csv`.
 

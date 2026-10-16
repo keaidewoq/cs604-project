@@ -3,6 +3,10 @@
 `lora_targets` picks the layers (default: the fused attention qkv only).
 Valid names: qkv, proj (attention output), fc1, fc2 (MLP).
 
+`first_trainable_block: k` wraps only blocks k..11 (default 0 = all blocks). With
+nothing trainable below block k, backward stops there, so each step is cheaper;
+src/model.py keeps `unfreeze_extra` above block k too.
+
 `lora_dora: true` turns each layer into DoRA (Liu et al., ICML 2024): the adapted
 weight W0 + s*B@A is split into a direction (its row-normalised form, updated by
 LoRA) and a trainable magnitude per output row, initialised to ||W0|| so training
@@ -94,10 +98,13 @@ def apply_lora(model, cfg):
         raise ValueError(f"Unknown lora_targets {unknown}; choose from {list(LORA_TARGETS)}")
     if not hasattr(model, "blocks"):
         raise TypeError("LoRA expects a ViT with `model.blocks`")
+    start = int(cfg.get("first_trainable_block", 0))
+    if not 0 <= start < len(model.blocks):
+        raise ValueError(f"first_trainable_block must be in [0, {len(model.blocks) - 1}], got {start}")
 
     n = 0
     params = 0
-    for block in model.blocks:
+    for block in model.blocks[start:]:
         for name in targets:
             parent = getattr(block, LORA_TARGETS[name], None)
             if parent is None or not isinstance(getattr(parent, name, None), nn.Linear):
@@ -107,7 +114,7 @@ def apply_lora(model, cfg):
             params += sum(p.numel() for p in wrapped.parameters() if p.requires_grad)
             n += 1
     print(
-        f"[lora] wrapped {n} layers ({', '.join(targets)} in {len(model.blocks)} blocks), "
+        f"[lora] wrapped {n} layers ({', '.join(targets)} in blocks {start}-{len(model.blocks) - 1}), "
         f"rank={rank}, alpha={alpha}, dropout={dropout}{', DoRA' if dora else ''}: {params:,} params"
     )
     return model

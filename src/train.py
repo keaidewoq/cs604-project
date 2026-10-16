@@ -211,6 +211,7 @@ def train(cfg):
     time_only = cfg.get("epochs") is None
     elapsed_training = [0.0]
     clock = None
+    total_steps = None
     if time_only:
         if max_train_seconds is None:
             raise ValueError("epochs: null requires max_train_minutes")
@@ -233,6 +234,16 @@ def train(cfg):
             clock = {"fraction": 0.0}
         scheduler = build_scheduler(optimizer, warmup_steps, total_steps, clock)
     clip_grad_norm = cfg.get("clip_grad_norm")
+    # Progressive resizing (FixRes-style): train at low_res_size until training is
+    # low_res_fraction done, then at img_size. "Done" is the same position the lr
+    # schedule uses: the larger of the step fraction and the time-budget fraction.
+    low_res_fraction = None
+    if loaders.get("train_low") is not None:
+        low_res_fraction = float(cfg.get("low_res_fraction", 0.75))
+        if not 0 < low_res_fraction < 1:
+            raise ValueError("low_res_fraction must be in (0, 1)")
+        print(f"[train] progressive resize: {cfg.low_res_size}px for the first {low_res_fraction:.0%}, "
+              f"then {cfg.img_size}px")
     if len(loaders["train"]) == 0:
         raise ValueError("Training loader has no batches; reduce batch_size")
     print(f"[train] images={len(loaders['train'].dataset)}, batches_per_epoch={len(loaders['train'])}, "
@@ -271,7 +282,8 @@ def train(cfg):
     step_w = csv.DictWriter(step_f, fieldnames=["step", "epoch", "loss", "lr"])
     epoch_w = csv.DictWriter(
         epoch_f, fieldnames=["epoch", "train_loss", "val_loss", "val_acc", "epoch_time_s",
-                             "batches_processed", "batches_total", "images_processed", "epoch_complete"]
+                             "batches_processed", "batches_total", "images_processed", "epoch_complete",
+                             "img_size"]
     )
     step_w.writeheader()
     epoch_w.writeheader()
@@ -282,6 +294,13 @@ def train(cfg):
     time_limit_reached = False
     if max_train_seconds is not None:
         print(f"[train] training-only time limit={max_train_minutes} minutes")
+
+    def progress(training_start):
+        done = global_step / total_steps if total_steps else 0.0
+        if max_train_seconds is not None:
+            used = training_seconds + time.monotonic() - training_start
+            done = max(done, used / max_train_seconds)
+        return done
 
     try:
         epochs = itertools.count(1) if time_only else range(1, int(cfg.epochs) + 1)
@@ -298,9 +317,29 @@ def train(cfg):
             if max_train_seconds is not None and device.type == "cuda":
                 torch.cuda.synchronize(device)
             training_start = time.monotonic()
-            label = f"epoch {epoch} (time budget)" if time_only else f"epoch {epoch}/{cfg.epochs}"
-            pbar = tqdm(loaders["train"], desc=label, leave=True)
+            low_res = low_res_fraction is not None and progress(training_start) < low_res_fraction
+            epoch_sizes = [int(cfg.low_res_size) if low_res else int(cfg.img_size)]
             n_batches = len(loaders["train"])
+
+            def epoch_batches():
+                if not low_res:
+                    yield from loaders["train"]
+                    return
+                # Low-res batches until the phase is over (checked at accumulation
+                # boundaries), then the rest of the epoch from the img_size loader.
+                k = 0
+                for k, batch in enumerate(loaders["train_low"]):
+                    if k % accum == 0 and progress(training_start) >= low_res_fraction:
+                        break
+                    yield batch
+                else:
+                    return
+                print(f"\n[train] switching to {cfg.img_size}px after {global_step} steps")
+                epoch_sizes.append(int(cfg.img_size))
+                yield from itertools.islice(loaders["train"], n_batches - k)
+
+            label = f"epoch {epoch} (time budget)" if time_only else f"epoch {epoch}/{cfg.epochs}"
+            pbar = tqdm(epoch_batches(), total=n_batches, desc=f"{label} @{epoch_sizes[0]}px", leave=True)
             for i, (images, labels, _) in enumerate(pbar, start=1):
                 if (max_train_seconds is not None and
                         training_seconds + time.monotonic() - training_start >= max_train_seconds):
@@ -358,6 +397,7 @@ def train(cfg):
                 "batches_total": n_batches,
                 "images_processed": seen,
                 "epoch_complete": int(batches_processed == n_batches),
+                "img_size": "->".join(map(str, epoch_sizes)),
             }
             if has_val:
                 metrics = evaluate(model, loaders["val"], loss_fn, device, use_bf16)

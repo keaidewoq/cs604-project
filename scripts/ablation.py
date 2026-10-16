@@ -10,6 +10,8 @@ the arms (config overrides). Steps:
      has seen the holdout: prototypes (other classes keep `base_prototypes` rows)
      and, if an arm uses `head_init: probe`, a linear probe.
   3. Train each arm in its own process and score it on the holdout.
+An arm may set `max_train_minutes: {match: <arm>}` to get exactly the training
+minutes that arm used (it must run first), for comparisons at equal compute.
 Writes <output_dir>/ablation_<spec>/ablation.csv and ablation_summary.json.
 Rerunning with the same spec skips arms that already finished.
 """
@@ -31,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.pilot_sweep import build_pilot_root, summarise_run
+from scripts.pilot_sweep import build_pilot_root, read_run_stats, summarise_run
 from src.utils import Config, load_config, save_config
 
 ENV = {**os.environ, "PYTHONPATH": str(ROOT)}
@@ -89,6 +91,19 @@ def backbone_pct(text):
     return float(m[-1]) if m else float("nan")
 
 
+def resolve_matches(overrides, arms_dir):
+    """Replace `{match: <arm>}` values with that arm's training minutes (from its marker)."""
+    out = dict(overrides or {})
+    for key, value in out.items():
+        if isinstance(value, dict) and "match" in value:
+            marker = arms_dir / f"{value['match']}.json"
+            if not marker.is_file():
+                raise SystemExit(f"{key}: match {value['match']!r} has not run yet; list it earlier in the spec")
+            out[key] = float(json.loads(marker.read_text())["training_min"])
+            print(f"[ablation] {key} = {out[key]} (matched to {value['match']})")
+    return out
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--spec", required=True)
@@ -134,7 +149,7 @@ def main():
             print(f"[ablation] {name}: already done, reusing")
             results.append(json.loads(marker.read_text()))
             continue
-        cfg = Config({**base_d, **run_overrides, **(overrides or {}), **heads})
+        cfg = Config({**base_d, **run_overrides, **resolve_matches(overrides, out_dir / "arms"), **heads})
         cfg_path = out_dir / "arms" / f"{name}.yaml"
         save_config(cfg, cfg_path)
         print(f"\n[ablation] ===== {name}: {overrides or 'no change'}")
@@ -144,6 +159,7 @@ def main():
         run_dir = re.findall(r"\[train\] run_dir=(\S+)", text)[-1]
         row = summarise_run(run_dir, {"arm": name, "changes": json.dumps(overrides or {})})
         row["backbone_pct"] = backbone_pct(text)
+        row["training_min"] = float(read_run_stats(run_dir).get("training_minutes", "nan"))
         marker.write_text(json.dumps(row))
         results.append(row)
 
@@ -151,7 +167,7 @@ def main():
     for r in results:
         r["delta_vs_A_points"] = round(100 * (r["final_val_acc"] - ref), 2) if ref is not None else None
     cols = ["arm", "changes", "final_val_acc", "delta_vs_A_points", "best_val_acc", "best_epoch",
-            "final_val_loss", "early_dip", "backbone_pct", "peak_vram_gb", "wall_min", "run_dir"]
+            "final_val_loss", "early_dip", "backbone_pct", "peak_vram_gb", "training_min", "wall_min", "run_dir"]
     with (out_dir / "ablation.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
