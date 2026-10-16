@@ -345,3 +345,11 @@ Frozen features + linear probe, internal holdout accuracy:
 - trainable % / peak VRAM / GPU-hours: selected deep arm **4.7391%** backbone (head excluded) / **19.97 GiB** / **0.1802 wall GPU-hours** (10.03 training min).
 - what changed: added VPT to LoRA r24 + extras at 336 with a prototype cosine head; 1,000 classes, 40 fit + 5 holdout/class, five epochs, seed 42; pilot-selected prompt LR **3e-4**. Deep gains **0.40 pp** over baseline with **5.4% longer training**; one seed, full-data gain unconfirmed.
 - next: train **LoRA + VPT-Deep, 8 tokens/block at 336**, from pretrained weights on all **450,000 images for 144 training minutes**, using fresh all-data prototypes and prompt LR **3e-4**; evaluate on CodaBench.
+
+### 2026-10-16 — Qian — LoRA + VPT-Deep (`configs/lora_vpt_deep_336.yaml`)
+
+- run_dir: `CS604_RUNS/lora_vpt_deep_336_seed42/lora_20261016_050840/last.pt` (`qq_branch_v2`).
+- val acc (ours / CodaBench): no internal holdout / **0.793**, submission **992462**; crop 0.75 + horizontal-flip TTA.
+- trainable % / peak VRAM / GPU-hours: **4.7391%** backbone (head excluded) / **20.09 GiB** / **2.4025 wall GPU-hours**; 144 training min on A100 40GB. Merged-LoRA single-view latency: **9.430 ms/image** (batch 1), **0.694 ms/image** (batch 64), excluding flip TTA and preprocessing.
+- what changed: LoRA r24 + extras with **8 VPT-Deep tokens/block at 336**, prototype cosine head using `prototypes_336.pt`, all 450,000 images; LoRA/prompt LR 3e-4, head LR 3e-3, batch 128 x 2, BF16, seed 42, 5% time warmup + cosine. Reached epoch 7.
+- No improvement is demonstrated by the recorded CodaBench scores: **LoRA r24 + extras without VPT also achieved 79.3%** (crop 0.7 + flip). Different crops prevent isolating VPT's effect.
