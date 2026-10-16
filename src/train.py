@@ -94,8 +94,21 @@ def layer_decay_param_groups(model, weight_decay, lr, head_lr, layer_decay):
     return groups
 
 
-def adamw_param_groups(model, weight_decay, lr, head_lr=None, layer_decay=None):
+def adamw_param_groups(model, weight_decay, lr, head_lr=None, layer_decay=None, prompt_lr=None):
     """One lr for everything, or backbone `lr` + classifier `head_lr` (Qian's FT)."""
+    prompts = list(model.vpt.parameters()) if hasattr(model, "vpt") else []
+    if prompts:
+        if layer_decay is not None:
+            raise ValueError("VPT with layer_decay is not supported")
+        head_ids = {id(p) for p in model.get_classifier().parameters()}
+        prompt_ids = {id(p) for p in prompts}
+        backbone = [p for p in model.parameters() if id(p) not in head_ids | prompt_ids]
+        groups = _split_decay(backbone, weight_decay, lr)
+        groups.extend(_split_decay(model.get_classifier().parameters(), weight_decay,
+                                   float(head_lr if head_lr is not None else lr)))
+        groups.extend(_split_decay(prompts, weight_decay,
+                                   float(prompt_lr if prompt_lr is not None else lr)))
+        return groups
     if layer_decay is not None:
         return layer_decay_param_groups(model, weight_decay, lr, head_lr, layer_decay)
     if head_lr is None:
@@ -203,6 +216,7 @@ def train(cfg):
     groups = adamw_param_groups(
         model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get("head_lr"),
         layer_decay=cfg.get("layer_decay"),
+        prompt_lr=cfg.get("prompt_lr"),
     )
     optimizer = AdamW(groups, lr=float(cfg.lr))
 
@@ -388,6 +402,7 @@ def train(cfg):
     stats["training_seconds"] = round(training_seconds, 2)
     stats["training_minutes"] = round(training_seconds / 60, 2)
     stats["time_limit_reached"] = time_limit_reached
+    stats.update(getattr(model, "adaptation_stats", {}))
     with (run_dir / "run_stats.txt").open("w", encoding="utf-8") as f:
         for k, v in stats.items():
             f.write(f"{k}={v}\n")
