@@ -10,6 +10,7 @@ from src.utils import PEFT_METHODS
 
 # Register here for model dispatch and trainable-only checkpoints.
 PEFT_METHODS.add("prefix")
+PEFT_METHODS.add("selected")
 
 
 def build_peft(model, cfg):
@@ -34,6 +35,10 @@ def build_peft(model, cfg):
         from .adaptformer import apply_adaptformer
 
         return apply_adaptformer(model, cfg)
+    if method == "selected":
+        from .selected import apply_selected
+
+        return apply_selected(model, cfg)
     if method == "last_blocks":
         from .last_blocks import apply_last_blocks
 

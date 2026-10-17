@@ -3,6 +3,9 @@
 `lora_targets` picks the layers (default: the fused attention qkv only).
 Valid names: qkv, proj (attention output), fc1, fc2 (MLP).
 
+Layers listed in `unfreeze_modules` (src/peft/selected.py) are trained at full
+rank instead, so they are not wrapped.
+
 `first_trainable_block: k` wraps only blocks k..11 (default 0 = all blocks). With
 nothing trainable below block k, backward stops there, so each step is cheaper;
 src/model.py keeps `unfreeze_extra` above block k too.
@@ -21,6 +24,8 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from .selected import resolve_unfreeze_modules
 
 
 class LoRALinear(nn.Module):
@@ -102,10 +107,15 @@ def apply_lora(model, cfg):
     if not 0 <= start < len(model.blocks):
         raise ValueError(f"first_trainable_block must be in [0, {len(model.blocks) - 1}], got {start}")
 
+    full_rank = set(resolve_unfreeze_modules(cfg))
     n = 0
     params = 0
-    for block in model.blocks[start:]:
+    for i, block in enumerate(model.blocks):
+        if i < start:
+            continue
         for name in targets:
+            if f"blocks.{i}.{LORA_TARGETS[name]}.{name}" in full_rank:
+                continue
             parent = getattr(block, LORA_TARGETS[name], None)
             if parent is None or not isinstance(getattr(parent, name, None), nn.Linear):
                 raise TypeError(f"LoRA expects each block to have `{LORA_TARGETS[name]}.{name}`")
@@ -116,6 +126,7 @@ def apply_lora(model, cfg):
     print(
         f"[lora] wrapped {n} layers ({', '.join(targets)} in blocks {start}-{len(model.blocks) - 1}), "
         f"rank={rank}, alpha={alpha}, dropout={dropout}{', DoRA' if dora else ''}: {params:,} params"
+        + (f"; skipped {len(full_rank)} fully trained layers" if full_rank else "")
     )
     return model
 

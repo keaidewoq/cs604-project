@@ -7,6 +7,7 @@ import torch.nn as nn
 
 from src.heads import replace_head
 from src.peft import build_peft
+from src.peft.selected import apply_sparse_mask, resolve_unfreeze_modules, unfreeze_modules
 from src.utils import PEFT_METHODS, format_params
 
 EXTRA_PARTS = ("norm", "bias", "pos_embed", "cls_token")
@@ -84,7 +85,8 @@ def log_backbone_trainable(model, base_total):
     the pretrained model itself (how the brief reports e.g. LoRA = 0.34%).
     """
     total = base_total
-    trainable = sum(p.numel() for p in _backbone_params(model) if p.requires_grad)
+    # sparse (GPS) weights count only their masked entries
+    trainable = sum(getattr(p, "_trainable_count", p.numel()) for p in _backbone_params(model) if p.requires_grad)
     pct = 100.0 * trainable / total if total else 0.0
     print(f"[params] backbone trainable {format_params(trainable)}/{format_params(total)} ({pct:.2f}%, head excluded)")
     return trainable, total, pct
@@ -109,6 +111,11 @@ def apply_method(model, cfg):
         start = int(cfg.get("first_trainable_block", 0))
         if cfg.get("unfreeze_extra"):
             _unfreeze_extra(model, list(cfg.unfreeze_extra), start)
+        names = resolve_unfreeze_modules(cfg)
+        if names:
+            unfreeze_modules(model, names)
+        if cfg.get("sparse_mask_file"):
+            apply_sparse_mask(model, cfg.sparse_mask_file)
         if start > 0:
             _check_frozen_below(model, start)
         log_backbone_trainable(model, base_total)

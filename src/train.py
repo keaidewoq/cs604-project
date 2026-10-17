@@ -94,20 +94,30 @@ def layer_decay_param_groups(model, weight_decay, lr, head_lr, layer_decay):
     return groups
 
 
-def adamw_param_groups(model, weight_decay, lr, head_lr=None, layer_decay=None):
-    """One lr for everything, or backbone `lr` + classifier `head_lr` (Qian's FT)."""
+def adamw_param_groups(model, weight_decay, lr, head_lr=None, layer_decay=None, unfreeze_lr=None):
+    """One lr for everything, or backbone `lr` + classifier `head_lr` (Qian's FT).
+
+    With `unfreeze_lr`, pretrained weights unfrozen by src/peft/selected.py
+    (marked `_unfrozen`) get their own lr; the rest of the backbone keeps `lr`.
+    """
     if layer_decay is not None:
         return layer_decay_param_groups(model, weight_decay, lr, head_lr, layer_decay)
-    if head_lr is None:
+    if head_lr is None and unfreeze_lr is None:
         return _split_decay(model.parameters(), weight_decay, lr)
     head_ids = {id(p) for p in model.get_classifier().parameters()}
-    backbone = [p for p in model.parameters() if id(p) not in head_ids]
+    unfrozen = []
+    if unfreeze_lr is not None:
+        unfrozen = [p for p in model.parameters() if id(p) not in head_ids and getattr(p, "_unfrozen", False)]
+    unfrozen_ids = {id(p) for p in unfrozen}
+    backbone = [p for p in model.parameters() if id(p) not in head_ids and id(p) not in unfrozen_ids]
     head = [p for p in model.parameters() if id(p) in head_ids]
     groups = _split_decay(backbone, weight_decay, lr)
-    groups.extend(_split_decay(head, weight_decay, float(head_lr)))
+    groups.extend(_split_decay(unfrozen, weight_decay, float(unfreeze_lr or lr)))
+    groups.extend(_split_decay(head, weight_decay, float(head_lr if head_lr is not None else lr)))
     if not groups:
         raise ValueError("No trainable parameters")
-    print(f"[optim] backbone lr={lr}  head_lr={head_lr}")
+    extra = f"  unfreeze_lr={unfreeze_lr} ({len(unfrozen)} tensors)" if unfrozen else ""
+    print(f"[optim] backbone lr={lr}  head_lr={head_lr}{extra}")
     return groups
 
 
@@ -202,7 +212,7 @@ def train(cfg):
 
     groups = adamw_param_groups(
         model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get("head_lr"),
-        layer_decay=cfg.get("layer_decay"),
+        layer_decay=cfg.get("layer_decay"), unfreeze_lr=cfg.get("unfreeze_lr"),
     )
     optimizer = AdamW(groups, lr=float(cfg.lr))
 

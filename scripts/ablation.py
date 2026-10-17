@@ -12,6 +12,8 @@ the arms (config overrides). Steps:
   3. Train each arm in its own process and score it on the holdout.
 An arm may set `max_train_minutes: {match: <arm>}` to get exactly the training
 minutes that arm used (it must run first), for comparisons at equal compute.
+String values may contain `{out_dir}` (this spec's results folder), for files that
+a step between runs writes there (scripts/select_params.py).
 Writes <output_dir>/ablation_<spec>/ablation.csv and ablation_summary.json.
 Rerunning with the same spec skips arms that already finished.
 """
@@ -92,9 +94,14 @@ def backbone_pct(text):
 
 
 def resolve_matches(overrides, arms_dir):
-    """Replace `{match: <arm>}` values with that arm's training minutes (from its marker)."""
+    """Replace `{match: <arm>}` values with that arm's training minutes (from its marker),
+    and `{out_dir}` in strings with the spec's results folder."""
     out = dict(overrides or {})
     for key, value in out.items():
+        if isinstance(value, str) and "{out_dir}" in value:
+            out[key] = value.replace("{out_dir}", str(arms_dir.parent))
+            if not Path(out[key]).exists():
+                raise SystemExit(f"{key}: {out[key]} does not exist yet (run scripts/select_params.py first)")
         if isinstance(value, dict) and "match" in value:
             marker = arms_dir / f"{value['match']}.json"
             if not marker.is_file():
