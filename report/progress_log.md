@@ -14,6 +14,18 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-17 — Van — AdaptFormer + biases/LayerNorms at 384 px (`configs/van_adaptformer_bias_384_fast.yaml`)
+
+- run_dir: `CS604_RUNS/van_adaptformer_20261016_142837` (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` 2bd8e78); prototypes `CS604_RUNS/prototypes_384.pt`
+- val acc (ours / CodaBench): no internal holdout (all 45 images/class) / **0.794 plain** (ID 994764), **0.807 crop 0.75 + zoom** (ID 994759, Task 2 best; 336: 0.802, ID 980309). Crop 0.75 + flip (`tta_crop075_flip/`) not submitted; its 336 counterpart is 0.794 (ID 980317). The 336 run with biases/norms has no plain submission (the older 336 final without them: 0.779).
+- trainable % / peak VRAM / GPU-hours: 3,672,588 backbone params ≈ **4.27%** of ViT-B (head excluded; 11.67% with it) / 19.87 GB / 2.40 (144.0 training minutes, time limit reached)
+- what changed vs `van_adaptformer_bias_fast.yaml`: `img_size` 336 → **384** and 384 prototypes; recipe and speed options unchanged. ~447 img/s, **8.6 epochs**.
+- why: on Van's equal-compute laptop screen (10 images/class, fixed 5/class holdout) 384 beat 336 by +1.55 at the default crop for AdaptFormer (+0.86 for full FT). On CodaBench the zoom gain is +0.5, as for full FT (+0.5 with zoom, +1.0 plain): zoom and resolution overlap.
+- latency (A100, forward only, synthetic 384 px, bf16): 9.86 ms at batch 1, 0.95 ms/image at batch 64.
+- training loss rises over epochs 2-6 and then falls, as in the 336 run: the CosFace margin times the learned cosine scale, not a fault.
+- side note (laptop screen, full FT, equal compute, crop 0.9): 336 / 384 / 448 = 63.20 / 64.06 / 64.79%, so 448 is still +0.73 over 384 with only 4.1 epochs; a 512 point is not run yet. Laptop runs with a per-epoch holdout (224, 12 epochs) show no accuracy overfitting (holdout accuracy rises every epoch; holdout loss bottoms at epoch 10), and the finals get ~8 epochs.
+- next: **Task 2 final candidate** (crop 0.75 + zoom, 0.807).
+
 ### 2026-10-16 — Van — full FT at 384 px (`configs/van_full_ft_384_fast.yaml`)
 
 - run_dir: `CS604_RUNS/full_ft_20261016_052544` (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` 7e05162); prototypes `CS604_RUNS/prototypes_384.pt` (built on Van's laptop with `scripts/build_prototypes.py`, all 45 images/class)
