@@ -14,6 +14,16 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-17 — Van — full FT at 448 px (`configs/van_full_ft_448_fast.yaml`)
+
+- run_dir: `CS604_RUNS/full_ft_20261017_122237` (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` 2013466); prototypes `CS604_RUNS/prototypes_448.pt` (Qian's, all 45 images/class, sha256 5abf68ac…)
+- val acc (ours / CodaBench): no internal holdout (all 45 images/class) / **0.825 plain** (ID 995914), **0.827 crop 0.75 + flip** (ID 995918; uploaded as `val_team_08_full_384_tta_crop075_flip.zip`, but the file is this run's `tta_crop075_flip/` prediction, not the 384 run's, whose flip score is 0.821, ID 992482), **0.828 crop 0.75 + zoom** (ID 995951, team best). Against 384 (`full_ft_20261016_052544`): +0.8 plain, +0.6 flip, +0.4 zoom.
+- trainable % / peak VRAM / GPU-hours: 100% (93,930,241 incl. head) / 17.80 GB / 2.41 (144.0 training minutes, time limit reached)
+- what changed vs `van_full_ft_384_fast.yaml`: `img_size` 384 → **448**, `prototypes_448.pt`, batch 128 x 2 → **64 x 4** (same effective 256). ~285 img/s, **5.5 epochs**.
+- why: Van's laptop screen at equal compute (10 images/class, crop 0.9): 336 / 384 / 448 / 512 = 63.20 / 64.06 / 64.79 / 64.98%, i.e. +0.73 for 384 → 448 and flat after; CodaBench plain agrees (+0.8).
+- latency (A100, forward only, synthetic 448 px, bf16): 7.16 ms at batch 1.
+- next: **Task 1 final** (crop 0.75 + zoom, 0.828). 512 is not worth a run (flat on the screen). As at 384, zoom and flip add less at higher resolution (+0.3 / +0.2 over plain at 448 vs +0.7 / +0.4 at 384).
+
 ### 2026-10-17 — Van — AdaptFormer + biases/LayerNorms at 384 px (`configs/van_adaptformer_bias_384_fast.yaml`)
 
 - run_dir: `CS604_RUNS/van_adaptformer_20261016_142837` (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` 2bd8e78); prototypes `CS604_RUNS/prototypes_384.pt`
