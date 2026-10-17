@@ -312,6 +312,12 @@ Frozen features + linear probe, internal holdout accuracy:
 - what changed: Van's zoom (crop 0.75, second view on the region the model used, softmax averaged). No flip.
 - result: **+0.6** over this checkpoint's crop 0.7 + flip score (0.793). Same size gain Van measured on the full fine-tune (0.813 → 0.819). This is the best under-5% score so far, 0.2 points above his AdaptFormer zoom (0.797, submission 972126), and 2.0 points below the full fine-tune zoom (0.819).
 
+### 2026-10-17 — Wenqi — zoom latency on the two submitted checkpoints
+
+- run_dir: no training. Timed `full_ft_20261006_122039/last.pt` and `lora_20261007_051926/last.pt` with the zoom path (plain view, zoom crop, second forward). A100-SXM4-40GB, bf16, synthetic inputs, 30 warm-ups, 200 timed iterations. JSON: `inference_latency_zoom.json` in each run folder.
+- full FT zoom (the 0.819 checkpoint): **20.650 ms/image** at batch 1, **1.417 ms/image** at batch 64. Single-pass latency on this checkpoint was 7.94 / 0.64 ms.
+- LoRA r24 zoom, unmerged (the 0.799 checkpoint): **36.793 ms/image** at batch 1, **2.286 ms/image** at batch 64. Load printed 48 LoRA layers (qkv, proj, fc1, fc2) and 4.65% trainable. The 49 missing keys are the frozen backbone weights; a LoRA checkpoint does not store them. No unexpected keys. Single-pass unmerged latency was about 14.4–15.0 ms at batch 1; merged single-pass was 7.68 ms.
+
 
 ### 2026-10-14 — Qian — BitFit head, resolution and crop/flip ablations
 
