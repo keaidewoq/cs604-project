@@ -21,23 +21,29 @@ def _unfreeze_head(model):
         param.requires_grad = True
 
 
-def _below_block(name, start):
-    """True if parameter/module `name` sits before block `start` (embeddings count as before 0)."""
+def _below_block(name, start, keep_embed=False):
+    """True if parameter/module `name` sits before block `start` (embeddings count as before 0).
+
+    keep_embed (`keep_embed_trainable`): pos_embed and cls_token do not count as before,
+    so they can still train (backward then runs through every block: no speed-up).
+    """
     if start <= 0:
+        return False
+    if keep_embed and name in ("pos_embed", "cls_token"):
         return False
     if name.startswith("blocks."):
         return int(name.split(".")[1]) < start
     return name.startswith(("patch_embed", "pos_embed", "cls_token", "reg_token", "norm_pre"))
 
 
-def _unfreeze_extra(model, parts, start=0):
+def _unfreeze_extra(model, parts, start=0, keep_embed=False):
     """Also train small backbone pieces next to a PEFT method (`unfreeze_extra`).
 
     norm: LayerNorm weights and biases; bias: biases of every Linear / conv
     (BitFit-style); pos_embed, cls_token: the learned embeddings. These are
     flagged `_no_weight_decay`, so AdamW does not pull pretrained values to 0.
     With `start` (first_trainable_block) > 0, pieces before that block stay frozen,
-    including pos_embed and cls_token, so backward can stop at block `start`.
+    including pos_embed and cls_token (unless keep_embed), so backward can stop at block `start`.
     """
     unknown = [p for p in parts if p not in EXTRA_PARTS]
     if unknown:
@@ -52,7 +58,8 @@ def _unfreeze_extra(model, parts, start=0):
         if "bias" in parts and isinstance(module, (nn.Linear, nn.Conv2d)) and module.bias is not None:
             picked.append(module.bias)
     for name in ("pos_embed", "cls_token"):
-        if name in parts and isinstance(getattr(model, name, None), nn.Parameter) and not _below_block(name, start):
+        if name in parts and isinstance(getattr(model, name, None), nn.Parameter) \
+                and not _below_block(name, start, keep_embed):
             picked.append(getattr(model, name))
     n = 0
     for param in picked:
@@ -61,16 +68,21 @@ def _unfreeze_extra(model, parts, start=0):
         param.requires_grad = True
         param._no_weight_decay = True
         n += param.numel()
-    kept = f" (blocks {start}+ only; embeddings frozen)" if start > 0 else ""
+    kept = ""
+    if start > 0:
+        kept = f" (blocks {start}+ only; embeddings {'trainable' if keep_embed else 'frozen'})"
     print(f"[unfreeze_extra] {', '.join(parts)}: {n:,} params{kept}")
 
 
-def _check_frozen_below(model, start):
+def _check_frozen_below(model, start, keep_embed=False):
     """With first_trainable_block > 0, nothing before that block may train, or backward runs through it anyway."""
-    leaks = [name for name, p in model.named_parameters() if p.requires_grad and _below_block(name, start)]
+    leaks = [name for name, p in model.named_parameters() if p.requires_grad and _below_block(name, start, keep_embed)]
     if leaks:
         raise ValueError(f"first_trainable_block={start} but these still train: {leaks[:5]}")
-    print(f"[frozen] embeddings and blocks 0-{start - 1} frozen; backward stops at block {start}")
+    if keep_embed:
+        print(f"[frozen] blocks 0-{start - 1} frozen; pos_embed/cls_token train, so backward runs through every block")
+    else:
+        print(f"[frozen] embeddings and blocks 0-{start - 1} frozen; backward stops at block {start}")
 
 
 def _backbone_params(model):
@@ -109,15 +121,16 @@ def apply_method(model, cfg):
         base_total = sum(p.numel() for p in _backbone_params(model))
         model = build_peft(model, cfg)
         start = int(cfg.get("first_trainable_block", 0))
+        keep_embed = bool(cfg.get("keep_embed_trainable", False))
         if cfg.get("unfreeze_extra"):
-            _unfreeze_extra(model, list(cfg.unfreeze_extra), start)
+            _unfreeze_extra(model, list(cfg.unfreeze_extra), start, keep_embed)
         names = resolve_unfreeze_modules(cfg)
         if names:
             unfreeze_modules(model, names)
         if cfg.get("sparse_mask_file"):
             apply_sparse_mask(model, cfg.sparse_mask_file)
         if start > 0:
-            _check_frozen_below(model, start)
+            _check_frozen_below(model, start, keep_embed)
         log_backbone_trainable(model, base_total)
         return model
     raise ValueError(

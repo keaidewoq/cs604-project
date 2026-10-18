@@ -273,3 +273,81 @@ Frozen features + linear probe, internal holdout accuracy:
 - results: **0.9 points below LoRA r24** at the same budget, both plain (0.776 vs 0.785) and with crop + flip (0.785 vs 0.793), despite more epochs (**~9.1** vs ~6.8). Crop + flip added +0.9, the largest TTA gain so far (full FT +0.6, LoRA +0.8).
 - cost: fastest training of all 336 runs: **~951 s/epoch (~473 img/s)** vs 1,017 s full FT and 1,272 s LoRA; lowest peak VRAM (15.54 vs 20.05 GB full FT). Adapters cannot be merged into the weights: latency **11.60 ms/image at batch 1 (+46% vs full FT's 7.94)**, 0.73 ms/image at batch 64 (+15%). LoRA, once merged, has no extra latency (7.68 ms), so Adapter is cheaper to train but slower to run.
 - next: AdaptFormer covered by Van's run (0.779 / 0.790, 4.13%). Try Van's CosFace margin (0.1) on LoRA r24; measure merged-LoRA latency.
+
+### 2026-10-12 — Anastasia — LoRA r24 recipe ablation + DoRA, pilot scale (`configs/ablation_lora_r24.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_lora_r24/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_ablation.ipynb`, `ana-branch`); arms A–F on 2026-10-11, G–I on 2026-10-12
+- setup: one change at a time from `lora_r24_336_recipe.yaml`; 1,000-class pilot subset (seed 0), 40 fit images/class, 3 epochs (5% warmup + cosine), scored on a labelled 5/class holdout; one seed per arm. Both starting heads rebuilt from the fit images only (pilot-class prototypes recomputed; linear probe trained on the same images), so no head has seen the holdout. Not ablated: batch 256 and weight decay 0.05 (kept in all arms).
+
+| Arm | Change | Holdout top-1 | vs A (points) | Backbone trainable | Pilot min |
+|---|---|---:|---:|---:|---:|
+| A | full recipe | **0.8984** | — | 4.65% | 6.3 |
+| B | no norms / biases / pos_embed / cls_token | 0.8970 | −0.14 | 4.12% | 5.9 |
+| C | rank 16 instead of 24 | 0.8918 | −0.66 | 3.28% | 6.3 |
+| D | linear head from a linear probe (LP-FT) | 0.8692 | −2.92 | 4.65% | 6.3 |
+| E | head lr 1e-4 instead of 3e-3 | 0.8370 | −6.14 | 4.65% | 6.3 |
+| F | B + C + D + E (≈ the 0.717 run's setup) | 0.8538 | −4.46 | 2.74% | 6.0 |
+| G | D with head lr 1e-4 (probe head, slow lr) | 0.8572 | −4.12 | 4.65% | 6.5 |
+| H | linear head started from prototypes | 0.8892 | −0.92 | 4.65% | 6.3 |
+| I | DoRA instead of LoRA (extension) | 0.8996 | +0.12 | 4.75% | 7.7 |
+
+- results: **the head setup drives most of the gain.** Head start × head lr: prototype cosine head 0.8984 (fast) / 0.8370 (slow); linear-probe head 0.8692 (fast) / 0.8572 (slow). A fast head lr helps both starts, but the prototype start depends on it 5× more (−6.1 vs −1.2 points): it starts as class means and must be trained into a classifier, while a probe head is already one. **The prototype start wins only with a fast head lr** (+2.9 fast, −2.0 slow), so the two must be chosen together; the 0.717 run's combination (probe + slow) was not even the best for a probe head (+1.2 with a fast lr). Of the 2.9-point gap between the prototype cosine head (A) and LP-FT (D), ~2.0 comes from the prototype start (H − D) and ~0.9 from the cosine head (A − H). Rank 24 over 16: +0.66. Extras (norms, biases, embeddings): +0.14, within seed noise (~0.3), so dropping them saves 0.53% of the backbone at no measurable cost. F's −4.5 covers most of the full-scale gap (0.717 → 0.785); the rest is plausibly scale plus batch size and weight decay.
+- DoRA (I): +0.12 points (a tie) at +0.10% parameters, but **22% slower** to train (7.7 vs 6.3 min). Plausibly rank 24 already gives LoRA enough capacity (DoRA's reported gains are largest at low rank), and the head, not the adapter, is the bottleneck here. DoRA merges like LoRA (`lora_dora`, tested: merged = unmerged). Confirmed at full scale in the next entry.
+- limitations: pilot scale (absolute accuracies inflated by the easier 1,000-class task; use for direction and ranking); one seed per arm; G's best epoch (0.8588) was slightly above its final (0.8572).
+- next: report the head start × head lr table and the A/H/D split; final PEFT model stays LoRA r24 (optionally without extras, 4.12%).
+
+### 2026-10-13 — Anastasia — DoRA r24 + extras @ 336 with Van's recipe (`configs/lora_r24_336_dora.yaml`)
+
+- run_dir: `CS604_RUNS/lora_20261012_130611` (launcher `notebooks/colab_launcher_ana_dora336.ipynb`, `ana-branch`)
+- val acc (ours / CodaBench): no internal holdout / **0.783** plain (submission 983071); **0.793** with crop 0.7 + flip (submission 983064)
+- trainable % / peak VRAM / GPU-hours: **4.75% of the backbone** (4.08M / 85.99M, head excluded; +82,944 magnitude params vs LoRA) / **28.06 GB** / 2.40 (144.0 training min, time limit reached; A100 40 GB)
+- what changed vs `lora_r24_336_recipe.yaml` (0.785): only `lora_dora: true`. DoRA (Liu et al., ICML 2024) splits each adapted weight into a direction (updated by LoRA) and a learned per-output magnitude, closer to how full FT updates weights.
+- results: **tie with LoRA** (−0.2 plain, ±0 with crop + flip), matching the pilot (arm I: +0.12). DoRA trained **25% slower** (~1,585 vs ~1,272 s/epoch) and reached only **~5.45 epochs** vs ~6.8, so it matched LoRA with ~20% fewer epochs, but at a fixed 144-min budget the slowdown cancels the per-epoch gain. Peak memory +45% (28.06 vs 19.40 GB): each step builds the full adapted weight of all 48 layers to compute its norms. Crop + flip added +1.0, the largest TTA gain so far. Consistent with the ablation: rank 24 already gives LoRA enough capacity, and the head setup, not the adapter, limits accuracy here.
+- cost: latency measured **unmerged 23.14–24.36 ms/image at batch 1** (1.41 ms/image at batch 64), the slowest of all runs, because every forward pass recomputes the weight norms of all 48 layers. **Merged** (`scripts/latency_merged.py`, same A100 session): **7.71 ms at batch 1, 0.649 ms at batch 64**, identical to a plain ViT-B with the same head (7.71 / 0.651 ms), so DoRA, like LoRA, has no inference cost once merged. (A second merged-latency session on the LoRA r24 checkpoint gave 8.35 ms vs 8.20 ms plain; the first gave 7.68 vs 7.58. Merged stays within ~0.15 ms of plain both times.)
+- next: final PEFT model stays LoRA r24 (same accuracy, faster and lighter to train).
+
+### 2026-10-16 — Anastasia — LoRA from block k up + progressive resizing, pilot scale (`configs/ablation_lora_depth_res.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_lora_depth_res/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_depth_res.ipynb`, `ana-branch`)
+- setup: same pilot as the r24 ablation (1,000 classes, 40 fit / 5 holdout per class, prototype heads rebuilt from fit images), A = `lora_r24_336_recipe.yaml`. Two new opt-in options: `first_trainable_block: k` (LoRA only in blocks k..11; norms, biases, `pos_embed` and `cls_token` below k frozen, so backward stops at block k) and `low_res_size: 224` / `low_res_fraction: 0.67` (train at 224 for the first 67% of progress, then 336; eval and inference at 336). J–M: same 3 epochs as A (accuracy cost). `*_t` arms: same training minutes as A (5.75 min, via `max_train_minutes: {match: A_full_recipe}`), i.e. what the speed-up buys under a time budget.
+
+| Arm | Change | Holdout top-1 | vs A | Trainable | Epochs | Speed-up | Peak VRAM |
+|---|---|---:|---:|---:|---:|---:|---:|
+| A | full recipe | **0.8986** | — | 4.65% | 3 | 1.00× | 19.40 GB |
+| J | blocks 4–11, r40 | 0.8894 | −0.92 | 4.67% | 3 | 1.29× | 13.59 GB |
+| K | blocks 6–11, r54 | 0.8830 | −1.56 | 4.70% | 3 | 1.43× | 10.64 GB |
+| L | 224 → 336 | 0.8866 | −1.20 | 4.65% | 3 | 1.55× | 19.39 GB |
+| M | J + L | 0.8878 | −1.08 | 4.67% | 3 | 1.87× | 13.59 GB |
+| J_t | J, A's minutes | 0.8890 | −0.96 | 4.67% | 4 | 1.33× | 13.59 GB |
+| L_t | L, A's minutes | 0.8898 | −0.88 | 4.65% | 6 | 2.00× | 19.39 GB |
+| M_t | M, A's minutes | 0.8872 | −1.14 | 4.67% | 7 | 2.33× | 13.59 GB |
+
+- results: **neither speed-up helps, even at equal compute.** All seven arms lost 0.9–1.6 points (beyond ~0.3 seed noise, all in the same direction). Extra epochs bought almost nothing (L 3 epochs 0.8866 vs L_t 6 epochs 0.8898; M_t with 7 epochs still −1.1), so at pilot scale LoRA plateaus within ~3 epochs and the time budget is not the bottleneck. Training at 224 costs ~1.2 points and a final phase at 336 doesn't recover it. The speed-ups and VRAM savings are real on the A100 (J 13.6 GB, K 10.6 GB vs 19.4 GB), useful only on a memory-limited GPU.
+- caveat on interpretation: J and K also froze `pos_embed` + `cls_token` (~0.44M, most of A's extras) and concentrated the same budget in fewer blocks, so their loss does **not** show that the early blocks specifically matter. The param-selection pilot (next entry) found no depth effect, which points to concentration rather than depth. A control run (`configs/ablation_lora_depth_control.yaml`: fixed r24 on fewer blocks, and J with `pos_embed` trainable) is set up to separate the two; results TBC.
+- limitations: pilot scale (1,000 classes may plateau sooner than 10,000); one seed per arm.
+- next: keep A as the LoRA submission; no lr / `low_res_fraction` sweep or full run.
+
+### 2026-10-17 — Anastasia — parameter-selection pilot: depth, fine-tuned angle, gradient at equal budget (`configs/ablation_param_selection.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_param_selection/` (`scripts/ablation.py` + `scripts/select_params.py`, launcher `notebooks/colab_launcher_ana_param_selection.ipynb`, `ana-branch`)
+- question: at a fixed budget of ~4.6% of the backbone, which parameters should be trained? Same pilot as above (1,000 classes, 40 fit / 5 holdout per class, 3 epochs, one seed per arm). Directly trained pretrained weights use their own `unfreeze_lr` (3e-5 for whole matrices, 1e-4 for GPS entries; the latter a guess, not swept).
+- arms: **A** LoRA r24 everywhere (current recipe). **F** full FT at pilot scale, Van's LLRD recipe (`F_llrd`) and one flat lr 3e-5 (`F_flat`). **S0 / S5 / S11** (surgical, Lee et al. ICLR 2023): block *i*'s full attention (qkv + proj, 2.36M) + LoRA r8 elsewhere. **Y** (partial FT, Ye et al. 2023): rank matrices by angle between pretrained and `F_flat` weights; `Y_layer` = top whole attention layer + LoRA r8, `Y_matrix` = top single matrices filled to budget, no LoRA. **G** (GPS, Zhang et al. CVPR 2024): top-K weights per output neuron by accumulated gradient on fit images (cross-entropy, not GPS's contrastive loss, since the head starts from prototypes), K = 42 and K = 10. Y and G selections use only fit images (no holdout leakage).
+
+| Arm | Holdout top-1 | vs A | Backbone trainable | Peak VRAM | Training min |
+|---|---:|---:|---:|---:|---:|
+| A: LoRA r24 everywhere | **0.8996** | — | 4.65% | 19.40 GB | 5.86 |
+| F_llrd: full FT, LLRD | 0.8960 | −0.36 | 100% | 20.05 GB | 4.75 |
+| F_flat: full FT, flat lr | 0.8956 | −0.40 | 100% | 20.05 GB | 4.63 |
+| G_k42: GPS | 0.8944 | −0.52 | 4.63% | 20.37 GB | 4.64 |
+| Y_layer: block 11 attention + LoRA r8 | 0.8908 | −0.88 | 4.61% | 19.30 GB | 5.78 |
+| S5: block 5 attention + LoRA r8 | 0.8900 | −0.96 | 4.61% | 19.30 GB | 5.80 |
+| S11: block 11 attention + LoRA r8 | 0.8894 | −1.02 | 4.61% | 19.30 GB | 5.77 |
+| G_k10: GPS | 0.8892 | −1.04 | 1.51% | 20.37 GB | 4.64 |
+| S0: block 0 attention + LoRA r8 | 0.8888 | −1.08 | 4.61% | 19.30 GB | 5.78 |
+| Y_matrix: 4 single matrices, no LoRA | 0.8738 | −2.58 | 4.65% | 13.51 GB | 4.06 |
+
+- selections: `Y_layer` picked `blocks.11.attn.qkv` + `blocks.11.attn.proj`, the same as S11, so the two are identical runs; their 0.14-point difference (0.8908 vs 0.8894) is a measured run-to-run noise estimate (GPU nondeterminism), consistent with the ~0.3 tie threshold. `Y_matrix` picked `blocks.11.attn.qkv` and `attn.proj` of blocks 0, 9, 10: 4 of 49 matrices, no MLP, because the larger `fc1` matrices next in the ranking didn't fit the remaining budget.
+- angles (`F_flat`, degrees between pretrained and fine-tuned weights, `angles.csv`): all 49 matrices between 0.79° (`patch_embed`, the lowest) and 1.22° (`blocks.11.attn.qkv`). `qkv` (0.92 → 1.22) and `fc1` (0.90 → 1.16) rise steadily with depth; `proj` and `fc2` are mostly flat (block-0 `proj` outlier at 1.16°). Full FT changes every layer a little and the high-level layers most.
+- results: **spreading the budget beats concentrating it.** The two best ways to spend ~4.6% (LoRA everywhere, GPS) touch every layer; one full-rank attention block costs ~1 point at any depth, and the most concentrated arm (`Y_matrix`) loses 2.6. **Depth makes no difference** (S0 ≈ S5 ≈ S11, within noise), so the early-layer hypothesis from Lee et al. is not supported here; with the angles (patch embedding moved least), iNat vs ImageNet is not a low-level appearance shift. How much a layer moves under full FT doesn't predict how useful it is to tune at a fixed budget. G_k10 is the best accuracy per parameter (−1.0 at 1.51%), but GPS saves parameters, not compute: full gradients are still computed and masked (20.37 GB, no speed-up).
+- caveat: **full FT does not beat LoRA at pilot scale** (−0.4), unlike full scale (0.807 vs 0.785). The pilot (40k images, 1,000 classes, 3 epochs) can rank PEFT variants but can't show the capacity limit that makes full FT win at 450k images; all "vs F" conclusions are pilot-only. Consistent with a data-size crossover, but the settings also differ in class count and epochs. Angle comparisons across matrix types are weaker than within a type (angle is relative to ‖W‖). Pilot angles come from 3 epochs at lr 3e-5, so all changes are small.
+- next: depth-control run (`configs/ablation_lora_depth_control.yaml`) to test "spread vs concentrated" directly (C16_all vs J24_embed at ~3.2%) and the `pos_embed` confound (J40 vs J40_embed); results TBC. Angle-vs-depth figure for the report.
