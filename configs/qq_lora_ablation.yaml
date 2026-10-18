@@ -1,0 +1,17 @@
+# Four equal-time subset runs based on the team's strongest PEFT training recipe.
+inherits: lora_r24_336_recipe.yaml
+max_adaptation_pct: 5.0
+prompt_mode: none
+prompt_length: 0
+# Training time includes loading and augmentation, as in the shared trainer.
+epochs: null
+max_train_minutes: 12
+time_warmup_fraction: 0.05
+warmup: 0.0
+schedule_fit_time: false
+# Fixed, single-view holdout evaluation. No flip or zoom during selection.
+eval_crop_pct: 0.9
+full_image_probability: 0.0
+ablation_classes: 1000
+ablation_holdout: 5
+ablation_min_gain: 0.003  # 0.3 percentage points; a screening rule, not significance.

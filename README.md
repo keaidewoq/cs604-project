@@ -39,6 +39,12 @@ Each run folder stores the resolved `config.yaml`, `step_log.csv`, `epoch_log.cs
 
 Submission lines are `image_path class_id`, matching the course label files.
 
+## Qian's LoRA crop/resolution experiment
+
+On `qq_lora_ablation`, `notebooks/colab_launcher_qq.ipynb` runs the LoRA r24 + extras recipe at 336 and 384, each with the current crops or a 75% crop / 25% whole-image resize-and-pad mixture. It uses the official backbone, a shared 1,000-class fit/holdout split, fitting-only prototypes per resolution, a 10,000-way classifier, and 12 training minutes per arm by default. Evaluation uses crop 0.9 without flip or zoom; selection uses final accuracy after equal training time.
+
+The optional final comparison reuses the better 384 arm and runs matching settings at 448 only if 384 beats the best 336 result by more than 0.3 percentage points. Results, configs, checkpoints, split lists and plots go to Drive. Select an A100 GPU runtime. A–D use 48 training minutes and the optional 448 arm adds 12; setup, prototype extraction and evaluation take additional wall time. This is a subset screen, not a final 144-minute all-data run.
+
 ## Parameter table
 
 Shared defaults live in `configs/base.yaml`. A method file only lists what it **changes**. Blank = inherit from base.
