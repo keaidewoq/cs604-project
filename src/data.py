@@ -7,14 +7,50 @@ may omit the class id; those splits are then unlabeled.
 from __future__ import annotations
 
 from pathlib import Path
+import math
+import random
 
-from PIL import Image
+from PIL import Image, ImageOps
 from torch.utils.data import DataLoader, Dataset
 from timm.data import create_transform, resolve_data_config
 from timm.models import get_pretrained_cfg
 
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+
+
+class ResizeWithPadding:
+    """Keep the entire image and its proportions, then center-pad to a square."""
+
+    def __init__(self, size, fill):
+        self.size = int(size)
+        self.fill = tuple(fill)
+
+    def __call__(self, image):
+        scale = self.size / max(image.size)
+        width = max(1, min(self.size, round(image.width * scale)))
+        height = max(1, min(self.size, round(image.height * scale)))
+        image = image.resize((width, height), Image.Resampling.BICUBIC)
+        left, top = (self.size - width) // 2, (self.size - height) // 2
+        return ImageOps.expand(
+            image, (left, top, self.size - width - left, self.size - height - top),
+            fill=self.fill,
+        )
+
+
+class RandomCropOrPad:
+    """Choose exactly one view; subsequent flip/color/normalization are shared."""
+
+    def __init__(self, crop, pad, probability):
+        self.crop = crop
+        self.pad = pad
+        self.probability = probability
+
+    def __call__(self, image):
+        return self.pad(image) if random.random() < self.probability else self.crop(image)
+
+    def __repr__(self):
+        return f"RandomCropOrPad(full_image_probability={self.probability}, crop={self.crop})"
 
 
 def _parse_line(line):
@@ -91,6 +127,18 @@ def build_transforms(cfg, eval_crop_pct=None, img_size=None):
         pretrained_cfg=pretrained_cfg,
     )
     train_tf = create_transform(**data_config, is_training=True)
+    probability = float(getattr(cfg, "full_image_probability", 0.0))
+    if not math.isfinite(probability) or not 0 <= probability <= 1:
+        raise ValueError("full_image_probability must be between 0 and 1")
+    if probability:
+        # Replace only geometry. Every view still receives the existing flip,
+        # color jitter, tensor conversion and pretrained normalization.
+        fill = tuple(round(255 * value) for value in data_config["mean"])
+        train_tf.transforms[0] = RandomCropOrPad(
+            train_tf.transforms[0], ResizeWithPadding(size, fill), probability,
+        )
+    if eval_crop_pct is None:
+        eval_crop_pct = getattr(cfg, "eval_crop_pct", None)
     if eval_crop_pct is not None:
         data_config = {**data_config, "crop_pct": float(eval_crop_pct)}
     eval_tf = create_transform(**data_config, is_training=False)

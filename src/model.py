@@ -120,6 +120,12 @@ def apply_method(model, cfg):
     if method in PEFT_METHODS:
         base_total = sum(p.numel() for p in _backbone_params(model))
         model = build_peft(model, cfg)
+        if cfg.get("prompt_mode", "none") != "none" or cfg.get("prompt_length", 0):
+            if method != "lora":
+                raise ValueError("Visual prompts are currently supported with method=lora")
+            from src.peft.vpt import apply_vpt
+
+            model = apply_vpt(model, cfg)
         start = int(cfg.get("first_trainable_block", 0))
         keep_embed = bool(cfg.get("keep_embed_trainable", False))
         if cfg.get("unfreeze_extra"):
@@ -131,7 +137,15 @@ def apply_method(model, cfg):
             apply_sparse_mask(model, cfg.sparse_mask_file)
         if start > 0:
             _check_frozen_below(model, start, keep_embed)
-        log_backbone_trainable(model, base_total)
+        trainable, total, pct = log_backbone_trainable(model, base_total)
+        model.adaptation_stats = {
+            "adaptation_parameters": trainable,
+            "original_backbone_parameters": total,
+            "adaptation_pct": pct,
+        }
+        cap = cfg.get("max_adaptation_pct")
+        if cap is not None and pct >= float(cap):
+            raise ValueError(f"Backbone adaptation {pct:.6f}% must be strictly below {cap}%")
         return model
     raise ValueError(
         f"Unknown method {method!r}. Expected full_ft, linear_probe, or a PEFT method."
