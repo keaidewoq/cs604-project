@@ -21,6 +21,8 @@ figures/    plots
 
 ## Run on Colab
 
+For dataset exploration, upload `notebooks/dataset_inspection.ipynb` to Colab. It produces manifest checks, a reproducible internal holdout membership list, sampled image statistics, class galleries, training/evaluation crop comparisons, and duplicate candidates. Set the data and Drive output paths in its first cell; a GPU is not required.
+
 1. Open `notebooks/colab_launcher.ipynb` on Colab (GPU runtime, 48GB VRAM if you have it).
 2. The notebook clones this repo, installs requirements, mounts Drive, downloads `doem1997/cs604-course-data` to `/content/data`, trains with `output_dir` on Drive, then writes `val_team_xx.txt` / `test_team_xx.txt`.
 
