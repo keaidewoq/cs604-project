@@ -359,3 +359,11 @@ Frozen features + linear probe, internal holdout accuracy:
 - trainable % / peak VRAM / GPU-hours: **4.7391%** backbone (head excluded) / **20.09 GiB** / **2.4025 wall GPU-hours**; 144 training min on A100 40GB. Merged-LoRA single-view latency: **9.430 ms/image** (batch 1), **0.694 ms/image** (batch 64), excluding flip TTA and preprocessing.
 - what changed: LoRA r24 + extras with **8 VPT-Deep tokens/block at 336**, prototype cosine head using `prototypes_336.pt`, all 450,000 images; LoRA/prompt LR 3e-4, head LR 3e-3, batch 128 x 2, BF16, seed 42, 5% time warmup + cosine. Reached epoch 7.
 - No improvement is demonstrated by the recorded CodaBench scores: **LoRA r24 + extras without VPT also achieved 79.3%** (crop 0.7 + flip). Different crops prevent isolating VPT's effect.
+
+### 2026-10-18 — Qian — LoRA crop/resolution ablation (`configs/qq_lora_ablation.yaml`)
+
+- run_dir: `CS604_RUNS/qq_lora_crop_resolution_c1000_seed42_v1/` (`qq_lora_ablation`); selected E: `E_448/lora_20261018_093724/`.
+- val acc (ours / CodaBench): A/B/C/D/E final holdout **0.9082 / 0.9058 / 0.9058 / 0.9094 / 0.9122** / not submitted. Evaluation: crop 0.9, no flip or zoom.
+- trainable % / peak VRAM / GPU-hours: selected E **4.9446%** backbone (head excluded) / **33.90 GiB** / **0.2183 wall GPU-hours**, excluding prototype extraction; 12 training min, 3.48 epochs on A100 40GB.
+- what changed: LoRA r24 + extras, no VPT; 1,000 classes, 40 fit + 5 holdout/class, fitting-only prototypes per resolution, seed 42. Equal 12-minute arms: 336/384 with current crops or 75% crop + 25% whole-image/padding, then 448 with the mixture. E gains **+0.28 pp** over matching 384 and **+0.40 pp** over the 336 baseline. One seed; full-data gain unconfirmed.
+- next: `qq_branch_v2`, `configs/lora_r24_crop_pad_448.yaml`: fresh pretrained weights, all **450,000 images**, **144 training minutes**, reuse all-data `prototypes_448.pt`; predict with **crop 0.75 + autozoom (mass 0.7), no flip** via `scripts/predict_zoom.py`.
