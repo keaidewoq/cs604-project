@@ -21,7 +21,7 @@ figures/    plots
 
 ## Run on Colab
 
-For dataset exploration, upload `notebooks/dataset_inspection.ipynb` to Colab. It produces manifest checks, a reproducible internal holdout membership list, sampled image statistics, class galleries, training/evaluation crop comparisons, and duplicate candidates. Set the data and Drive output paths in its first cell; a GPU is not required.
+For dataset exploration, upload `notebooks/dataset_inspection.ipynb` to Colab. It follows the Qian launcher setup and saves image statistics, class galleries, current training crops, alternative crops, six resolutions (224–512), simple zoom levels, flips, and mild brightness/color comparisons to Drive. Set the paths in its first settings cell; a GPU is not required. Dataset images download to Colab temporary storage at `/content/data`.
 
 1. Open `notebooks/colab_launcher.ipynb` on Colab (GPU runtime, 48GB VRAM if you have it).
 2. The notebook clones this repo, installs requirements, mounts Drive, downloads `doem1997/cs604-course-data` to `/content/data`, trains with `output_dir` on Drive, then writes `val_team_xx.txt` / `test_team_xx.txt`.
