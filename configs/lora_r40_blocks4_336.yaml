@@ -1,0 +1,17 @@
+# Full-scale check of pilot arm J (configs/ablation_lora_depth_res.yaml): LoRA only in
+# blocks 4-11, at rank 40 so the budget matches the r24 recipe (CodaBench 0.785).
+# Nothing below block 4 trains, so backward stops there: 1.29x faster per step on the pilot,
+# 13.6 GB instead of 19.4 GB peak VRAM.
+# Pilot: -0.92 at equal epochs and -0.96 at equal minutes, because the pilot plateaued
+# within ~3 epochs. At full scale the run is still improving at ~7 epochs, so the extra
+# epochs this buys in 144 min may count here, which is the question this run answers.
+# Caveat: pos_embed and cls_token are frozen too. If the depth-control pilot
+# (configs/ablation_lora_depth_control.yaml) shows J40_embed recovering most of the gap,
+# uncomment keep_embed_trainable below (it costs the speed-up: backward runs through every block).
+# Trainable backbone: 4.01M / 85.99M = 4.67% (head excluded).
+# Launcher: notebooks/colab_launcher_ana_fullcheck.ipynb (METHOD = "lora_r40_blocks4_336").
+inherits: lora_r24_336_recipe.yaml
+first_trainable_block: 4
+lora_rank: 40
+lora_alpha: 40
+# keep_embed_trainable: true
