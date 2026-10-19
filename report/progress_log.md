@@ -367,3 +367,10 @@ Frozen features + linear probe, internal holdout accuracy:
 - trainable % / peak VRAM / GPU-hours: selected E **4.9446%** backbone (head excluded) / **33.90 GiB** / **0.2183 wall GPU-hours**, excluding prototype extraction; 12 training min, 3.48 epochs on A100 40GB.
 - what changed: LoRA r24 + extras, no VPT; 1,000 classes, 40 fit + 5 holdout/class, fitting-only prototypes per resolution, seed 42. Equal 12-minute arms: 336/384 with current crops or 75% crop + 25% whole-image/padding, then 448 with the mixture. E gains **+0.28 pp** over matching 384 and **+0.40 pp** over the 336 baseline. One seed; full-data gain unconfirmed.
 - next: `qq_branch_v2`, `configs/lora_r24_crop_pad_448.yaml`: fresh pretrained weights, all **450,000 images**, **144 training minutes**, reuse all-data `prototypes_448.pt`; predict with **crop 0.75 + autozoom (mass 0.7), no flip** via `scripts/predict_zoom.py`.
+
+### 2026-10-19 — Qian — LoRA r24 crop/padding @ 448 (`configs/lora_r24_crop_pad_448.yaml`)
+
+- run_dir: `CS604_RUNS/lora_r24_crop_pad_448_seed42/lora_20261019_014714/last.pt` (`qq_branch_v2`).
+- val acc (CodaBench):  **0.810**, submission **1002095**; crop 0.75 + autozoom (mass 0.7), no flip.
+- trainable % / peak VRAM / GPU-hours: **4.9446%** backbone (head excluded) / **33.90 GiB** / **2.4023 wall GPU-hours**; 144 training min on A100 40GB. Autozoom latency (unmerged LoRA, BF16): **41.963 ms/image** at batch 1; **4.266 ms/image** at batch 32 (136.499 ms/batch), 30 warmups + 200 iterations on A100-SXM4-40GB. Synthetic GPU-resident views; includes both passes and zoom selection/cropping; excludes image loading, initial resize/crop and input transfers.
+- what changed: full-data arm E, LoRA r24 + extras at 448, 75% random crop + 25% whole-image/padding, prototype cosine head using all-data `prototypes_448.pt`; all 450,000 images, batch 128 x 2, LoRA/head LR 3e-4 / 3e-3, BF16, seed 42, 5% time warmup + cosine. **+1.1 pp** over previous LoRA @ 336 with zoom (0.799); resolution and training views changed together.
