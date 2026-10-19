@@ -14,6 +14,16 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-18 — Van — AdaptFormer + biases/LayerNorms at 448 px (`configs/van_adaptformer_bias_448_fast.yaml`)
+
+- run_dir: `CS604_RUNS/van_adaptformer_20261018_073912` (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` d65cbc3); prototypes `CS604_RUNS/prototypes_448.pt` (Qian's, all 45 images/class)
+- val acc (ours / CodaBench): no internal holdout (all 45 images/class) / **0.804 plain** (ID 1000827), **0.806 crop 0.75 + flip** (ID 1000837), **0.809 crop 0.75 + zoom** (ID 1001880, Task 2 best). Against 384 (`van_adaptformer_20261016_142837`): +1.0 plain, +0.2 zoom.
+- trainable % / peak VRAM / GPU-hours: 4.26% of the backbone excl. head (3,672,588; 11,352,589 incl. head) / 13.76 GB / 2.40 (144.0 training minutes, time limit reached)
+- what changed vs `van_adaptformer_bias_384_fast.yaml`: `img_size` 384 → **448**, `prototypes_448.pt`, batch 128 x 2 → **64 x 4** (same effective 256). ~317 img/s, **6.1 epochs** (384: 8.6).
+- why: Van's laptop screen at equal compute (10 images/class, crop 0.9): 336 / 384 / 448 = 59.63 / 61.18 / 62.72%, still +1.5 per step for AdaptFormer.
+- note: the Colab zoom prediction (`zoom_crop075/`) stopped at 31,062 of 50,000 rows; do not submit it. The submitted zoom file was predicted on Van's laptop with batch 32 and 4 loader workers (zoom at 448 builds 896 px copies; on the laptop batch 64 x 12 workers crashed the same way, so memory is the likely cause on Colab too). Its first 31,062 rows agree with the partial Colab file on 99.5% of images.
+- next: as for full FT, flip and zoom add less at higher resolution (+0.2 / +0.5 over plain at 448, vs +1.3 for zoom at 384). Van is checking whether the eval crop and zoom box need retuning at 448.
+
 ### 2026-10-17 — Van — full FT at 448 px (`configs/van_full_ft_448_fast.yaml`)
 
 - run_dir: `CS604_RUNS/full_ft_20261017_122237` (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` 2013466); prototypes `CS604_RUNS/prototypes_448.pt` (Qian's, all 45 images/class, sha256 5abf68ac…)
