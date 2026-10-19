@@ -14,6 +14,14 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-19 — Van — class-count balancing at prediction (`src.predict --balance_per_class`)
+
+- run_dir: no training; the Task 1 final `CS604_RUNS/full_ft_20261017_122237/last.pt`, re-predicted on Van's laptop (batch 32, 4 workers) with `--crop_pct 0.75 --zoom --balance_per_class 5` (`src/van_balance.py`, van-dev bb24049)
+- val acc (ours / CodaBench): internal holdout (exactly 5 images/class, laptop checkpoints at 384): full FT plain 79.03 → 80.92%, plain + zoom 79.68 → 81.35%; AdaptFormer plain 77.54 → 79.25%, plain + zoom 78.31 → 79.82% / **CodaBench 0.845** (ID 1002123) vs 0.828 for the same views without balancing (ID 995951): **+1.7, as the holdout predicted. Team best.**
+- what it is: val has exactly 5 images per class (test 10), but argmax predictions pile up on some classes (up to 12–13 images) and leave others empty. Sinkhorn gives each class a weight and rescales the weights (50 iterations) until every class's expected count is 5, then takes the argmax of the reweighted softmax (top-100 classes kept per image). On val it changed 3,096 of 50,000 predictions; afterwards no class is empty and the largest has 9. Forcing exactly 5 per class (min-cost matching) did worse on the holdout (80.24 / 80.74%) than the soft version.
+- note: this uses the known per-class counts of the split (stated in the dataset README). To check with the Prof that this is allowed before relying on it for Phase 2.
+- next: Phase 2 test with `--balance_per_class 10`; the AdaptFormer 448 final (Task 2) can get the same treatment.
+
 ### 2026-10-18 — Van — AdaptFormer + biases/LayerNorms at 448 px (`configs/van_adaptformer_bias_448_fast.yaml`)
 
 - run_dir: `CS604_RUNS/van_adaptformer_20261018_073912` (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` d65cbc3); prototypes `CS604_RUNS/prototypes_448.pt` (Qian's, all 45 images/class)
