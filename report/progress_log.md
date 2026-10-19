@@ -455,3 +455,36 @@ Frozen features + linear probe, internal holdout accuracy:
 - trainable % / peak VRAM / GPU-hours: selected E **4.9446%** backbone (head excluded) / **33.90 GiB** / **0.2183 wall GPU-hours**, excluding prototype extraction; 12 training min, 3.48 epochs on A100 40GB.
 - what changed: LoRA r24 + extras, no VPT; 1,000 classes, 40 fit + 5 holdout/class, fitting-only prototypes per resolution, seed 42. Equal 12-minute arms: 336/384 with current crops or 75% crop + 25% whole-image/padding, then 448 with the mixture. E gains **+0.28 pp** over matching 384 and **+0.40 pp** over the 336 baseline. One seed; full-data gain unconfirmed.
 - next: `qq_branch_v2`, `configs/lora_r24_crop_pad_448.yaml`: fresh pretrained weights, all **450,000 images**, **144 training minutes**, reuse all-data `prototypes_448.pt`; predict with **crop 0.75 + autozoom (mass 0.7), no flip** via `scripts/predict_zoom.py`.
+
+### 2026-10-19 — Anastasia — LoRA depth controls: fixed rank on fewer blocks, `pos_embed` control, spread vs concentrated (`configs/ablation_lora_depth_control.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_lora_depth_control/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_depth_control.ipynb`, `ana-branch`)
+- setup: same pilot as the depth/res and param-selection screens (1,000 classes, 40 fit / 5 holdout per class, prototype heads rebuilt from fit images, 3 epochs, one seed per arm); A = `lora_r24_336_recipe.yaml`. New opt-in option `keep_embed_trainable` (with `first_trainable_block > 0`, `pos_embed` + `cls_token` still train; costs the speed-up, since backward then runs through every block). J40 and C16 rerun here so every comparison is within one session.
+
+| Arm | Change | Holdout top-1 | vs A | Trainable | Peak VRAM | Training min |
+|---|---|---:|---:|---:|---:|---:|
+| A | full recipe | **0.8986** | — | 4.65% | 19.40 GB | 5.76 |
+| C16 | r16, all blocks | 0.8932 | −0.54 | 3.28% | 19.34 GB | 5.78 |
+| J40_embed | r40, blocks 4–11, embeddings train | 0.8926 | −0.60 | 5.06%* | 17.39 GB | 5.08 |
+| J40 | r40, blocks 4–11 (rerun of depth/res J) | 0.8890 | −0.96 | 4.67% | 13.59 GB | 4.43 |
+| J24_embed | r24, blocks 4–11, embeddings train | 0.8856 | −1.30 | 3.23% | 17.31 GB | 5.04 |
+| J24 | r24, blocks 4–11 | 0.8830 | −1.56 | 2.84% | 13.51 GB | 4.39 |
+| K24 | r24, blocks 6–11 | 0.8812 | −1.74 | 2.13% | 10.53 GB | 3.99 |
+
+\*over the 5% cap; a control only, not a submission.
+
+- results: **J's loss is about one third frozen embeddings, two thirds dropping the early blocks' capacity.** Training `pos_embed` + `cls_token` recovers 0.36 of J40's 0.96 points (J40_embed) and 0.26 of J24's 1.56 (J24_embed). **Spreading the budget beats concentrating it, confirmed directly:** at the same ~3.2–3.3%, r16 in all 12 blocks (C16, −0.54) beats r24 in blocks 4–11 with embeddings (J24_embed, −1.30) by **0.76 points**. Extra rank helps when the blocks are fixed (r40 over r24 in blocks 4–11: +0.60 frozen, +0.70 with embeddings). Reproducibility: J40 −0.96 here vs −0.92 in the depth/res screen; C16 −0.54 here vs C −0.66 in the r24 ablation, both within ~0.1 point.
+- consistent with the earlier screens: with LoRA in every block, the extras were worth only +0.14 (r24 ablation, arm B), but once blocks 0–3 are frozen, `pos_embed` alone is worth ~0.3–0.4, so early-block LoRA appears to compensate for frozen embeddings. Together with the param-selection pilot (no depth effect for one full-rank block), the evidence favours "spread capacity across all layers" over "early layers matter".
+- decision for the full-scale J run (`configs/lora_r40_blocks4_336.yaml`): **keep embeddings frozen.** J40_embed is over the 5% cap and gives up most of the speed-up (5.08 vs 4.43 training min, 17.4 vs 13.6 GB), and the full run's question is whether J's speed-up buys accuracy when epochs are limited.
+- limitations: pilot scale; one seed per arm.
+
+### 2026-10-19 — Anastasia — GPS k42 @ 336, full scale (`configs/gps_k42_336.yaml`)
+
+- run_dir: `CS604_RUNS/selected_20261019_072529`; mask `CS604_RUNS/gps_336/gps_mask_k42.pt` (launcher `notebooks/colab_launcher_ana_fullcheck.ipynb`, `METHOD = "gps_k42_336"`, `ana-branch`)
+- val acc (ours / CodaBench): no internal holdout / **0.779** plain; crop 0.7 + flip not submitted (TTA added +0.6 to +1.0 on every other 336 run)
+- trainable % / peak VRAM / GPU-hours: **4.63% of the backbone** (3.98M / 85.99M, head excluded; only masked entries counted) / **20.37 GB** / 2.40 (144.0 training min, time limit reached; A100 40 GB)
+- what it is: full-scale check of pilot arm G_gps_k42 (−0.52 vs LoRA A). GPS (Zhang et al., CVPR 2024): for every output neuron of every block Linear and the patch embedding, only the top 42 input connections by gradient magnitude train (mask from 400 batches = 51,200 training images, ~5/class, through the prototype head, cross-entropy); all other entries stay at their pretrained values. No LoRA. Plus the recipe's extras (norms, biases, pos_embed, cls_token). Sparse entries at `unfreeze_lr` 1e-4 (the pilot's value, not swept), extras at 3e-4; otherwise the LoRA r24 recipe (prototype cosine head, head lr 3e-3, batch 256, wd 0.05 off for these tensors, label smoothing 0.1, 5% warmup + cosine fitted to 144 min).
+- training: **~8.7 epochs** (8 full + 70% of the 9th), **~993 s/epoch (~453 img/s)**: 22% faster per epoch than LoRA (1,272 s, ~6.8 epochs) and about as fast as full FT (1,017 s, ~8.5). No LoRA branches means no extra matmuls; the full weight gradients are computed and masked, so it costs full-FT-like time and memory (20.37 vs 20.05 GB full FT, 19.40 LoRA), not less. Final train loss 1.863 (full FT @336 ended at 1.87; same loss and label smoothing).
+- cost: latency **7.13 ms/image at batch 1, 0.640 ms/image at batch 64** (forward only, bf16, A100). Nothing to merge: the trained entries are ordinary weights, so this is a plain ViT-B (LoRA merged 7.68–8.35 and DoRA merged 7.71 in other sessions; session-to-session variation is ~0.6 ms).
+- results: **0.6 points below LoRA r24** (0.779 vs 0.785), just above Adapter (0.776) and 2.8 below full FT (0.807). **The pilot predicted this:** −0.52 on the pilot, −0.6 at full scale. So the pilot ranked GPS correctly even though GPS is the arm most like full FT, where the pilot failed (pilot −0.4 vs LoRA, full scale +2.2). Despite ~28% more epochs than LoRA (8.7 vs 6.8) and a train loss as low as full FT's, it scored lower, so its limit is what the sparse entries can express, not training time, the same conclusion as the depth/res screen. Under the 5% cap, LoRA r24 everywhere stays the best way to spend the budget.
+- next: full-scale checks of B (`lora_r24_336_no_extras`) and J (`lora_r40_blocks4_336`).
