@@ -14,6 +14,14 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-19 — Van — AdaptFormer 448: zoom from a crop 0.9 view (prediction only)
+
+- run_dir: `CS604_RUNS/van_adaptformer_20261018_073912` (same `last.pt`; nothing retrained)
+- val acc (ours / CodaBench): **0.814 crop 0.9 + zoom** (ID 1002322, Task 2 best without balancing) vs 0.809 crop 0.75 + zoom (ID 1001880): **+0.5**.
+- what changed: `src.predict --crop_pct 0.9 --zoom` instead of `--crop_pct 0.75 --zoom` (mass 0.7 unchanged).
+- why: flip and zoom added less at 448, so Van re-tuned the views on the internal holdout with the 448 AdaptFormer screen model (eval only): crop 0.75 / 0.9 / 1.0 x zoom mass 0.5 / 0.7 / 0.9 x min box 8 / 11. Chosen on half the holdout, crop 0.9 + mass 0.7 beat crop 0.75 by +0.28 on the other half. The 0.75 crop helps the plain view but hurts the zoom at 448, where the zoom already enlarges the subject.
+- next: the full FT at 448 may gain from the same crop change (not yet tested); class-count balancing is not yet applied to this file.
+
 ### 2026-10-19 — Van — class-count balancing at prediction (`src.predict --balance_per_class`)
 
 - run_dir: no training; the Task 1 final `CS604_RUNS/full_ft_20261017_122237/last.pt`, re-predicted on Van's laptop (batch 32, 4 workers) with `--crop_pct 0.75 --zoom --balance_per_class 5` (`src/van_balance.py`, van-dev bb24049)
