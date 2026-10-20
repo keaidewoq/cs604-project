@@ -12,6 +12,8 @@ import random
 
 from PIL import Image, ImageOps
 from torch.utils.data import DataLoader, Dataset
+from torchvision.transforms import Compose
+from torchvision.transforms import functional as TF
 from timm.data import create_transform, resolve_data_config
 from timm.models import get_pretrained_cfg
 
@@ -53,6 +55,54 @@ class RandomCropOrPad:
         return f"RandomCropOrPad(full_image_probability={self.probability}, crop={self.crop})"
 
 
+class BoxAwareRandomResizedCrop:
+    """RandomResizedCrop that always keeps the object box inside the crop (`train_box_file`).
+
+    Boxes ([x0, y0, x1, y1] as fractions of the image, by image path) come from
+    scripts/find_boxes.py. Size and aspect are drawn as in `rrc` (its scale and
+    ratio), then grown to at least the box and placed at random wherever the box
+    still fits, so every view shows the whole object with a random amount of
+    surroundings. Images without a box use `rrc` itself.
+    """
+
+    def __init__(self, rrc, boxes):
+        self.rrc = rrc
+        self.boxes = boxes
+        self.size = rrc.size
+        self.scale = rrc.scale
+        self.ratio = rrc.ratio
+        self.interpolation = rrc.interpolation
+
+    def __call__(self, image, rel_path):
+        box = self.boxes.get(rel_path)
+        if box is None:
+            return self.rrc(image)
+        w, h = image.size
+        bx0, by0, bx1, by1 = box[0] * w, box[1] * h, box[2] * w, box[3] * h
+        bw, bh = max(bx1 - bx0, 1.0), max(by1 - by0, 1.0)
+        log_r = (math.log(self.ratio[0]), math.log(self.ratio[1]))
+        for _ in range(10):
+            area = w * h * random.uniform(*self.scale)
+            r = math.exp(random.uniform(*log_r))
+            cw = min(max(math.sqrt(area * r), bw), w)
+            ch = min(max(math.sqrt(area / r), bh), h)
+            if cw / ch < self.ratio[0] * 0.5 or cw / ch > self.ratio[1] * 2:
+                continue  # growing to the box made it far too thin
+            x0 = random.uniform(max(0.0, bx1 - cw), min(bx0, w - cw))
+            y0 = random.uniform(max(0.0, by1 - ch), min(by0, h - ch))
+            break
+        else:
+            x0, y0, cw, ch = 0.0, 0.0, float(w), float(h)
+        # round outwards so the whole box stays inside the crop
+        left, top = math.floor(x0), math.floor(y0)
+        right, bottom = min(w, math.ceil(x0 + cw)), min(h, math.ceil(y0 + ch))
+        return TF.resized_crop(image, top, left, max(1, bottom - top), max(1, right - left),
+                               list(self.size), self.interpolation)
+
+    def __repr__(self):
+        return f"BoxAwareRandomResizedCrop({len(self.boxes)} boxes, scale={self.scale}, ratio={self.ratio})"
+
+
 def _parse_line(line):
     parts = line.strip().split()
     if not parts:
@@ -75,10 +125,11 @@ def _scan_folder(data_root, split):
 
 
 class ImageListDataset(Dataset):
-    def __init__(self, data_root, split, transform=None):
+    def __init__(self, data_root, split, transform=None, box_crop=None):
         self.data_root = Path(data_root)
         self.split = split
         self.transform = transform
+        self.box_crop = box_crop  # BoxAwareRandomResizedCrop, applied before `transform`
         self.samples = self._load_samples()
         self.has_labels = bool(self.samples) and all(y >= 0 for _, y in self.samples)
 
@@ -106,6 +157,8 @@ class ImageListDataset(Dataset):
     def __getitem__(self, idx):
         rel_path, label = self.samples[idx]
         image = Image.open(self.data_root / rel_path).convert("RGB")
+        if self.box_crop is not None:
+            image = self.box_crop(image, rel_path)
         if self.transform is not None:
             image = self.transform(image)
         return image, label, rel_path
@@ -126,7 +179,14 @@ def build_transforms(cfg, eval_crop_pct=None, img_size=None):
         {"input_size": (3, size, size)},
         pretrained_cfg=pretrained_cfg,
     )
-    train_tf = create_transform(**data_config, is_training=True)
+    crop_scale = cfg.get("train_crop_scale")
+    if crop_scale is not None:
+        crop_scale = tuple(float(v) for v in crop_scale)
+        if len(crop_scale) != 2 or not 0 < crop_scale[0] <= crop_scale[1] <= 1:
+            raise ValueError(f"train_crop_scale must be [min, max] with 0 < min <= max <= 1, got {crop_scale}")
+    # RandomResizedCrop area range; timm's default is (0.08, 1.0)
+    train_tf = create_transform(**data_config, is_training=True,
+                                **({"scale": crop_scale} if crop_scale else {}))
     probability = float(getattr(cfg, "full_image_probability", 0.0))
     if not math.isfinite(probability) or not 0 <= probability <= 1:
         raise ValueError("full_image_probability must be between 0 and 1")
@@ -162,7 +222,17 @@ def build_dataloaders(cfg):
     train_tf, eval_tf = build_transforms(cfg)
     root = Path(cfg.data_root)
 
-    train_ds = ImageListDataset(root, "train", transform=train_tf)
+    box_crop = None
+    if cfg.get("train_box_file"):
+        if cfg.get("low_res_size") or float(cfg.get("full_image_probability", 0.0)):
+            raise ValueError("train_box_file cannot be combined with low_res_size or full_image_probability")
+        import torch
+
+        boxes = torch.load(cfg.train_box_file, map_location="cpu", weights_only=False)["boxes"]
+        box_crop = BoxAwareRandomResizedCrop(train_tf.transforms[0], boxes)
+        train_tf = Compose(train_tf.transforms[1:])  # the box-aware crop replaces the random crop
+        print(f"[data] box-aware training crops: {len(boxes):,} boxes from {cfg.train_box_file}")
+    train_ds = ImageListDataset(root, "train", transform=train_tf, box_crop=box_crop)
     loaders = {
         "train": _make_loader(train_ds, cfg, shuffle=True, drop_last=True),
         "val": None,
