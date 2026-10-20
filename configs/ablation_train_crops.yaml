@@ -34,3 +34,6 @@ arms:
   # phase 3 (needs the boxes phase 2 writes)
   BOX_aimed_crops:
     train_box_file: "{out_dir}/boxes.pt"
+  # after scripts/box_sweep.py: the boxes rebuilt with the sweep's winner (box_sweep launcher, part 2)
+  BOX2_aimed_crops_sweep_winner:
+    train_box_file: "{out_dir}/boxes_v2.pt"
