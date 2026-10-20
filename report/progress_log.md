@@ -14,6 +14,13 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-20 — Van — full FT 448: zoom from a crop 0.9 view (prediction only)
+
+- run_dir: `CS604_RUNS/full_ft_20261017_122237` (same `last.pt`; nothing retrained)
+- val acc (ours / CodaBench): **0.832 crop 0.9 + zoom** (ID 1004167, no balancing) vs 0.828 crop 0.75 + zoom (ID 995951): **+0.4**.
+- what changed: `src.predict --crop_pct 0.9 --zoom` instead of `--crop_pct 0.75 --zoom`; the same change gave the AdaptFormer at 448 +0.5 (0.814).
+- next: class-count balancing on top of this view (the balanced crop 0.75 + zoom file scored 0.845).
+
 ### 2026-10-19 — Van — AdaptFormer 448: zoom from a crop 0.9 view (prediction only)
 
 - run_dir: `CS604_RUNS/van_adaptformer_20261018_073912` (same `last.pt`; nothing retrained)
