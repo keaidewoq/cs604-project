@@ -106,11 +106,13 @@ def main():
             "prototypes": prototypes,
             "samples_per_class": counts.cpu(),
             "model_name": cfg.model_name,
+            "img_size": int(cfg.img_size),
         },
         out,
     )
     summary = {
         "model_name": cfg.model_name,
+        "img_size": int(cfg.img_size),
         "train_images": len(samples),
         "classes": n_cls,
         "empty_classes": 0,

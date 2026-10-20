@@ -81,3 +81,33 @@ def load_prototypes(cfg, model):
     apply_class_prototypes(model, prototypes)
     print(f"[head] loaded prototypes from {path}  shape={tuple(prototypes.shape)}")
     return prototypes
+
+
+def load_probe_head(cfg, model):
+    """`head_init: probe`: start a linear head from a trained linear probe (LP-FT).
+
+    `probe_head_file` is the `probe_head.pt` written by scripts/linear_probe_cached.py
+    (standardisation already folded in, so it takes raw backbone features).
+    """
+    if str(cfg.get("head_init", "random")) != "probe":
+        return None
+    path = Path(cfg.get("probe_head_file") or "")
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"probe_head_file not found: {path}. "
+            "Run: python scripts/linear_probe_cached.py --config configs/linear_probe_cached.yaml ..."
+        )
+    head = model.get_classifier()
+    if not isinstance(head, nn.Linear):
+        raise TypeError("head_init: probe needs head_type: linear")
+    blob = torch.load(path, map_location="cpu", weights_only=False)
+    for key, want in (("model_name", cfg.model_name), ("img_size", int(cfg.img_size))):
+        if blob.get(key) is not None and blob[key] != want:
+            raise ValueError(f"Probe head was trained with {key}={blob[key]}, not {want}")
+    if tuple(blob["weight"].shape) != tuple(head.weight.shape):
+        raise ValueError(f"Probe head shape {tuple(blob['weight'].shape)} != head {tuple(head.weight.shape)}")
+    with torch.no_grad():
+        head.weight.copy_(blob["weight"].to(head.weight))
+        head.bias.copy_(blob["bias"].to(head.bias))
+    print(f"[head] loaded linear-probe head from {path}")
+    return blob

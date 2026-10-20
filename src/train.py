@@ -16,7 +16,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from tqdm import tqdm
 
 from src.data import build_dataloaders
-from src.heads import load_prototypes
+from src.heads import load_probe_head, load_prototypes
 from src.losses import build_loss
 from src.model import build_model
 from src.utils import (
@@ -48,7 +48,7 @@ def _split_decay(params, weight_decay, lr):
     for param in params:
         if not param.requires_grad:
             continue
-        if param.ndim < 2:
+        if param.ndim < 2 or getattr(param, "_no_weight_decay", False):
             no_decay.append(param)
         else:
             decay.append(param)
@@ -94,8 +94,21 @@ def layer_decay_param_groups(model, weight_decay, lr, head_lr, layer_decay):
     return groups
 
 
-def adamw_param_groups(model, weight_decay, lr, head_lr=None, layer_decay=None):
+def adamw_param_groups(model, weight_decay, lr, head_lr=None, layer_decay=None, prompt_lr=None):
     """One lr for everything, or backbone `lr` + classifier `head_lr` (Qian's FT)."""
+    prompts = list(model.vpt.parameters()) if hasattr(model, "vpt") else []
+    if prompts:
+        if layer_decay is not None:
+            raise ValueError("VPT with layer_decay is not supported")
+        head_ids = {id(p) for p in model.get_classifier().parameters()}
+        prompt_ids = {id(p) for p in prompts}
+        backbone = [p for p in model.parameters() if id(p) not in head_ids | prompt_ids]
+        groups = _split_decay(backbone, weight_decay, lr)
+        groups.extend(_split_decay(model.get_classifier().parameters(), weight_decay,
+                                   float(head_lr if head_lr is not None else lr)))
+        groups.extend(_split_decay(prompts, weight_decay,
+                                   float(prompt_lr if prompt_lr is not None else lr)))
+        return groups
     if layer_decay is not None:
         return layer_decay_param_groups(model, weight_decay, lr, head_lr, layer_decay)
     if head_lr is None:
@@ -197,11 +210,13 @@ def train(cfg):
     loaders = build_dataloaders(cfg)
     model = build_model(cfg).to(device)
     load_prototypes(cfg, model)
+    load_probe_head(cfg, model)
     loss_fn = build_loss(cfg, model)
 
     groups = adamw_param_groups(
         model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get("head_lr"),
         layer_decay=cfg.get("layer_decay"),
+        prompt_lr=cfg.get("prompt_lr"),
     )
     # Opt-in (Van): fused CUDA AdamW kernel, same update rule; off keeps the default kernel.
     adamw_kwargs = {"fused": True} if bool(cfg.get("fused_adamw", False)) else {}
@@ -249,6 +264,7 @@ def train(cfg):
     else:
         print("[train] WARNING: running on CPU")
     print(f"[train] stopping={'training-time budget only' if time_only else 'epoch ceiling or time budget'}")
+
 
     log_run_stats("start", model, timer, vram)
     vram.reset()
@@ -410,6 +426,7 @@ def train(cfg):
     stats["training_seconds"] = round(training_seconds, 2)
     stats["training_minutes"] = round(training_seconds / 60, 2)
     stats["time_limit_reached"] = time_limit_reached
+    stats.update(getattr(model, "adaptation_stats", {}))
     with (run_dir / "run_stats.txt").open("w", encoding="utf-8") as f:
         for k, v in stats.items():
             f.write(f"{k}={v}\n")

@@ -1,4 +1,5 @@
-"""Van's prediction-time "look, then zoom in" view (opt-in: ``src.predict --zoom``).
+"""Van's prediction-time "look, then zoom in" view (opt-in: ``src.predict --zoom``;
+also used by ``scripts/predict_zoom.py``).
 
 The image is classified as usual. A class-matched saliency map then picks where the
 model found its evidence: the cosine between each final patch token and the
@@ -15,6 +16,8 @@ rest is zooming to the right place.
 """
 
 from __future__ import annotations
+
+import math
 
 import torch
 import torch.nn.functional as F
@@ -55,6 +58,10 @@ def cam_map(model, tokens, predicted):
 
 def select_boxes(saliency, grid, mass, min_side):
     """(batch, grid*grid) map -> (batch, 3) boxes ``top, left, side`` in patches."""
+    if not math.isfinite(mass) or not 0 < mass <= 1:
+        raise ValueError("zoom_mass must be in (0, 1]")
+    if min_side < 1 or saliency.shape[1] != grid * grid:
+        raise ValueError("Zoom needs a square patch grid and positive minimum side")
     weights = (saliency / saliency.sum(1, keepdim=True).clamp_min(1e-12)).view(-1, 1, grid, grid)
     batch, device = weights.shape[0], saliency.device
     side = torch.full((batch,), grid, device=device, dtype=torch.long)

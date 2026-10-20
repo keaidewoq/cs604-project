@@ -6,9 +6,18 @@ and registering it in `build_peft`. Pair it with a YAML config that sets `method
 
 from __future__ import annotations
 
+from src.utils import PEFT_METHODS
+
+# Register here for model dispatch and trainable-only checkpoints.
+PEFT_METHODS.add("prefix")
+
 
 def build_peft(model, cfg):
     method = cfg.method
+    if method == "prefix":
+        from .prefix import apply_prefix
+
+        return apply_prefix(model, cfg)
     if method == "lora":
         from .lora import apply_lora
 

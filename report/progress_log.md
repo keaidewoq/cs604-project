@@ -242,7 +242,7 @@ Frozen features + linear probe, internal holdout accuracy:
 ### 2026-10-04 — Anastasia — LoRA r16 (same targets) @ 336, LR 3e-4
  
 - run_dir: notebook run (Drive), TBC. History: `lora_augreg2_336_r16_history.csv`
-- val acc (ours / CodaBench): **0.719** holdout top-1 (best epoch 6: 0.7194; final 0.7192), top-5 0.885 / CodaBench TBC
+- val acc (ours / CodaBench): **0.719** holdout top-1 (best epoch 6: 0.7194; final 0.7192), top-5 0.885 / CodaBench **0.717**
 - trainable % / peak VRAM / GPU-hours: as above / TBC / ~2.4 (145.2 min on A100, including per-epoch holdout checks)
 - what changed: resolution 224 → 336; LoRA LR 1e-3 → 3e-4 (head LR 1e-4, weight decay 1e-4, AdamW, 5% warmup then cosine to zero over the time budget)
 - results: ~371 img/s, ~7.5 epochs. Holdout top-1 0.678 after epoch 1, then +1.2, +1.0, +0.9, +0.4, +0.5, +0.2, 0.0 points. Holdout loss flat from epoch 6 (~2.66) vs train loss ~1.50. Gains flatten as the cosine LR approaches zero, so the plateau is at least partly the schedule.
@@ -343,3 +343,159 @@ Frozen features + linear probe, internal holdout accuracy:
 - latency: **7.693 ms/image** at batch 1; **0.289 ms/image** at batch 64, synthetic forward-only BF16 (30 warmups, 200 iterations).
 - loss: epoch-average training loss 3.165 → 1.325 over complete epochs 1–5; partial epoch 6: 1.157. Raw logs retained; plots saved in `figures/`.
 - comparison: **+0.5 percentage points** over Qian's 66.3% full-FT reference, with fewer trainable backbone parameters and lower measured peak VRAM. Training recipes differ, so this is not an isolated adaptation-method comparison. Scope selection used random-head internal validation; this final run used prototypes.
+### 2026-10-07 — Anastasia — LoRA r24 + extras @ 336 with Van'srecipe (`configs/lora_r24_336_recipe.yaml`)
+
+- run_dir: `CS604_RUNS/lora_20261007_051926` (launcher `notebooks/colab_launcher_ana_lora336.ipynb`, `ana-branch`)
+- val acc (ours / CodaBench): no internal holdout (trained on all 45 images/class) / **0.785** plain center crop 0.9; **0.793**with crop 0.7 + flip TTA
+- trainable % / peak VRAM / GPU-hours: **4.65% of the backbone** (4.00M / 85.99M, head excluded) / 19.40 GB / 2.40 (144.0 training min, time limit reached; A100 40 GB)
+- what changed vs the 0.717 LoRA r16 run: rank 16 → 24; also trained LayerNorms, all biases, pos_embed and cls_token (0.46M, noweight decay); prototype cosine head (`prototypes_336.pt`) instead of a linear-probe head; head lr 1e-4 → 3e-3 (10× the LoRA lr); effective batch 128 → 256; weight decay 1e-4 → 0.05. Unchanged: LoRA on qkv/proj/fc1/fc2, LoRA lr 3e-4, alpha = rank, label smoothing 0.1, 5% warmup + cosine fitted to 144 min.
+- results: **+6.8 points over the 0.717 LoRA**; within 2.2 points of full FT @336 (0.807) with 4.65% of the backbone trained; above Van's full FT @224 (0.757) and Qian's last-block attention (0.668, 2.75%). Several changes at once, so the gain is not yet attributed to any one of them. **~6.8 epochs** (~1,270 s/epoch, ~355 img/s) vs ~8.5 for full FT @336: LoRA was ~25% slower per epoch than full FT (many small unmerged matmuls) and used nearly the same peak memory (19.40 vs 20.05 GB), so here it saved parameters, not training time or VRAM.
+- cost: latency measured **unmerged 14.44–14.98 ms/image at batch 1** (1.07 ms/image at batch 64): +89% vs full FT, because the 48 LoRA layers run as ~96 extra small matmuls. **Merged** into the base weights (`scripts/latency_merged.py`, `inference_latency_merged.json`, same A100 session): **7.68 ms at batch 1, 0.650 ms at batch 64**, the same as a plain ViT-B with the same head (7.58 / 0.651 ms), i.e. no inference cost. Merge check: 0 LoRA layers left, fp32 max logit difference 1.5e-5, 100% fp32 top-1 agreement (bf16 96.5% on synthetic noise inputs, from rounding at near-ties). Submitted predictions used the unmerged model. Crop 0.7 + flip needs two forward passes.
+- trainer additions (all off by default): `lora_targets` (qkv, proj, fc1, fc2), `unfreeze_extra` (norm, bias, pos_embed, cls_token; no weight decay on these), and a per-run `[params]` line giving trainable % of the original backbone with the head excluded(repo default LoRA r8 on qkv prints 0.34%, matching the brief).
+- next: ablate the changes (extras, rank, head init, head lr) at pilot scale; Adapter (width 96) and AdaptFormer (width 192) atthe same ~4.7% budget and setup.
+
+### 2026-10-09 — Qian — prefix tuning ablation test
+
+- run_dir: `CS604_RUNS/qq_prefix_ablation_336_seed42_v1/runs/screen/` (`qq_prefix_tuning_ablation`; `colab_launcher_qq.ipynb`).
+- val acc (internal): best **0.71688** (`all_p50`). All arms' best accuracy occurred at epoch 5; one seed, convergence unconfirmed.
+- trainable % / peak VRAM / GPU-hours: selected arm **1.071792%** backbone (classifier excluded) / **7.97 GiB** / **1.188 wall GPU-hours**, including **64.80 training minutes** on A100 40GB. All six runs below.
+- what changed: frozen augreg2 at 336 with fit-only prototype linear head; 40 fit + 5 holdout images/class, seed 42. Five epochs/arm; AdamW prefix/head LR 1e-3, weight decay 0, batch 64, BF16, 5% warmup + cosine. Compared placements at length 5, then lengths 20/50 at all blocks. `all_p50` adds **8.36 points** over baseline; its **0.04-point** lead over `all_p5` is inconclusive with one seed.
+- next: Qian selected **all blocks, length 50**. Rebuild all-data prototypes and train from pretrained weights on all 450,000 images for **144 training minutes**, then evaluate CodaBench (planned 2026-10-10).
+
+| Arm | Holdout top-1 | Backbone trainable % | Peak VRAM (GiB) | Training min | Wall GPU-hours |
+|---|---:|---:|---:|---:|---:|
+| Classifier only | 0.63328 | 0 | 1.24 | 61.86 | 1.141 |
+| Last block, length 5 | 0.65136 | 0.008932 | 1.45 | 61.40 | 1.130 |
+| Last 4 blocks, length 5 | 0.68996 | 0.035726 | 3.68 | 61.89 | 1.139 |
+| All blocks, length 5 | 0.71648 | 0.107179 | 8.35 | 63.79 | 1.170 |
+| All blocks, length 20 | 0.71634 | 0.428717 | 7.90 | 65.40 | 1.202 |
+| All blocks, length 50 | **0.71688** | 1.071792 | 7.97 | 64.80 | 1.188 |
+
+### 2026-10-10 — Qian — configs/prefix_tuning_336.yaml
+
+- run_dir: `CS604_RUNS/prefix_20261010_000404_id974631` (`last.pt`; `qq_branch_v2`).
+- val acc (ours / CodaBench): **0.71688** (selection ablation, `all_p50`) / **0.721** (final run), submission **974631**.
+- trainable % / peak VRAM / GPU-hours: **1.071792%** backbone (classifier excluded) / **7.97 GiB** / **2.402807 wall GPU-hours**; 144 training minutes on A100 40GB. Latency: **9.644 ms/image**, batch 1, BF16 synthetic forward-only.
+- what changed: final prefix-tuning run at 336, all blocks with length 50; prototype-initialized linear head using `prototypes_336.pt`; batch 64, prefix/head LR 1e-3, weight decay 0, seed 42; 5% time warmup + cosine, no epoch ceiling.
+
+### 2026-10-09 — Anastasia — Adapter w96 + extras @ 336 with Van's recipe (`configs/adapter_w96_336_recipe.yaml`)
+
+- run_dir: `CS604_RUNS/adapter_20261009_131150`; lr pilot `CS604_RUNS/pilot_adapter_336_20261009_125653` (launcher `notebooks/colab_launcher_ana_peft336.ipynb`, `ana-branch`)
+- val acc (ours / CodaBench): no internal holdout (trained on all 45 images/class) / **0.776** plain center crop 0.9; **0.785** with crop 0.7 + flip TTA
+- trainable % / peak VRAM / GPU-hours: **4.68% of the backbone** (4.02M / 85.99M, head excluded) / 15.54 GB / 2.40 (144.0 training min, time limit reached; A100 40 GB)
+- what it is: 24 serial bottleneck adapters (after attention and after the MLP in all 12 blocks, 768 → 96 → 768, ReLU, up-projection zero-initialised) plus LayerNorms, all biases, pos_embed and cls_token (no weight decay), sized to the LoRA r24 budget. Same setup as the LoRA r24 run: prototype cosine head, head lr 3e-3, weight decay 0.05, label smoothing 0.1, clip 1.0, effective batch 256, 5% warmup + cosine fitted to 144 min.
+- lr pilot (1,000 classes, 3 epochs, holdout 5/class): 3e-4 / 1e-3 / 3e-3 = 0.8938 / **0.8958** / 0.8840, no early dips. Best lr is inside the sweep; the tie rule (within 0.3 points → lower lr) chose **3e-4**. Consistent with Van's AdaptFormer sweep (1e-3 ≈ 3e-3 best).
+- results: **0.9 points below LoRA r24** at the same budget, both plain (0.776 vs 0.785) and with crop + flip (0.785 vs 0.793), despite more epochs (**~9.1** vs ~6.8). Crop + flip added +0.9, the largest TTA gain so far (full FT +0.6, LoRA +0.8).
+- cost: fastest training of all 336 runs: **~951 s/epoch (~473 img/s)** vs 1,017 s full FT and 1,272 s LoRA; lowest peak VRAM (15.54 vs 20.05 GB full FT). Adapters cannot be merged into the weights: latency **11.60 ms/image at batch 1 (+46% vs full FT's 7.94)**, 0.73 ms/image at batch 64 (+15%). LoRA, once merged, has no extra latency (7.68 ms), so Adapter is cheaper to train but slower to run.
+- next: AdaptFormer covered by Van's run (0.779 / 0.790, 4.13%). Try Van's CosFace margin (0.1) on LoRA r24; measure merged-LoRA latency.
+
+### 2026-10-11 — Qian — BitFit ablation test
+
+- run_dir: `CS604_RUNS/qq_bitfit_ablation_336_subset_seed42_v2/` (`qq_bitfit_ablation`; `colab_launcher_qq.ipynb`). Selected arm reused from `runs/pilot/all_biases_lr0.001/seed42/`; other arms under `runs/screen/`.
+- val acc (internal subset / CodaBench): **0.8810** (`all_biases`) / not submitted. All arms' best accuracy occurred at epoch 3; one seed, convergence unconfirmed.
+- trainable % / peak VRAM / GPU-hours: selected arm **0.119683%** backbone (classifier excluded) / **7.01 GiB** / **0.074 wall GPU-hours**, including **4.02 training minutes** on A100-SXM4-40GB.
+- what changed: augreg2 at 336, fit-only prototype linear head; same 1,000-class subset, 40 fit + 5 holdout images/class, seed 42. Three epochs/arm; AdamW bias/head LR 1e-3, weight decay 0, batch 64, BF16, 5% warmup + cosine. Compared bias scopes after an all-bias LR pilot; matching pilot run reused. All biases adds **6.18 points** over head-only and **0.64 points** over attention biases. Subset scores are not directly comparable to full-scale results.
+- next: selected **all biases**, bias/head LR **1e-3**. Returned to `qq_branch_v2`; rebuild all-data prototypes at 336 and train from pretrained weights on all 450,000 images for **144 training minutes**, then evaluate CodaBench.
+
+| Arm | Holdout top-1 | Backbone trainable % | Peak VRAM (GiB) | Training min | Wall GPU-hours |
+|---|---:|---:|---:|---:|---:|
+| Head only | 0.8192 | 0 | 1.24 | 3.73 | 0.071 |
+| All biases + head | **0.8810** | 0.119683 | 7.01 | 4.02 | 0.074 |
+| Attention biases + head | 0.8746 | 0.042872 | 6.88 | 3.92 | 0.073 |
+| MLP biases + head | 0.8722 | 0.053590 | 6.63 | 3.85 | 0.071 |
+| LayerNorm biases + head | 0.8724 | 0.022329 | 6.97 | 3.90 | 0.072 |
+
+### 2026-10-11 — Qian — configs/bitfit_336.yaml
+
+- run_dir: `CS604_RUNS/bitfit_20261011_024724` (`last.pt`; `qq_branch_v2`).
+- val acc (CodaBench): **0.734**, submission **976355**.
+- trainable % / peak VRAM / GPU-hours: **0.119683%** backbone (102,912 biases; classifier excluded) / **7.01 GiB** / **2.402 wall GPU-hours**; 144 training minutes on A100 40GB. Latency: **7.403 ms/image** at batch 1, **0.641 ms/image** at batch 64, BF16 synthetic forward-only.
+- what changed: final all-bias BitFit at 336 on all 450,000 training images; prototype linear head using `prototypes_336.pt`; bias/head LR 1e-3, weight decay 0, batch 64, seed 42; 5% time warmup + cosine, no epoch ceiling.
+
+### 2026-10-10 — Wenqi — last-block attention @ 336 (`configs/lastblock_attention_336.yaml`)
+
+- run_dir: `CS604_RUNS/last_blocks_20261010_022115`; submission file `val_team_08.txt`
+- val acc (ours / CodaBench): no internal holdout / **0.679260** (macro F1 0.673014)
+- trainable % / peak VRAM / GPU-hours: **2.7474%** backbone (classifier excluded) / **1.43 GiB** / **2.40** (144.01 training minutes, time limit reached)
+- what changed: Qian's last-block attention recipe (CodaBench 0.668 @ 224) with `img_size: 336` and prototypes rebuilt as `prototypes_336.pt`. Same otherwise: last-block QKV + output projection, prototype linear head, AdamW lr 1e-3, weight decay 0, batch 64, 5% time warmup + cosine over 144 minutes.
+- result: **+1.13 points** over Qian's 0.668 at 224, both on A100 with a 144-minute budget. Fewer epochs at 336 (3 complete epochs + 56% of epoch 4; train loss 3.20 → 1.33) than Qian's ~6 at 224. Still below Anastasia's LoRA r16 @ 336 (0.717) and full FT @ 336 (0.807). No inference latency measured.
+- next: do not rerun this method. The gap is the adaptation scope, not the GPU.
+
+### 2026-10-12 — Wenqi — eval crops 0.80 and 0.60 on full FT @ 336
+
+- run_dir: no training. Rescored `CS604_RUNS/full_ft_20261006_122039/last.pt` with `src.predict` on `ana-branch`.
+- val acc (CodaBench): crop 0.80 + flip **0.813**, submission **980303**, file `val_team_08_80.zip`; crop 0.60 + flip **0.806**, submission **980302**, file `val_team_08_60.zip`.
+- trainable % / peak VRAM / GPU-hours: same checkpoint as the 2026-10-06 full FT (100% / 20.05 GB / 2.40). Prediction only, so no new training cost.
+- what changed: `--crop_pct 0.80 --tta_flip` and `--crop_pct 0.60 --tta_flip` on Anastasia's full fine-tune at 336. Crop 0.75 was not rerun.
+- result: crop 0.80 ties her crop 0.7 + flip score (0.813). Crop 0.60 is 0.7 points lower. Both are below Van's crop 0.75 + zoom on this same checkpoint (0.819, submission 972132).
+
+### 2026-10-12 — Wenqi — zoom on LoRA r24 @ 336
+
+- run_dir: no training. Rescored `CS604_RUNS/lora_20261007_051926/last.pt` with `src.predict --crop_pct 0.75 --zoom` (`ana-branch` plus `src/van_zoom.py` from `van-zoom`).
+- val acc (CodaBench): **0.799**, submission **980328**, file `val_team_08_zoomcrop_075.zip`.
+- trainable % / peak VRAM / GPU-hours: same checkpoint as the 2026-10-07 LoRA r24 run (4.65% of the backbone / 19.40 GB / 2.40). Prediction only.
+- what changed: Van's zoom (crop 0.75, second view on the region the model used, softmax averaged). No flip.
+- result: **+0.6** over this checkpoint's crop 0.7 + flip score (0.793). Same size gain Van measured on the full fine-tune (0.813 → 0.819). This is the best under-5% score so far, 0.2 points above his AdaptFormer zoom (0.797, submission 972126), and 2.0 points below the full fine-tune zoom (0.819).
+
+### 2026-10-17 — Wenqi — zoom latency on the two submitted checkpoints
+
+- run_dir: no training. Timed `full_ft_20261006_122039/last.pt` and `lora_20261007_051926/last.pt` with the zoom path (plain view, zoom crop, second forward). A100-SXM4-40GB, bf16, synthetic inputs, 30 warm-ups, 200 timed iterations. JSON: `inference_latency_zoom.json` in each run folder.
+- full FT zoom (the 0.819 checkpoint): **20.650 ms/image** at batch 1, **1.417 ms/image** at batch 64. Single-pass latency on this checkpoint was 7.94 / 0.64 ms.
+- LoRA r24 zoom, unmerged (the 0.799 checkpoint): **36.793 ms/image** at batch 1, **2.286 ms/image** at batch 64. Load printed 48 LoRA layers (qkv, proj, fc1, fc2) and 4.65% trainable. The 49 missing keys are the frozen backbone weights; a LoRA checkpoint does not store them. No unexpected keys. Single-pass unmerged latency was about 14.4–15.0 ms at batch 1; merged single-pass was 7.68 ms.
+
+
+### 2026-10-14 — Qian — BitFit head, resolution and crop/flip ablations
+
+- run_dir: `CS604_RUNS/qq_bitfit_heads_crop_336_seed42_v1/` and `CS604_RUNS/qq_bitfit_resolution_336_384_448_seed42_v1/` (`qq_bitfit_ablation`; head/crop and resolution Colab launchers, saved commits `9f1f1de` / `166df46`). Full results retained in each run root's CSVs.
+- val acc (internal subset / CodaBench): at 336, linear **0.8792** vs cosine **0.8904** with standard crop; cosine crop 0.75 + flip **0.8980**. Resolution comparison at crop 0.75 + flip: 336 / 384 / 448 = **0.8976 / 0.8972 / 0.8990** / not submitted.
+- trainable % / peak VRAM / GPU-hours: ~**0.12%** backbone (classifier excluded). Head ablation: **7.01 GiB**, ~**0.074** wall GPU-hours/arm. Resolution runs (336 / 384 / 448): **7.01 / 8.94 / 11.94 GiB**, **0.0745 / 0.0958 / 0.1323** wall GPU-hours, **4.03 / 5.23 / 7.30** training minutes on A100 40GB.
+- what changed: compared prototype linear/cosine heads at 336, then cosine heads at 336/384/448; same 1,000 classes, 40 fit + 5 holdout images/class, fitting-only prototypes rebuilt per resolution, three epochs/arm, seed 42. Bias/head LR 1e-3, weight decay 0, batch 64, BF16, 5% warmup + cosine. Selected `best.pt` using crop 0.9 without flip; evaluated crop/flip variants on the same holdout.
+- result: cosine wins every matching inference setting at 336 (+1.12 points at standard crop). Best resolution setting: **448 + crop 0.75 + flip, 0.8990** (NLL 0.418256), only +0.14 points over 336 in that comparison, with 1.81× training time. All best epochs are epoch 3; one seed, convergence unconfirmed. Subset scores do not establish full-data performance under the 144-minute budget.
+- next: train BitFit with a prototype cosine head at **448** from pretrained weights on all **450,000** training images for **144 minutes**; rebuild all-data prototypes at 448, then predict with **crop 0.75 + horizontal-flip TTA** and evaluate on CodaBench.
+
+### 2026-10-15 — Qian — BitFit cosine head @ 448
+
+- run_dir: `CS604_RUNS/bitfit_20261015_015001/last.pt` (`qq_branch_v2`; `configs/bitfit_cosine_448.yaml`).
+- val acc (CodaBench): **0.762**, submission **988896**; crop 0.75 + horizontal-flip TTA. No internal holdout.
+- trainable % / peak VRAM / GPU-hours: **0.119318%** backbone (102,912 biases; classifier excluded) / **11.95 GiB** / **2.401 wall GPU-hours**; 144 training minutes on A100 40GB. Single-view latency: **7.787 ms/image** at batch 1, **1.179 ms/image** at batch 64, BF16 synthetic forward-only; excludes flip TTA and preprocessing.
+- what changed: full-data BitFit at 448 with prototype cosine head (initial scale 20), all-data `prototypes_448.pt`; all 450,000 training images, bias/head LR 1e-3, weight decay 0, batch 64, seed 42, BF16, 5% time warmup + cosine. Reached epoch 6 before the time limit.
+- result: **+2.8 percentage points** over the previous 336 linear-head BitFit (0.734). Resolution, head and inference settings changed together, so the gain cannot be attributed to one change.
+
+### 2026-10-16 — Qian — last-block attention, cosine head @ 448
+
+- run_dir: `CS604_RUNS/last_blocks_20261015_120404/last.pt` (`qq_branch_v2`; `configs/lastblock_attention_cosine_448.yaml`).
+- val acc (CodaBench): **0.685**, submission **990367**; crop 0.75 + horizontal-flip TTA per launcher. No internal holdout.
+- trainable % / peak VRAM / GPU-hours: **2.738970%** backbone (2,362,368 parameters; classifier excluded) / **2.23 GiB** / **2.402 wall GPU-hours**; 144 training minutes on A100 40GB. Single-view latency: **8.681 ms/image** at batch 1, **1.166 ms/image** at batch 64, BF16 synthetic forward-only; excludes flip TTA and preprocessing.
+- what changed: final-block QKV + output projection only, prototype cosine head (initial scale 20), `prototypes_448.pt`, all 450,000 training images at 448; attention/head LR 1e-4 / 3e-3, weight decay 0.05 (excluding biases/norms), label smoothing 0.1, clipping 1.0, batch 64 × accumulation 4, seed 42, BF16, 5% time warmup + cosine. Reached epoch 7 before the time limit.
+- result: **+0.57 percentage points** over last-block attention at 336 (0.679260), but **7.7 points below** BitFit cosine at 448 (0.762). Multiple recipe changes prevent attributing the difference to one factor; this run does not establish the method's optimized accuracy.
+
+### 2026-10-16 — Qian — LoRA + VPT ablation (`configs/lora_vpt_ablation.yaml`)
+
+- run_dir: `CS604_RUNS/qq_lora_vpt_336_c1000_seed42_v1/` (`qq_lora_vpt_ablation`).
+- val acc (ours / CodaBench): baseline **0.9032**; shallow 8/16/32 tokens **0.9040 / 0.9044 / 0.9058**; deep 8 tokens/block **0.9072** / not submitted.
+- trainable % / peak VRAM / GPU-hours: selected deep arm **4.7391%** backbone (head excluded) / **19.97 GiB** / **0.1802 wall GPU-hours** (10.03 training min).
+- what changed: added VPT to LoRA r24 + extras at 336 with a prototype cosine head; 1,000 classes, 40 fit + 5 holdout/class, five epochs, seed 42; pilot-selected prompt LR **3e-4**. Deep gains **0.40 pp** over baseline with **5.4% longer training**; one seed, full-data gain unconfirmed.
+- next: train **LoRA + VPT-Deep, 8 tokens/block at 336**, from pretrained weights on all **450,000 images for 144 training minutes**, using fresh all-data prototypes and prompt LR **3e-4**; evaluate on CodaBench.
+
+### 2026-10-16 — Qian — LoRA + VPT-Deep (`configs/lora_vpt_deep_336.yaml`)
+
+- run_dir: `CS604_RUNS/lora_vpt_deep_336_seed42/lora_20261016_050840/last.pt` (`qq_branch_v2`).
+- val acc (ours / CodaBench): no internal holdout / **0.793**, submission **992462**; crop 0.75 + horizontal-flip TTA.
+- trainable % / peak VRAM / GPU-hours: **4.7391%** backbone (head excluded) / **20.09 GiB** / **2.4025 wall GPU-hours**; 144 training min on A100 40GB. Merged-LoRA single-view latency: **9.430 ms/image** (batch 1), **0.694 ms/image** (batch 64), excluding flip TTA and preprocessing.
+- what changed: LoRA r24 + extras with **8 VPT-Deep tokens/block at 336**, prototype cosine head using `prototypes_336.pt`, all 450,000 images; LoRA/prompt LR 3e-4, head LR 3e-3, batch 128 x 2, BF16, seed 42, 5% time warmup + cosine. Reached epoch 7.
+- No improvement is demonstrated by the recorded CodaBench scores: **LoRA r24 + extras without VPT also achieved 79.3%** (crop 0.7 + flip). Different crops prevent isolating VPT's effect.
+
+### 2026-10-18 — Qian — LoRA crop/resolution ablation (`configs/qq_lora_ablation.yaml`)
+
+- run_dir: `CS604_RUNS/qq_lora_crop_resolution_c1000_seed42_v1/` (`qq_lora_ablation`); selected E: `E_448/lora_20261018_093724/`.
+- val acc (ours / CodaBench): A/B/C/D/E final holdout **0.9082 / 0.9058 / 0.9058 / 0.9094 / 0.9122** / not submitted. Evaluation: crop 0.9, no flip or zoom.
+- trainable % / peak VRAM / GPU-hours: selected E **4.9446%** backbone (head excluded) / **33.90 GiB** / **0.2183 wall GPU-hours**, excluding prototype extraction; 12 training min, 3.48 epochs on A100 40GB.
+- what changed: LoRA r24 + extras, no VPT; 1,000 classes, 40 fit + 5 holdout/class, fitting-only prototypes per resolution, seed 42. Equal 12-minute arms: 336/384 with current crops or 75% crop + 25% whole-image/padding, then 448 with the mixture. E gains **+0.28 pp** over matching 384 and **+0.40 pp** over the 336 baseline. One seed; full-data gain unconfirmed.
+- next: `qq_branch_v2`, `configs/lora_r24_crop_pad_448.yaml`: fresh pretrained weights, all **450,000 images**, **144 training minutes**, reuse all-data `prototypes_448.pt`; predict with **crop 0.75 + autozoom (mass 0.7), no flip** via `scripts/predict_zoom.py`.
+
+### 2026-10-19 — Qian — LoRA r24 crop/padding @ 448 (`configs/lora_r24_crop_pad_448.yaml`)
+
+- run_dir: `CS604_RUNS/lora_r24_crop_pad_448_seed42/lora_20261019_014714/last.pt` (`qq_branch_v2`).
+- val acc (CodaBench):  **0.810**, submission **1002095**; crop 0.75 + autozoom (mass 0.7), no flip.
+- trainable % / peak VRAM / GPU-hours: **4.9446%** backbone (head excluded) / **33.90 GiB** / **2.4023 wall GPU-hours**; 144 training min on A100 40GB. Autozoom latency (unmerged LoRA, BF16): **41.963 ms/image** at batch 1; **4.266 ms/image** at batch 32 (136.499 ms/batch), 30 warmups + 200 iterations on A100-SXM4-40GB. Synthetic GPU-resident views; includes both passes and zoom selection/cropping; excludes image loading, initial resize/crop and input transfers.
+- what changed: full-data arm E, LoRA r24 + extras at 448, 75% random crop + 25% whole-image/padding, prototype cosine head using all-data `prototypes_448.pt`; all 450,000 images, batch 128 x 2, LoRA/head LR 3e-4 / 3e-3, BF16, seed 42, 5% time warmup + cosine. **+1.1 pp** over previous LoRA @ 336 with zoom (0.799); resolution and training views changed together.

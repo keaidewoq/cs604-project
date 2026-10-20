@@ -1,0 +1,7 @@
+# Final all-data run selected from Qian's head/resolution pilots.
+inherits: bitfit_336.yaml
+img_size: 448
+head_type: cosine
+cosine_scale: 20.0
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_448.pt
+# Prediction settings are passed explicitly by the Colab launcher.
