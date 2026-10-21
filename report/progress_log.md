@@ -14,6 +14,14 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-21 — Van — AdaptFormer + biases/norms + LoRA on qkv (laptop screen; Colab config ready)
+
+- run_dir: none yet; Colab config `configs/van_adaptformer_lora_448_fast.yaml` (METHOD in `notebooks/van_colab_launcher.ipynb`)
+- val acc (ours, laptop holdout 336 px, 40/5 split): 1 epoch: LoRA rank 8 73.54, rank 16 73.74 vs 72.97 without LoRA; **3 epochs: rank 16 77.33 vs 76.76 (+0.57)**.
+- trainable %: 4.96% at 336 (4.94% at 448), head excluded; laptop throughput 9% lower, memory +0.5 GB.
+- what changed: `adapter_lora: true` (opt-in, `method: van_adaptformer` only) wraps every qkv in the team's `LoRALinear` (rank 16, alpha 32) beside the adapters and the trainable biases/norms. Same logits as Van's laptop implementation on a trained checkpoint (max difference 0).
+- next: Colab A100 run at 448, against 0.804 plain / 0.814 crop 0.9 + zoom.
+
 ### 2026-10-20 — Van — full FT 448: zoom from a crop 0.9 view (prediction only)
 
 - run_dir: `CS604_RUNS/full_ft_20261017_122237` (same `last.pt`; nothing retrained)

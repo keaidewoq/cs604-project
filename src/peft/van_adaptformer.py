@@ -22,9 +22,15 @@ Config keys (method: van_adaptformer):
     adapter_train_bias       also train every pretrained backbone bias: Linear, patch-embedding
                              conv and LayerNorm (102,912 on ViT-B; default false)
     adapter_train_norm       also train every pretrained LayerNorm weight (19,200; default false)
+    adapter_lora             also wrap every qkv in the team's LoRA (src/peft/lora.py), with
+                             lora_rank / lora_alpha / lora_dropout (defaults 8 / 16 / 0.0);
+                             rank 16: 12 x 16 x (768 + 2304) = 589,824 (default false). Wrapped
+                             before the bias unfreeze, so qkv's bias still trains with
+                             adapter_train_bias. LoRA trains at `lr` with weight decay.
 
 Params: 12 x (2 x 768 x width + width + 768); width 192 -> 3,550,464 = 4.13% of
-ViT-B (head excluded); with both options and learned scales 3,672,588 = 4.27%.
+ViT-B (head excluded); with both options and learned scales 3,672,588 = 4.27%; plus
+adapter_lora at rank 16, 4,262,412 = 4.96%.
 Building refuses a backbone share of 5% or more. The biases and norms start at their
 pretrained values, train at `lr` and, being 1-D, get no weight decay in src/train.py.
 """
@@ -122,6 +128,15 @@ def apply_van_adaptformer(model, cfg):
         for p in adapter.parameters():
             p.requires_grad = True
             added += p.numel()
+    lora = 0
+    if bool(cfg.get("adapter_lora", False)):
+        from .lora import LoRALinear
+
+        rank, alpha = int(cfg.get("lora_rank", 8)), float(cfg.get("lora_alpha", 16))
+        for block in model.blocks:
+            block.attn.qkv = LoRALinear(block.attn.qkv, rank, alpha, float(cfg.get("lora_dropout", 0.0)))
+            lora += sum(p.numel() for n, p in block.attn.qkv.named_parameters() if n.startswith("lora_"))
+        print(f"[van_adaptformer] LoRA rank {rank}, alpha {alpha} on every qkv: {lora:,} params")
     unfrozen = _unfreeze_bias_and_norm(
         model, bool(cfg.get("adapter_train_bias", False)), bool(cfg.get("adapter_train_norm", False))
     )
