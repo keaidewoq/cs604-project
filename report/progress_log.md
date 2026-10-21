@@ -14,6 +14,14 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-21 — Van — AdaptFormer + biases/norms + LoRA rank 16 at 448 (Task 2 best)
+
+- run_dir: `CS604_RUNS/van_adaptformer_20261021_083823` (`configs/van_adaptformer_lora_448_fast.yaml`, van-dev 1022022)
+- val acc (ours / CodaBench): **0.812 plain** (ID 1008585) and **0.822 crop 0.9 + zoom** (ID 1008590), vs 0.804 / 0.814 without LoRA: **+0.8 on both**. No balancing.
+- trainable % / peak VRAM / GPU-hours: 4.94% (head excluded) / 14.66 GB / 2.40 (A100 40 GB, 144 training minutes, 5.5 epochs vs 6.1 without LoRA); latency 12.4 ms at batch 1.
+- what changed: LoRA rank 16, alpha 32 on every qkv beside the adapters and the trainable biases/norms; nothing else.
+- next: class-count balancing on the crop 0.9 + zoom file (gave Task 1 +1.7), pending the Prof's check.
+
 ### 2026-10-21 — Van — AdaptFormer + biases/norms + LoRA on qkv (laptop screen; Colab config ready)
 
 - run_dir: none yet; Colab config `configs/van_adaptformer_lora_448_fast.yaml` (METHOD in `notebooks/van_colab_launcher.ipynb`)
