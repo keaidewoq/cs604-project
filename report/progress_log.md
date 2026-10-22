@@ -374,3 +374,11 @@ Frozen features + linear probe, internal holdout accuracy:
 - val acc (CodaBench):  **0.810**, submission **1002095**; crop 0.75 + autozoom (mass 0.7), no flip.
 - trainable % / peak VRAM / GPU-hours: **4.9446%** backbone (head excluded) / **33.90 GiB** / **2.4023 wall GPU-hours**; 144 training min on A100 40GB. Autozoom latency (unmerged LoRA, BF16): **41.963 ms/image** at batch 1; **4.266 ms/image** at batch 32 (136.499 ms/batch), 30 warmups + 200 iterations on A100-SXM4-40GB. Synthetic GPU-resident views; includes both passes and zoom selection/cropping; excludes image loading, initial resize/crop and input transfers.
 - what changed: full-data arm E, LoRA r24 + extras at 448, 75% random crop + 25% whole-image/padding, prototype cosine head using all-data `prototypes_448.pt`; all 450,000 images, batch 128 x 2, LoRA/head LR 3e-4 / 3e-3, BF16, seed 42, 5% time warmup + cosine. **+1.1 pp** over previous LoRA @ 336 with zoom (0.799); resolution and training views changed together.
+
+### 2026-10-22 — Qian — LoRA vs DoRA (`configs/qq_lora_dora_ablation.yaml`, `qq_lora_ablation`)
+
+- run_dir: `CS604_RUNS/qq_lora_dora_448_c1000_m64_v2/seed42/`; arms `lora_r24`, `lora_r23`, `dora_r23`.
+- val acc (ours / CodaBench): LoRA r24 / LoRA r23 / DoRA r23: **0.9098 / 0.9096 / 0.9070** final holdout / not submitted.
+- trainable % / peak VRAM / GPU-hours: same arm order, **4.9446 / 4.7736 / 4.8698%** backbone (head excluded), **17.29 / 17.28 / 24.97 GiB**; ~**0.20 training GPU-hours/arm** (12 minutes); wall GPU-hours not supplied.
+- what changed: arm E recipe at 448, 25% whole-image/padding, prototype cosine head + extras; fixed 1,000 classes (40 fit + 5 holdout/class), fit-only prototypes, seed 42, BF16, A100 40GB, batch 64 x 4, equal 12-minute budgets. Evaluation: crop 0.9, no flip/zoom. DoRA r23 trails the primary LoRA r24 reference by **0.28 pp**, with **144.5 vs 190.0 img/s** and higher VRAM; one-seed subset screen.
+- next: compare **LoRA with AdaLoRA** under the same <5% backbone parameter cap and training-time budget.
