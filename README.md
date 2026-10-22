@@ -82,6 +82,28 @@ On Colab, `colab_launcher.ipynb` also prints the **resolved** config for your ch
 
 ## Add a method or an ablation
 
+### Qian's LoRA versus DoRA screen
+
+On `qq_lora_ablation`, open `notebooks/colab_launcher_qq_lora_dora.ipynb` on
+an A100. It uses crop/resolution arm E's 448px recipe, fitting-only prototypes
+and a fixed 1,000-class split. Each arm gets 12 training minutes. The preflight
+counts the actual ViT parameters and chooses the largest shared rank below 5%:
+LoRA r24 is the reference; if needed, LoRA and DoRA at a reduced shared rank
+provide the controlled method comparison. Classifier parameters are excluded.
+
+```bash
+python -m src.qq_lora_dora_ablation --preflight-only
+python -m src.qq_lora_dora_ablation --data_root /content/data --output_dir /content/drive/MyDrive/CS604_RUNS/qq_lora_dora_448_c1000_v1 --seeds 42
+```
+
+For a second training seed, rerun the same command with `--seeds 42 43` to reuse
+completed seed-42 arms. The split and prototype initialization remain at seed 42.
+Use a new output folder after code, hardware or recipe changes or an interrupted
+arm. Compare final equal-time accuracy, throughput, memory and common completed
+epochs in `results.csv` and `comparison.json`. Common-epoch metrics still use
+time-based schedules at different LR positions. This subset screen does not
+launch full-data training or produce official submissions.
+
 **New method**
 
 1. Add `src/peft/<name>.py` with `apply_<name>(model, cfg)`.

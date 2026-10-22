@@ -95,13 +95,14 @@ def ensure_prototypes(cfg, split, experiment_root):
     """Cache per-resolution fit-only means; unused classes get seeded random rows."""
     path = Path(experiment_root) / f"prototypes_fit_{cfg.img_size}.pt"
     metadata = path.with_suffix('.json')
+    prototype_seed = int(cfg.get('prototype_seed', cfg.seed))
     spec = dict(model_name=cfg.model_name, img_size=int(cfg.img_size), num_classes=int(cfg.num_classes),
-                fit_sha256=file_hash(split / 'train.txt'), seed=int(cfg.seed), eval_crop_pct=cfg.eval_crop_pct)
+                fit_sha256=file_hash(split / 'train.txt'), seed=prototype_seed, eval_crop_pct=cfg.eval_crop_pct)
     if path.exists():
         if not metadata.exists() or json.loads(metadata.read_text()) != spec:
             raise ValueError(f"Prototype metadata mismatch: {path}. Use a new experiment folder.")
         return path
-    set_seed(int(cfg.seed))
+    set_seed(prototype_seed)
     proto_cfg = Config({**cfg.to_dict(), 'method': 'linear_probe', 'head_init': 'random',
                         'prompt_mode': 'none', 'prompt_length': 0, 'full_image_probability': 0.0})
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -122,7 +123,7 @@ def ensure_prototypes(cfg, split, experiment_root):
     if not selected or not (counts[selected] > 0).all():
         raise ValueError('Missing fitting examples for a selected class')
     # Do not build unseen-class means from the holdout or full-data prototypes.
-    generator = torch.Generator().manual_seed(int(cfg.seed))
+    generator = torch.Generator().manual_seed(prototype_seed)
     prototypes = F.normalize(torch.randn(int(cfg.num_classes), model.num_features, generator=generator), dim=1)
     prototypes[selected] = F.normalize(sums[selected] / counts[selected, None], dim=1).cpu()
     temporary = path.with_suffix('.pt.tmp')

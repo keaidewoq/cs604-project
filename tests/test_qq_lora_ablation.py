@@ -146,7 +146,8 @@ def test_arm_runs_real_trainer_on_tiny_images_and_reuses_result(tmp_path,monkeyp
     import matplotlib
     matplotlib.use('Agg')
     notebook=json.loads(Path('notebooks/colab_launcher_qq.ipynb').read_text())
-    summary_cell=next(c['source'] for c in notebook['cells'] if c['cell_type']=='code' and 'main_results =' in c['source'])
+    code_cells=[''.join(c['source']) for c in notebook['cells'] if c['cell_type']=='code']
+    summary_cell=next(source for source in code_cells if 'main_results =' in source)
     exec(summary_cell, {'EXPERIMENT_DIR':experiment,'display':lambda value:None})
     assert (experiment/'comparison.png').is_file()
     with pytest.raises(ValueError,match='differs'):

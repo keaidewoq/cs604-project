@@ -57,7 +57,9 @@ class LoRALinear(nn.Module):
             return self.linear(x) + lora * self.scaling
         # DoRA: rescale each output row of the adapted weight to the learned magnitude.
         no_bias = F.linear(x, self.linear.weight)
-        norm = self._adapted_weight().float().norm(p=2, dim=1).detach()
+        # The norm is detached by definition; avoid constructing its autograd graph.
+        with torch.no_grad():
+            norm = self._adapted_weight().float().norm(p=2, dim=1)
         scale = (self.magnitude / norm).to(no_bias.dtype)
         out = scale * (no_bias + lora * self.scaling)
         bias = self.linear.bias

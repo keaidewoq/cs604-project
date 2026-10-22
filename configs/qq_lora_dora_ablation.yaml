@@ -1,0 +1,9 @@
+# Controlled comparison using crop/resolution arm E's training recipe.
+inherits: qq_lora_ablation.yaml
+img_size: 448
+full_image_probability: 0.25
+cosine_scale: 20.0
+lora_dora: false
+# Keep the subset and prototype initialization fixed when repeating training seeds.
+split_seed: 42
+prototype_seed: 42
