@@ -12,6 +12,45 @@ from src.qq_lora_dora_ablation import matched_epoch_results, plan_arms, save_com
 from src.utils import Config, load_config
 
 
+def test_cuda_hardware_metadata_can_be_saved_before_training(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    import yaml
+    import src.qq_lora_dora_ablation as experiment
+    from src.utils import save_config
+
+    source = tmp_path / 'data'
+    source.mkdir()
+    (source / 'train.txt').write_text(''.join(
+        f'images/{label}_{index}.png {label}\n' for label in range(2) for index in range(6)))
+    output = tmp_path / 'results'
+    monkeypatch.setattr(sys, 'argv', ['comparison', '--data_root', str(source),
+                                     '--output_dir', str(output), '--classes', '2',
+                                     '--split_dir', str(tmp_path / 'local_split')])
+    monkeypatch.setattr(torch, '__version__', torch.torch_version.TorchVersion('2.11.0+cu130'))
+    monkeypatch.setattr(torch.cuda, 'is_available', lambda: True)
+    monkeypatch.setattr(torch.cuda, 'get_device_properties', lambda _: SimpleNamespace(
+        name='NVIDIA A100-SXM4-40GB', total_memory=40 * 1024**3))
+    monkeypatch.setattr(experiment, 'plan_arms', lambda cfg: [dict(
+        arm='lora_r24', rank=24, dora=False, adaptation_parameters=4264704,
+        original_backbone_parameters=86250240, adaptation_pct=4.944571)])
+
+    class BeforeTraining(Exception):
+        pass
+
+    def save_arm_config(cfg, split, seed_root, name, resolution, probability):
+        save_config(cfg, output / 'resolved.yaml')
+        raise BeforeTraining
+
+    monkeypatch.setattr(experiment, 'run_arm', save_arm_config)
+    with pytest.raises(BeforeTraining):
+        experiment.main()
+    hardware = yaml.safe_load((output / 'resolved.yaml').read_text())['comparison_hardware']
+    assert type(hardware['torch']) is str
+    assert hardware['torch'] == '2.11.0+cu130'
+    assert json.loads(json.dumps(hardware)) == hardware
+
+
 def test_dora_starts_at_base_trains_and_merges():
     torch.manual_seed(42)
     base = torch.nn.Linear(7, 9)

@@ -138,8 +138,9 @@ def main():
         raise RuntimeError('Select an A100 GPU runtime for training')
     properties = torch.cuda.get_device_properties(0)
     import timm
+    # torch.__version__ may be a TorchVersion subclass, which safe_dump rejects.
     base.comparison_hardware = dict(gpu=properties.name, memory=properties.total_memory,
-                                    torch=torch.__version__, timm=timm.__version__, cuda=torch.version.cuda)
+                                    torch=str(torch.__version__), timm=timm.__version__, cuda=torch.version.cuda)
     root = Path(args.output_dir).resolve()
     root.mkdir(parents=True, exist_ok=True)
     split_cfg = Config({**base.to_dict(), 'seed': int(base.split_seed)})
