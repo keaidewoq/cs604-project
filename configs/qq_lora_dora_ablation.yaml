@@ -4,6 +4,10 @@ img_size: 448
 full_image_probability: 0.25
 cosine_scale: 20.0
 lora_dora: false
+# DoRA's saved activations exceed an A100 40GB at microbatch 128 and 448px.
+# Use the same microbatch for every arm; retain effective batch 256.
+batch_size: 64
+grad_accum_steps: 4
 # Keep the subset and prototype initialization fixed when repeating training seeds.
 split_seed: 42
 prototype_seed: 42

@@ -33,7 +33,10 @@ def test_cuda_hardware_metadata_can_be_saved_before_training(tmp_path, monkeypat
         name='NVIDIA A100-SXM4-40GB', total_memory=40 * 1024**3))
     monkeypatch.setattr(experiment, 'plan_arms', lambda cfg: [dict(
         arm='lora_r24', rank=24, dora=False, adaptation_parameters=4264704,
-        original_backbone_parameters=86250240, adaptation_pct=4.944571)])
+        original_backbone_parameters=86250240, adaptation_pct=4.944571), dict(
+        arm='dora_r23', rank=23, dora=True, adaptation_parameters=4200192,
+        original_backbone_parameters=86250240, adaptation_pct=4.869774)])
+    monkeypatch.setattr(experiment, 'check_training_memory', lambda cfg, arm: None)
 
     class BeforeTraining(Exception):
         pass
@@ -49,6 +52,74 @@ def test_cuda_hardware_metadata_can_be_saved_before_training(tmp_path, monkeypat
     assert type(hardware['torch']) is str
     assert hardware['torch'] == '2.11.0+cu130'
     assert json.loads(json.dumps(hardware)) == hardware
+
+
+def test_memory_probe_checks_dora_before_any_timed_arm(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    import src.qq_lora_dora_ablation as experiment
+
+    monkeypatch.setattr(sys, 'argv', ['comparison', '--memory-check-only'])
+    monkeypatch.setattr(torch.cuda, 'is_available', lambda: True)
+    monkeypatch.setattr(torch.cuda, 'get_device_properties', lambda _: SimpleNamespace(
+        name='NVIDIA A100-SXM4-40GB', total_memory=40 * 1024**3))
+    arms = [dict(arm='dora_r23', rank=23, dora=True, adaptation_parameters=4200192,
+                 original_backbone_parameters=86250240, adaptation_pct=4.869774)]
+    monkeypatch.setattr(experiment, 'plan_arms', lambda cfg: arms)
+    seen = []
+    def probe(cfg, arm):
+        seen.append((cfg.batch_size, cfg.grad_accum_steps, arm['arm']))
+    monkeypatch.setattr(experiment, 'check_training_memory', probe)
+    monkeypatch.setattr(experiment, 'run_arm', lambda *args: pytest.fail('Timed training started'))
+    experiment.main()
+    assert seen == [(64, 4, 'dora_r23')]
+
+
+def test_memory_probe_runs_accumulated_updates_and_handles_oom(monkeypatch):
+    from contextlib import nullcontext
+    import src.qq_lora_dora_ablation as experiment
+    from src.heads import CosineClassifier
+
+    cfg = load_config('configs/qq_lora_dora_ablation.yaml')
+    cfg.update(dict(batch_size=2, grad_accum_steps=4, img_size=8, num_classes=10))
+    arm = dict(arm='dora_r23', rank=23, dora=True)
+    calls = []
+
+    class Tiny(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.feature = LoRALinear(torch.nn.Linear(3, 4), 1, 1, dora=True)
+            self.head = CosineClassifier(4, 10)
+        def to(self, device): return self  # Execute the probe's training path on CPU.
+        def get_classifier(self): return self.head
+        def forward(self, x):
+            calls.append(x.shape[0])
+            return self.head(self.feature(x.mean((2, 3))))
+
+    model = Tiny()
+    before = model.feature.magnitude.detach().clone()
+    def build(probe_cfg):
+        assert not probe_cfg.pretrained and probe_cfg.head_init == 'random'
+        assert probe_cfg.lora_dora and probe_cfg.lora_rank == 23
+        return model
+    monkeypatch.setattr(experiment, 'build_model', build)
+    monkeypatch.setattr(experiment, 'amp_context', lambda *args: nullcontext())
+    randn, arange = torch.randn, torch.arange
+    monkeypatch.setattr(torch, 'randn', lambda *args, **kwargs: randn(*args))
+    monkeypatch.setattr(torch, 'arange', lambda *args, **kwargs: arange(*args))
+    for name in ['empty_cache', 'reset_peak_memory_stats', 'synchronize']:
+        monkeypatch.setattr(torch.cuda, name, lambda: None)
+    monkeypatch.setattr(torch.cuda, 'max_memory_allocated', lambda: 1024**3)
+    assert experiment.check_training_memory(cfg, arm) == 1.
+    assert calls == [2] * 8  # Two optimizer updates, each with four microbatches.
+    assert not torch.equal(before, model.feature.magnitude)
+    assert cfg.pretrained and cfg.head_init == 'prototype'
+
+    def oom(probe_cfg):
+        raise torch.cuda.OutOfMemoryError('synthetic OOM')
+    monkeypatch.setattr(experiment, 'build_model', oom)
+    with pytest.raises(RuntimeError, match='before any timed arm started'):
+        experiment.check_training_memory(cfg, arm)
 
 
 def test_dora_starts_at_base_trains_and_merges():
@@ -112,6 +183,23 @@ def test_common_epochs_exclude_partial_and_second_seed_is_required(tmp_path):
     comparison = json.loads((tmp_path / 'comparison.json').read_text())
     assert comparison['promising_across_seeds']
     assert comparison['comparisons'][0]['speed_ratio'] == .8
+
+
+def test_primary_comparison_uses_reference_lora_rank_under_cap(tmp_path):
+    results = []
+    for rank, dora, accuracy in [(24, False, .9120), (23, False, .9086), (23, True, .9100)]:
+        directory = tmp_path / f'{rank}_{dora}'
+        directory.mkdir()
+        (directory / 'epoch_log.csv').write_text(
+            f'epoch,epoch_complete,val_acc,val_loss\n1,1,{accuracy},1.5\n')
+        results.append(dict(seed=42, rank=rank, dora=dora, run_dir=str(directory),
+                            final_val_acc=accuracy, images_per_second=100))
+    save_comparison(tmp_path, results, .003)
+    comparison = json.loads((tmp_path / 'comparison.json').read_text())['comparisons'][0]
+    assert (comparison['lora_rank'], comparison['dora_rank']) == (24, 23)
+    assert comparison['delta_pp'] == pytest.approx(-.20)
+    assert comparison['matched_complete_epochs'][0]['lora_val_acc'] == .9120
+    assert comparison['shared_rank_control']['delta_pp'] == pytest.approx(.14)
 
 
 def test_prototype_seed_is_independent_of_training_seed(tmp_path, monkeypatch):

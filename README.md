@@ -90,10 +90,17 @@ and a fixed 1,000-class split. Each arm gets 12 training minutes. The preflight
 counts the actual ViT parameters and chooses the largest shared rank below 5%:
 LoRA r24 is the reference; if needed, LoRA and DoRA at a reduced shared rank
 provide the controlled method comparison. Classifier parameters are excluded.
+At 448px, microbatch 128 exceeded A100 40GB memory for DoRA. The comparison now
+uses microbatch 64 with accumulation 4 for every arm (effective batch 256), and
+checks DoRA forward/backward plus AdamW memory before any timed arm starts.
+Keep the old 128x2 experiment outputs and use a new folder for the 64x4 comparison.
+The primary accuracy comparison is DoRA r23 versus LoRA r24 under the 5% cap;
+LoRA r23 is a secondary control.
 
 ```bash
 python -m src.qq_lora_dora_ablation --preflight-only
-python -m src.qq_lora_dora_ablation --data_root /content/data --output_dir /content/drive/MyDrive/CS604_RUNS/qq_lora_dora_448_c1000_v1 --seeds 42
+python -m src.qq_lora_dora_ablation --memory-check-only
+python -m src.qq_lora_dora_ablation --data_root /content/data --output_dir /content/drive/MyDrive/CS604_RUNS/qq_lora_dora_448_c1000_m64_v2 --seeds 42
 ```
 
 For a second training seed, rerun the same command with `--seeds 42 43` to reuse

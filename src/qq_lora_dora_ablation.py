@@ -12,8 +12,10 @@ from pathlib import Path
 import torch
 
 from src.model import build_model
+from src.losses import build_loss
 from src.peft.lora import LoRALinear
 from src.qq_lora_ablation import prepare_split, run_arm, save_results, write_json
+from src.train import adamw_param_groups, amp_context
 from src.utils import Config, load_config
 
 
@@ -59,12 +61,59 @@ def plan_arms(base):
     return arms
 
 
-def matched_epoch_results(results):
+def check_training_memory(base, arm):
+    """Probe DoRA forward/backward and AdamW state before spending time on LoRA."""
+    cfg = Config({**base.to_dict(), 'pretrained': False, 'head_init': 'random',
+                  'lora_rank': arm['rank'], 'lora_alpha': arm['rank'], 'lora_dora': arm['dora']})
+    device = torch.device('cuda')
+    model = optimizer = images = labels = logits = loss = None
+    print(f"[memory check] {arm['arm']}: batch={cfg.batch_size}, accumulation={cfg.grad_accum_steps}; "
+          'synthetic inputs, no pretrained download or checkpoints')
+    try:
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+        model = build_model(cfg).to(device).train()
+        optimizer = torch.optim.AdamW(adamw_param_groups(
+            model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get('head_lr')))
+        loss_fn = build_loss(cfg)
+        images = torch.randn(int(cfg.batch_size), 3, int(cfg.img_size), int(cfg.img_size), device=device)
+        labels = torch.arange(int(cfg.batch_size), device=device) % int(cfg.num_classes)
+        # The second update includes the AdamW state allocated by the first.
+        for _ in range(2):
+            optimizer.zero_grad(set_to_none=True)
+            for _ in range(int(cfg.grad_accum_steps)):
+                with amp_context(device, bool(cfg.bf16)):
+                    logits = model(images)
+                    loss = loss_fn(logits, labels) / int(cfg.grad_accum_steps)
+                loss.backward()
+            if cfg.get('clip_grad_norm') is not None:
+                torch.nn.utils.clip_grad_norm_(
+                    [p for p in model.parameters() if p.requires_grad], float(cfg.clip_grad_norm))
+            optimizer.step()
+        torch.cuda.synchronize()
+        peak = torch.cuda.max_memory_allocated() / 1024**3
+        print(f'[memory check] passed; peak allocated {peak:.2f} GiB. Real-data allocation can differ.')
+        return peak
+    except torch.cuda.OutOfMemoryError as exc:
+        raise RuntimeError(
+            'DoRA memory check failed before any timed arm started. Reduce batch_size for ALL arms '
+            'and increase grad_accum_steps to keep effective batch 256. Use a new experiment folder '
+            'after changing the recipe. No timed training or prototype extraction was started.'
+        ) from exc
+    finally:
+        model = optimizer = images = labels = logits = loss = None
+        gc.collect()
+        torch.cuda.empty_cache()
+
+
+def matched_epoch_results(results, lora_rank=None):
     """Compare logged evaluations at common complete epochs, excluding partials."""
     shared_rank = next(row['rank'] for row in results if row['dora'])
-    pair = {row['dora']: row for row in results if row['rank'] == shared_rank}
+    lora_rank = shared_rank if lora_rank is None else lora_rank
+    pair = {row['dora']: row for row in results
+            if row['rank'] == (shared_rank if row['dora'] else lora_rank)}
     if len(pair) != 2:
-        raise ValueError('Missing the shared-rank LoRA/DoRA pair')
+        raise ValueError('Missing the requested LoRA/DoRA pair')
     histories = {}
     for dora, result in pair.items():
         with (Path(result['run_dir']) / 'epoch_log.csv').open() as handle:
@@ -87,15 +136,22 @@ def save_comparison(root, results, minimum_gain):
         dora = next((row for row in seeded if row['dora']), None)
         if dora is None:
             continue
-        lora = next(row for row in seeded if not row['dora'] and row['rank'] == dora['rank'])
+        lora = max((row for row in seeded if not row['dora']), key=lambda row: row['rank'])
+        control = next(row for row in seeded if not row['dora'] and row['rank'] == dora['rank'])
         delta = dora['final_val_acc'] - lora['final_val_acc']
-        comparisons.append(dict(seed=seed, shared_rank=dora['rank'], delta_pp=100 * delta,
+        comparisons.append(dict(seed=seed, lora_rank=lora['rank'], dora_rank=dora['rank'],
+                                shared_rank=dora['rank'], delta_pp=100 * delta,
                                 speed_ratio=dora['images_per_second'] / lora['images_per_second'],
                                 clears_screening_threshold=delta > minimum_gain,
-                                matched_complete_epochs=matched_epoch_results(seeded)))
+                                matched_complete_epochs=matched_epoch_results(seeded, lora['rank']),
+                                shared_rank_control=dict(
+                                    delta_pp=100 * (dora['final_val_acc'] - control['final_val_acc']),
+                                    speed_ratio=dora['images_per_second'] / control['images_per_second'],
+                                    matched_complete_epochs=matched_epoch_results(seeded))))
     confirmed = len(comparisons) >= 2 and all(row['clears_screening_threshold'] for row in comparisons)
     write_json(Path(root) / 'comparison.json', dict(
         metric='final_val_acc after equal training minutes', comparisons=comparisons,
+        primary_comparison='DoRA versus the reference LoRA rank under the same parameter cap',
         min_gain_pp=100 * minimum_gain, promising_across_seeds=confirmed,
         note='Subset screen, not statistical significance or a full-data result. '
              'Common-epoch metrics use time-based schedules at different LR positions; '
@@ -112,7 +168,10 @@ def main():
     parser.add_argument('--classes', type=int, default=1000)
     parser.add_argument('--workers', type=int, default=8)
     parser.add_argument('--split_dir', default='/content/qq_lora_dora_data')
-    parser.add_argument('--preflight-only', action='store_true')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--preflight-only', action='store_true')
+    mode.add_argument('--memory-check-only', action='store_true',
+                      help='Check DoRA training memory on the GPU without running timed arms')
     args = parser.parse_args()
     if not 0 < args.minutes <= 144 or len(set(args.seeds)) != len(args.seeds):
         raise ValueError('Use unique seeds and positive minutes per arm no greater than 144')
@@ -132,7 +191,7 @@ def main():
           'prototype extraction, evaluation and saving take additional wall time.')
     if args.preflight_only:
         return
-    if not args.data_root or not args.output_dir:
+    if not args.memory_check_only and (not args.data_root or not args.output_dir):
         parser.error('--data_root and --output_dir are required for training')
     if not torch.cuda.is_available():
         raise RuntimeError('Select an A100 GPU runtime for training')
@@ -141,6 +200,9 @@ def main():
     # torch.__version__ may be a TorchVersion subclass, which safe_dump rejects.
     base.comparison_hardware = dict(gpu=properties.name, memory=properties.total_memory,
                                     torch=str(torch.__version__), timm=timm.__version__, cuda=torch.version.cuda)
+    check_training_memory(base, next(arm for arm in arms if arm['dora']))
+    if args.memory_check_only:
+        return
     root = Path(args.output_dir).resolve()
     root.mkdir(parents=True, exist_ok=True)
     split_cfg = Config({**base.to_dict(), 'seed': int(base.split_seed)})
@@ -169,7 +231,7 @@ def main():
             results.append(row)
             save_results(root, results)
             save_comparison(root, results, float(base.ablation_min_gain))
-        print(f"[seed {seed}] See comparison.json for shared-rank differences and common-epoch metrics")
+        print(f"[seed {seed}] See comparison.json for DoRA versus reference LoRA and the shared-rank control")
 
 
 if __name__ == '__main__':
