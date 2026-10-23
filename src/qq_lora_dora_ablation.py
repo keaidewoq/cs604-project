@@ -62,7 +62,7 @@ def plan_arms(base):
 
 
 def check_training_memory(base, arm):
-    """Probe DoRA forward/backward and AdamW state before spending time on LoRA."""
+    """Probe adapter forward/backward, optimizer and allocation state before timed runs."""
     cfg = Config({**base.to_dict(), 'pretrained': False, 'head_init': 'random',
                   'lora_rank': arm['rank'], 'lora_alpha': arm['rank'], 'lora_dora': arm['dora']})
     device = torch.device('cuda')
@@ -79,29 +79,35 @@ def check_training_memory(base, arm):
         images = torch.randn(int(cfg.batch_size), 3, int(cfg.img_size), int(cfg.img_size), device=device)
         labels = torch.arange(int(cfg.batch_size), device=device) % int(cfg.num_classes)
         # The second update includes the AdamW state allocated by the first.
-        for _ in range(2):
+        for update in range(2):
             optimizer.zero_grad(set_to_none=True)
             for _ in range(int(cfg.grad_accum_steps)):
                 with amp_context(device, bool(cfg.bf16)):
                     logits = model(images)
                     loss = loss_fn(logits, labels) / int(cfg.grad_accum_steps)
                 loss.backward()
+            allocation = getattr(model, 'adalora_controller', None)
+            regularizer = allocation.regularization() if allocation else None
+            if regularizer is not None:
+                regularizer.backward()
             if cfg.get('clip_grad_norm') is not None:
                 torch.nn.utils.clip_grad_norm_(
                     [p for p in model.parameters() if p.requires_grad], float(cfg.clip_grad_norm))
             optimizer.step()
+            if allocation:
+                allocation.after_step(update + 1, .5 if update == 0 else .85)
         torch.cuda.synchronize()
         peak = torch.cuda.max_memory_allocated() / 1024**3
         print(f'[memory check] passed; peak allocated {peak:.2f} GiB. Real-data allocation can differ.')
         return peak
     except torch.cuda.OutOfMemoryError as exc:
         raise RuntimeError(
-            'DoRA memory check failed before any timed arm started. Reduce batch_size for ALL arms '
+            'Adapter memory check failed before any timed arm started. Reduce batch_size for ALL arms '
             'and increase grad_accum_steps to keep effective batch 256. Use a new experiment folder '
             'after changing the recipe. No timed training or prototype extraction was started.'
         ) from exc
     finally:
-        model = optimizer = images = labels = logits = loss = None
+        model = optimizer = images = labels = logits = loss = allocation = regularizer = None
         gc.collect()
         torch.cuda.empty_cache()
 

@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import yaml
 
-PEFT_METHODS = {"lora", "adapter", "adaptformer", "bitfit", "last_blocks"}
+PEFT_METHODS = {"lora", "adalora", "adapter", "adaptformer", "bitfit", "last_blocks"}
 
 
 class Config:

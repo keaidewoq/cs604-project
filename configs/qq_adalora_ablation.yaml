@@ -1,0 +1,11 @@
+# Four equal-time arms: LoRA r24 and AdaLoRA init24 -> target8/16/20.
+inherits: qq_lora_dora_ablation.yaml
+adalora_init_rank: 24
+adalora_target_ranks: [8, 16, 20]
+adalora_target_rank: 16
+adalora_initial_fraction: 0.10
+adalora_final_fraction: 0.20
+adalora_mask_interval: 10
+adalora_beta1: 0.85
+adalora_beta2: 0.85
+adalora_orth_reg_weight: 0.5

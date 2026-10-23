@@ -1,0 +1,3 @@
+-r requirements.txt
+# Tested AdaLoRA SVDLinear and RankAllocator API.
+peft==0.21.2

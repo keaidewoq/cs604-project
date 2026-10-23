@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import itertools
+import json
 import math
 import time
 from datetime import datetime
@@ -160,6 +161,8 @@ def save_checkpoint(path, model, cfg, epoch, metrics):
         "num_classes": cfg.num_classes,
         "trainable_only": cfg.method in PEFT_METHODS,
     }
+    if hasattr(model, 'adalora_controller'):
+        payload['adalora'] = model.adalora_controller.snapshot()
     torch.save(payload, path)
 
 
@@ -188,6 +191,8 @@ def evaluate(model, loader, loss_fn, device, use_bf16):
 
 
 def train(cfg):
+    if cfg.method == 'adalora' and cfg.get('epochs') is not None:
+        raise ValueError('AdaLoRA time allocation requires epochs: null and max_train_minutes')
     max_train_minutes = cfg.get("max_train_minutes")
     max_train_seconds = None
     if max_train_minutes is not None:
@@ -209,6 +214,7 @@ def train(cfg):
 
     loaders = build_dataloaders(cfg)
     model = build_model(cfg).to(device)
+    allocation = getattr(model, 'adalora_controller', None)
     load_prototypes(cfg, model)
     load_probe_head(cfg, model)
     loss_fn = build_loss(cfg)
@@ -289,6 +295,13 @@ def train(cfg):
     )
     step_w.writeheader()
     epoch_w.writeheader()
+    rank_f = (run_dir / 'adalora_rank_log.csv').open('w', newline='', encoding='utf-8') if allocation else None
+    rank_w = None
+    if rank_f:
+        rank_w = csv.DictWriter(rank_f, fieldnames=['step', 'progress', 'frozen', 'scheduled_rank_budget',
+                                                  'active_components', 'average_active_rank',
+                                                  'active_adaptation_pct', 'orth_reg_loss', 'ranks'])
+        rank_w.writeheader()
 
     best_acc = -1.0
     global_step = 0
@@ -330,11 +343,22 @@ def train(cfg):
                 (loss / accum).backward()
 
                 if i % accum == 0 or i == n_batches:
+                    regularizer = allocation.regularization() if allocation else None
+                    if regularizer is not None:
+                        regularizer.backward()
                     if clip_grad_norm is not None:
                         torch.nn.utils.clip_grad_norm_(
                             [p for p in model.parameters() if p.requires_grad], float(clip_grad_norm)
                         )
                     optimizer.step()
+                    if allocation:
+                        used = training_seconds + time.monotonic() - training_start
+                        allocation.after_step(global_step + 1, used / max_train_seconds)
+                        snapshot = allocation.snapshot()
+                        rank_w.writerow({**{key: snapshot[key] for key in rank_w.fieldnames
+                                             if key not in ('orth_reg_loss', 'ranks')},
+                                         'orth_reg_loss': float(regularizer.detach()) if regularizer is not None else 0.,
+                                         'ranks': json.dumps(snapshot['ranks'])})
                     if clock is not None:
                         used = training_seconds + time.monotonic() - training_start
                         clock["fraction"] = used / max_train_seconds
@@ -390,6 +414,8 @@ def train(cfg):
 
             epoch_w.writerow(row)
             epoch_f.flush()
+            if rank_f:
+                rank_f.flush()
             save_checkpoint(run_dir / "last.pt", model, cfg, epoch, {"train_loss": row["train_loss"]})
             if time_limit_reached:
                 print(f"[train] time limit reached after {training_seconds / 60:.2f} training minutes")
@@ -397,12 +423,16 @@ def train(cfg):
     finally:
         step_f.close()
         epoch_f.close()
+        if rank_f:
+            rank_f.close()
 
     stats = log_run_stats("end", model, timer, vram)
     stats["training_seconds"] = round(training_seconds, 2)
     stats["training_minutes"] = round(training_seconds / 60, 2)
     stats["time_limit_reached"] = time_limit_reached
     stats.update(getattr(model, "adaptation_stats", {}))
+    if allocation:
+        (run_dir / 'adalora_final.json').write_text(json.dumps(allocation.snapshot(), indent=2))
     with (run_dir / "run_stats.txt").open("w", encoding="utf-8") as f:
         for k, v in stats.items():
             f.write(f"{k}={v}\n")

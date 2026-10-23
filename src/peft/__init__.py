@@ -14,6 +14,10 @@ PEFT_METHODS.add("prefix")
 
 def build_peft(model, cfg):
     method = cfg.method
+    if method == "adalora":
+        from .adalora import apply_adalora
+
+        return apply_adalora(model, cfg)
     if method == "prefix":
         from .prefix import apply_prefix
 

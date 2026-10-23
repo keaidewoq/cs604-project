@@ -82,6 +82,16 @@ On Colab, `colab_launcher.ipynb` also prints the **resolved** config for your ch
 
 ## Add a method or an ablation
 
+### Qian's AdaLoRA target-rank sweep
+
+On `qq_lora_ablation`, use `notebooks/colab_launcher_qq_adalora.ipynb` and
+`requirements-adalora.txt`. Compare LoRA r24 with AdaLoRA initial rank24 and
+target average ranks 8/16/20: 12 training minutes per arm, 48 total, seed42 only.
+All use 448px, batch64 x accumulation4 and the same split/prototypes/arm E recipe.
+The runner checks the initial <5% cap and AdaLoRA GPU memory before timed runs.
+See [the experiment notes](docs/adalora_experiment.md) for the time-based rank
+schedule, allocation logs and final active versus allocated parameter counts.
+
 ### Qian's LoRA versus DoRA screen
 
 On `qq_lora_ablation`, open `notebooks/colab_launcher_qq_lora_dora.ipynb` on
