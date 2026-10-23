@@ -382,3 +382,11 @@ Frozen features + linear probe, internal holdout accuracy:
 - trainable % / peak VRAM / GPU-hours: same arm order, **4.9446 / 4.7736 / 4.8698%** backbone (head excluded), **17.29 / 17.28 / 24.97 GiB**; ~**0.20 training GPU-hours/arm** (12 minutes); wall GPU-hours not supplied.
 - what changed: arm E recipe at 448, 25% whole-image/padding, prototype cosine head + extras; fixed 1,000 classes (40 fit + 5 holdout/class), fit-only prototypes, seed 42, BF16, A100 40GB, batch 64 x 4, equal 12-minute budgets. Evaluation: crop 0.9, no flip/zoom. DoRA r23 trails the primary LoRA r24 reference by **0.28 pp**, with **144.5 vs 190.0 img/s** and higher VRAM; one-seed subset screen.
 - next: compare **LoRA with AdaLoRA** under the same <5% backbone parameter cap and training-time budget.
+
+### 2026-10-23 — Qian — LoRA vs AdaLoRA (`configs/qq_adalora_ablation.yaml`, `qq_lora_ablation`)
+
+- run_dir: `CS604_RUNS/qq_adalora_448_c1000_seed42_v1/seed42/`; arms `lora_r24`, `adalora_t8`, `adalora_t16`, `adalora_t20`.
+- val acc (ours / CodaBench): same arm order, **0.9076 / 0.8792 / 0.8794 / 0.8804** final holdout / not submitted.
+- trainable % / peak VRAM / GPU-hours: allocated backbone **4.9446% LoRA / 4.9459% AdaLoRA**, head excluded; final active AdaLoRA t8/t16/t20 **2.1562 / 3.4531 / 4.1434%**. Peak **17.29 / 18.79 GiB** (LoRA / AdaLoRA); ~**0.20 training GPU-hours/arm**, 12 minutes each.
+- what changed: PEFT AdaLoRA init rank 24, target averages 8/16/20; same 448px arm E recipe, cosine head + extras, fixed 1,000 classes (40 fit + 5 holdout/class), fit-only prototypes, seed 42, BF16, A100 40GB, batch 64 x 4. Evaluation: crop 0.9, no flip/zoom. All targets reached and masks fixed. Best AdaLoRA (t20) trails LoRA by **2.72 pp**, with **115.0 vs 189.8 img/s** and **2.07 vs 3.42 epochs**; one-seed subset screen.
+- next: retain **LoRA r24** as the reference; this sweep does not support promoting AdaLoRA to full-data training.
