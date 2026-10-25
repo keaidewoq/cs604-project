@@ -552,3 +552,26 @@ Frozen features + linear probe, internal holdout accuracy:
 - each class's most similar other class lies within 1 / 5 / 10 / 50 IDs for **24% / 50% / 60% / 77%** of classes (chance 0.02% / 0.10% / 0.20% / 1.0%); median ID distance to the most similar class: **5**. Of each class's 10 most similar classes, 35% lie within 10 IDs (chance 0.2%).
 - results: **class IDs are ordered by relatedness**, smoothly decaying with distance, as in iNaturalist 2021, whose IDs follow the taxonomy (kingdom → … → genus → species). Neighbouring IDs are very likely the same genus. Consistent with a teammate's observation that the model's mistakes are often look-alike relatives. The dataset's sizes also match iNat21: 450,000 + 50,000 = the 500,000-image "train_mini" (50 per class); test 100,000 = iNat21's validation size (10 per class). So models trained on iNat21 (e.g. BioCLIP, iNat21 checkpoints) would likely have seen our training and validation photos: avoid them.
 - caveat: prototypes measure visual similarity under the pretrained backbone, so this shows IDs track visual relatedness; the taxonomic reading rests on iNat21's documented ID order.
+
+### 2026-10-19 — Qian — LoRA r24 crop/padding @ 448 (`configs/lora_r24_crop_pad_448.yaml`)
+
+- run_dir: `CS604_RUNS/lora_r24_crop_pad_448_seed42/lora_20261019_014714/last.pt` (`qq_branch_v2`).
+- val acc (CodaBench):  **0.810**, submission **1002095**; crop 0.75 + autozoom (mass 0.7), no flip.
+- trainable % / peak VRAM / GPU-hours: **4.9446%** backbone (head excluded) / **33.90 GiB** / **2.4023 wall GPU-hours**; 144 training min on A100 40GB. Autozoom latency (unmerged LoRA, BF16): **41.963 ms/image** at batch 1; **4.266 ms/image** at batch 32 (136.499 ms/batch), 30 warmups + 200 iterations on A100-SXM4-40GB. Synthetic GPU-resident views; includes both passes and zoom selection/cropping; excludes image loading, initial resize/crop and input transfers.
+- what changed: full-data arm E, LoRA r24 + extras at 448, 75% random crop + 25% whole-image/padding, prototype cosine head using all-data `prototypes_448.pt`; all 450,000 images, batch 128 x 2, LoRA/head LR 3e-4 / 3e-3, BF16, seed 42, 5% time warmup + cosine. **+1.1 pp** over previous LoRA @ 336 with zoom (0.799); resolution and training views changed together.
+
+### 2026-10-22 — Qian — LoRA vs DoRA (`configs/qq_lora_dora_ablation.yaml`, `qq_lora_ablation`)
+
+- run_dir: `CS604_RUNS/qq_lora_dora_448_c1000_m64_v2/seed42/`; arms `lora_r24`, `lora_r23`, `dora_r23`.
+- val acc (ours / CodaBench): LoRA r24 / LoRA r23 / DoRA r23: **0.9098 / 0.9096 / 0.9070** final holdout / not submitted.
+- trainable % / peak VRAM / GPU-hours: same arm order, **4.9446 / 4.7736 / 4.8698%** backbone (head excluded), **17.29 / 17.28 / 24.97 GiB**; ~**0.20 training GPU-hours/arm** (12 minutes); wall GPU-hours not supplied.
+- what changed: arm E recipe at 448, 25% whole-image/padding, prototype cosine head + extras; fixed 1,000 classes (40 fit + 5 holdout/class), fit-only prototypes, seed 42, BF16, A100 40GB, batch 64 x 4, equal 12-minute budgets. Evaluation: crop 0.9, no flip/zoom. DoRA r23 trails the primary LoRA r24 reference by **0.28 pp**, with **144.5 vs 190.0 img/s** and higher VRAM; one-seed subset screen.
+- next: compare **LoRA with AdaLoRA** under the same <5% backbone parameter cap and training-time budget.
+
+### 2026-10-23 — Qian — LoRA vs AdaLoRA (`configs/qq_adalora_ablation.yaml`, `qq_lora_ablation`)
+
+- run_dir: `CS604_RUNS/qq_adalora_448_c1000_seed42_v1/seed42/`; arms `lora_r24`, `adalora_t8`, `adalora_t16`, `adalora_t20`.
+- val acc (ours / CodaBench): same arm order, **0.9076 / 0.8792 / 0.8794 / 0.8804** final holdout / not submitted.
+- trainable % / peak VRAM / GPU-hours: allocated backbone **4.9446% LoRA / 4.9459% AdaLoRA**, head excluded; final active AdaLoRA t8/t16/t20 **2.1562 / 3.4531 / 4.1434%**. Peak **17.29 / 18.79 GiB** (LoRA / AdaLoRA); ~**0.20 training GPU-hours/arm**, 12 minutes each.
+- what changed: PEFT AdaLoRA init rank 24, target averages 8/16/20; same 448px arm E recipe, cosine head + extras, fixed 1,000 classes (40 fit + 5 holdout/class), fit-only prototypes, seed 42, BF16, A100 40GB, batch 64 x 4. Evaluation: crop 0.9, no flip/zoom. All targets reached and masks fixed. Best AdaLoRA (t20) trails LoRA by **2.72 pp**, with **115.0 vs 189.8 img/s** and **2.07 vs 3.42 epochs**; one-seed subset screen.
+- next: retain **LoRA r24** as the reference; this sweep does not support promoting AdaLoRA to full-data training.
