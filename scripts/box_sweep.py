@@ -7,11 +7,14 @@ the organism, its box crops should be recognised clearly more often than random 
 pilot's boxes (ddt_final) managed only 0.591 vs 0.581.
 
 One forward pass collects every layer the variants need, so all variants see the same photos.
-Writes box_sweep.csv (one row per variant), box_sweep.json (with token-norm diagnostics) and
-box_sweep_overlay.png (rows: photos, columns: variants).
+--round picks the list of variants (ROUNDS below). Writes box_sweep_<round>.csv (one row per
+variant), .json (with token-norm diagnostics) and _overlay.png (rows: photos, columns: variants).
+Round 1's files (from before rounds existed) are box_sweep.csv / .json / _overlay.png.
+
+The bar to clear is the centred crop of the same size: in round 1 it beat every box finder.
 
     python scripts/box_sweep.py --config configs/lora_r24_336_no_extras.yaml \\
-        --data_root /content/pilot_data/c1000_h5_s0 --out_dir <folder>
+        --data_root /content/pilot_data/c1000_h5_s0 --out_dir <folder> [--round round2]
 then rebuild the boxes with the winner: python scripts/find_boxes.py ... <its flags>
 """
 
@@ -40,16 +43,29 @@ from scripts.find_boxes import load_backbone
 from src.boxes import (FeatureTaps, WholeImages, box_from_map, class_scores, outlier_tokens, prototype_top1,
                        read_train_rows, variant_name)
 
-VARIANTS = [
-    # (score, layer, mask, smooth); layer = block index, None = final tokens
-    ("ddt", None, False, False),   # the first pilot's boxes (baseline)
-    ("ddt", None, True, True),     # same, without outlier tokens, smoothed
-    ("ddt", 9, False, True),       # earlier layer (block 10 of 12)
-    ("ddt", 9, True, True),
-    ("ddt", 6, False, True),       # middle layer (block 7 of 12)
-    ("proto", None, False, True),  # true-label prototype map
-    ("proto", None, True, True),
-]
+ROUNDS = {
+    # (score, layer, mask, smooth, top); layer = block index, None = final tokens;
+    # top = keep the photo's top fraction of patches (None = all positive ones)
+    "round1": [
+        ("ddt", None, False, False, None),   # the first pilot's boxes (baseline)
+        ("ddt", None, True, True, None),     # same, without outlier tokens, smoothed
+        ("ddt", 9, False, True, None),       # earlier layer (block 10 of 12)
+        ("ddt", 9, True, True, None),
+        ("ddt", 6, False, True, None),       # middle layer (block 7 of 12)
+        ("proto", None, False, True, None),  # true-label prototype map
+        ("proto", None, True, True, None),
+    ],
+    # round 1: nothing beat random placement; the prototype map looked right but its
+    # boxes were loose (median 71% of the photo). Tighter thresholds:
+    "round2": [
+        ("ddt", None, False, False, None),   # reference: the first pilot's boxes
+        ("proto", None, False, True, None),  # reference: round 1's loose prototype boxes
+        ("proto", None, False, True, 0.3),
+        ("proto", None, False, True, 0.2),
+        ("proto", None, False, False, 0.2),  # tight, without smoothing
+        ("ddt", None, False, True, 0.2),     # the same tightening for DDT
+    ],
+}
 
 
 def flags(v):
@@ -57,6 +73,7 @@ def flags(v):
     out += [f"--layer {v['layer']}"] if v["layer"] is not None else []
     out += ["--mask"] if v["mask"] else []
     out += ["--smooth"] if v["smooth"] else []
+    out += [f"--top {v['top']}"] if v.get("top") else []
     return " ".join(out)
 
 
@@ -74,6 +91,8 @@ def main():
     p.add_argument("--max_area", type=float, default=0.8)
     p.add_argument("--overlay_photos", type=int, default=8)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--round", choices=sorted(ROUNDS), default="round2", help="which list of variants")
+    p.add_argument("--out_name", default=None, help="file prefix (default box_sweep_<round>)")
     args = p.parse_args()
 
     started = time.time()
@@ -81,7 +100,8 @@ def main():
     size = int(cfg.img_size)
     grid = size // int(model.patch_embed.patch_size[0])
     use_bf16 = bool(cfg.bf16) and device.type == "cuda"
-    variants = [dict(score=s, layer=l, mask=m, smooth=sm) for s, l, m, sm in VARIANTS]
+    variants = [dict(score=s, layer=l, mask=m, smooth=sm, top=t) for s, l, m, sm, t in ROUNDS[args.round]]
+    name = args.out_name or f"box_sweep_{args.round}"
     for v in variants:
         v["name"] = variant_name(v)
     taps = FeatureTaps(model, [v["layer"] for v in variants])
@@ -120,7 +140,8 @@ def main():
             scores, frac = class_scores(feats, v, grid, proto, args.outlier_ratio)
             masked[v["name"]].append(frac)
             for k, i in enumerate(buf["idx"]):
-                boxes[v["name"]][i] = box_from_map(scores[k], grid, args.margin, args.min_patches, args.max_area)
+                boxes[v["name"]][i] = box_from_map(scores[k], grid, args.margin, args.min_patches, args.max_area,
+                                                   v["top"])
                 if i in shown:
                     maps_keep[(v["name"], i)] = scores[k].view(grid, grid).clone()
         buf.update(idx=[], feats=[])
@@ -178,30 +199,32 @@ def main():
 
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    with (out / "box_sweep.csv").open("w", newline="") as f:
+    with (out / f"{name}.csv").open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(results[0]))
         w.writeheader()
         w.writerows(results)
     diag = {layer: {"outlier_token_fraction": round(sum(s[0]) / len(s[0]), 4),
                     "mean_max_over_median_norm": round(sum(s[1]) / len(s[1]), 2)}
             for layer, s in norm_stats.items()}
-    best = max(results, key=lambda r: (r["lift_vs_random_points"] if r["photos_with_box"] >= 0.5 else -1e9))
-    summary = {"photos": len(rows), "classes": len(keep), "token_norms": diag, "results": results,
-               "best_with_boxes_on_half_the_photos": best["variant"],
+    # the bar to clear is the centred crop of the same size (photographers centre the subject)
+    best = max(results, key=lambda r: (r["lift_vs_centre_points"] if r["photos_with_box"] >= 0.5 else -1e9))
+    summary = {"round": args.round, "photos": len(rows), "classes": len(keep), "token_norms": diag, "results": results,
+               "best_vs_centre_with_boxes_on_half_the_photos": best["variant"],
                "seconds": {"features": round(features_s, 1), "total": round(time.time() - started, 1)}}
-    (out / "box_sweep.json").write_text(json.dumps(summary, indent=2))
+    (out / f"{name}.json").write_text(json.dumps(summary, indent=2))
 
     print("\n[sweep] token norms (outlier = norm > %.1f x the photo's median):" % args.outlier_ratio)
     for layer, d in diag.items():
         print(f"  {layer:8s} outlier tokens {d['outlier_token_fraction']:.2%}, "
               f"max/median norm {d['mean_max_over_median_norm']:.2f}")
-    print("\n[sweep] variant                      box%   area  top1 box  random  centre  whole  lift(rand)")
-    for r in sorted(results, key=lambda r: -r["lift_vs_random_points"]):
+    print("\n[sweep] variant                      box%   area  top1 box  random  centre  whole  vs rand  vs centre")
+    for r in sorted(results, key=lambda r: -r["lift_vs_centre_points"]):
         print(f"  {r['variant']:28s} {r['photos_with_box']:5.0%}  {r['median_box_area']:5.2f}   "
               f"{r['top1_box']:.3f}   {r['top1_random_same_size']:.3f}   {r['top1_centre_same_size']:.3f}  "
-              f"{r['top1_whole_photo']:.3f}   {r['lift_vs_random_points']:+.1f}")
-    print(f"\n[sweep] best lift with boxes on at least half the photos: {best['variant']} "
-          f"({best['lift_vs_random_points']:+.1f} points); rebuild with: find_boxes.py ... {best['flags']}")
+              f"{r['top1_whole_photo']:.3f}   {r['lift_vs_random_points']:+6.1f}   {r['lift_vs_centre_points']:+6.1f}")
+    print(f"\n[sweep] best vs the centred crop, with boxes on at least half the photos: {best['variant']} "
+          f"({best['lift_vs_centre_points']:+.1f} points vs centre, {best['lift_vs_random_points']:+.1f} vs random); "
+          f"rebuild with: find_boxes.py ... {best['flags']}")
 
     import matplotlib
     matplotlib.use("Agg")
@@ -226,8 +249,8 @@ def main():
             if r == 0:
                 ax.set_title(v["name"], fontsize=7)
     fig.tight_layout()
-    fig.savefig(out / "box_sweep_overlay.png", dpi=100)
-    print(f"[sweep] wrote box_sweep.csv, box_sweep.json, box_sweep_overlay.png in {out} "
+    fig.savefig(out / f"{name}_overlay.png", dpi=100)
+    print(f"[sweep] wrote {name}.csv / .json / _overlay.png in {out} "
           f"({(time.time() - started) / 60:.1f} min)")
 
 

@@ -21,6 +21,8 @@ A variant chooses how the score map is made:
           dominate a PCA. Masked patches score 0.
   smooth  3 x 3 average of the score map before thresholding, so single hot patches do not
           form blobs.
+  top     which patches count as organism: None = score above 0 (above the photo's mean for
+          "proto"); q = the photo's top q fraction of patches (e.g. 0.2), for tighter boxes.
 """
 
 from __future__ import annotations
@@ -41,6 +43,7 @@ def variant_name(v):
     parts = [v["score"], "final" if v["layer"] is None else f"block{v['layer']}"]
     parts += ["masked"] if v["mask"] else []
     parts += ["smooth"] if v["smooth"] else []
+    parts += [f"top{round(100 * v['top'])}"] if v.get("top") else []
     return "_".join(parts)
 
 
@@ -203,9 +206,16 @@ def class_scores(feats, variant, grid, prototype, outlier_ratio):
     return scores, masked
 
 
-def box_from_map(score, grid, margin, min_patches, max_area):
-    """(P,) score map -> [x0, y0, x1, y1] fractions of the photo, or None (no useful box)."""
-    blob = largest_blob((score > 0).view(grid, grid))
+def box_from_map(score, grid, margin, min_patches, max_area, top=None):
+    """(P,) score map -> [x0, y0, x1, y1] fractions of the photo, or None (no useful box).
+
+    `top`: keep the photo's top fraction of patches instead of all positive ones."""
+    if top:
+        cut = torch.quantile(score.float(), 1 - float(top))
+        mask = (score >= cut) & (score > 0)
+    else:
+        mask = score > 0
+    blob = largest_blob(mask.view(grid, grid))
     if blob is None or len(blob) < min_patches:
         return None
     ys, xs = [b[0] for b in blob], [b[1] for b in blob]

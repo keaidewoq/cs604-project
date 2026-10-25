@@ -77,6 +77,7 @@ def add_variant_args(p):
     p.add_argument("--layer", type=int, default=None, help="block index (0-based); default: final tokens")
     p.add_argument("--mask", action="store_true", help="leave out high-norm outlier tokens")
     p.add_argument("--smooth", action="store_true", help="3x3 average of the score map")
+    p.add_argument("--top", type=float, default=None, help="keep the photo's top fraction of patches (e.g. 0.2)")
     p.add_argument("--outlier_ratio", type=float, default=2.0, help="outlier: norm > ratio x median")
     p.add_argument("--margin", type=float, default=0.1, help="added on each side, fraction of the box size")
     p.add_argument("--min_patches", type=int, default=4)
@@ -106,7 +107,7 @@ def main():
     p.add_argument("--crops_per_image", type=int, default=10, help="random crops sampled for the miss rate")
     p.add_argument("--overlays", type=int, default=24)
     args = p.parse_args()
-    variant = {"score": args.score, "layer": args.layer, "mask": args.mask, "smooth": args.smooth}
+    variant = {"score": args.score, "layer": args.layer, "mask": args.mask, "smooth": args.smooth, "top": args.top}
     variant["name"] = variant_name(variant)
 
     started = time.time()
@@ -134,7 +135,7 @@ def main():
         scores, frac = class_scores(feats, variant, grid, prototypes[buf["label"]], args.outlier_ratio)
         masked.append(frac)
         for k, i in enumerate(buf["idx"]):
-            boxes[i] = box_from_map(scores[k], grid, args.margin, args.min_patches, args.max_area)
+            boxes[i] = box_from_map(scores[k], grid, args.margin, args.min_patches, args.max_area, args.top)
             if i in keep_maps:
                 maps_keep[i] = scores[k].view(grid, grid).clone()
         buf.update(idx=[], feats=[])

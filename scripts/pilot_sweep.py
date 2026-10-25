@@ -78,10 +78,14 @@ def read_label_file(path):
     return rows
 
 
-def build_pilot_root(data_root, pilot_dir, n_classes, holdout_per_class, seed):
-    """Subset train.txt by class, carve a labelled holdout, symlink everything else."""
+def build_pilot_root(data_root, pilot_dir, n_classes, holdout_per_class, seed, class_block=1):
+    """Subset train.txt by class, carve a labelled holdout, symlink everything else.
+
+    class_block > 1 draws the classes as blocks of that many consecutive class IDs (e.g.
+    100 blocks of 10), so related species (neighbouring IDs) are trained together."""
     data_root = Path(data_root)
-    root = Path(pilot_dir) / f"c{n_classes}_h{holdout_per_class}_s{seed}"
+    block = int(class_block)
+    root = Path(pilot_dir) / (f"c{n_classes}_h{holdout_per_class}_s{seed}" + (f"_b{block}" if block > 1 else ""))
     marker = root / ".done"
     if marker.exists():
         print(f"[pilot] reusing pilot data root {root}")
@@ -95,7 +99,11 @@ def build_pilot_root(data_root, pilot_dir, n_classes, holdout_per_class, seed):
 
     rng = random.Random(seed)
     classes = sorted(by_class)
-    if n_classes < len(classes):
+    if n_classes < len(classes) and block > 1:
+        starts = list(range(0, len(classes) - block + 1, block))
+        picked = sorted(rng.sample(starts, n_classes // block))
+        classes = [classes[s + j] for s in picked for j in range(block)]
+    elif n_classes < len(classes):
         classes = sorted(rng.sample(classes, n_classes))
 
     fit, hold = [], []
@@ -165,6 +173,8 @@ def summarise_run(run_dir, values):
         "best_val_acc": round(accs[best_i], 4),
         "best_epoch": int(log[best_i]["epoch"]),
         "final_val_acc": round(accs[-1], 4),
+        # prediction within 5 class IDs of the label (older logs lack the column)
+        "final_val_acc_near5": round(float(log[-1].get("val_acc_near5", float("nan"))), 4),
         "final_val_loss": round(log[-1]["val_loss"], 4),
         "early_dip": dip,
         "trainable_pct": round(float(stats.get("trainable_pct", "nan")), 3),

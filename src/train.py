@@ -233,9 +233,12 @@ def amp_context(device, use_bf16):
 
 @torch.no_grad()
 def evaluate(model, loader, loss_fn, device, use_bf16):
+    """Holdout loss and top-1, plus `val_acc_near5`: prediction within 5 class IDs of the
+    label (IDs follow the taxonomy here, so roughly "right genus")."""
     model.eval()
     total_loss = 0.0
     correct = 0
+    near = 0
     n = 0
     for images, labels, _ in loader:
         images = images.to(device, non_blocking=True)
@@ -244,9 +247,12 @@ def evaluate(model, loader, loss_fn, device, use_bf16):
             logits = model(images)
             loss = loss_fn(logits, labels)
         total_loss += loss.item() * labels.size(0)
-        correct += (logits.argmax(dim=1) == labels).sum().item()
+        pred = logits.argmax(dim=1)
+        correct += (pred == labels).sum().item()
+        near += ((pred - labels).abs() <= 5).sum().item()
         n += labels.size(0)
-    return {"val_loss": total_loss / max(n, 1), "val_acc": correct / max(n, 1)}
+    return {"val_loss": total_loss / max(n, 1), "val_acc": correct / max(n, 1),
+            "val_acc_near5": near / max(n, 1)}
 
 
 def train(cfg, resume_dir=None):
@@ -386,11 +392,12 @@ def train(cfg, resume_dir=None):
     step_f = step_path.open("a" if append else "w", newline="", encoding="utf-8")
     epoch_f = epoch_path.open("a" if append else "w", newline="", encoding="utf-8")
     step_w = csv.DictWriter(step_f, fieldnames=["step", "epoch", "loss", "lr"])
-    epoch_w = csv.DictWriter(
-        epoch_f, fieldnames=["epoch", "train_loss", "val_loss", "val_acc", "epoch_time_s",
-                             "batches_processed", "batches_total", "images_processed", "epoch_complete",
-                             "img_size"]
-    )
+    epoch_fields = ["epoch", "train_loss", "val_loss", "val_acc", "val_acc_near5", "epoch_time_s",
+                    "batches_processed", "batches_total", "images_processed", "epoch_complete", "img_size"]
+    if append:  # a resumed run keeps the columns its log started with
+        with epoch_path.open(newline="", encoding="utf-8") as f:
+            epoch_fields = next(csv.reader(f))
+    epoch_w = csv.DictWriter(epoch_f, fieldnames=epoch_fields, extrasaction="ignore")
     if not append:
         step_w.writeheader()
         epoch_w.writeheader()
@@ -526,9 +533,11 @@ def train(cfg, resume_dir=None):
                 metrics = evaluate(model, loaders["val"], loss_fn, device, use_bf16)
                 row["val_loss"] = metrics["val_loss"]
                 row["val_acc"] = metrics["val_acc"]
+                row["val_acc_near5"] = metrics["val_acc_near5"]
                 print(
                     f"[epoch {epoch}] train_loss={row['train_loss']:.4f} "
-                    f"val_loss={metrics['val_loss']:.4f} val_acc={metrics['val_acc']:.4f}"
+                    f"val_loss={metrics['val_loss']:.4f} val_acc={metrics['val_acc']:.4f} "
+                    f"near5={metrics['val_acc_near5']:.4f}"
                 )
                 if metrics["val_acc"] > best_acc:
                     best_acc = metrics["val_acc"]

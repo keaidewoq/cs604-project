@@ -514,3 +514,23 @@ Frozen features + linear probe, internal holdout accuracy:
 - box quality: **the boxes mostly did not find the organism.** 27,312 of 40,000 images (68%) got a box (median 29% of the photo); the rest kept random crops. Class-prototype top-1 on box crops 0.591 vs 0.581 on random crops of the same size (whole image 0.763), so the boxes are barely better than random placement. The overlay shows scattered single-patch hot spots across backgrounds rather than blobs on the organism; good boxes on some clear subjects (sea anemone, ruler-photographed flower). For 643 of 1,000 classes the class-prototype sign rule would have picked the opposite sign, so the score map's polarity is itself unreliable. Likely cause: high-norm outlier ("artifact") patch tokens in the final layer of supervised ViTs (Darcet et al., ICLR 2024), which can dominate a PCA of patch features; untested.
 - results: **all three arms tie** (within ~0.3 seed noise). Bigger crops (S25) do not help, matching Van's full-FT test (scale 0.35 at 224: no effect). BOX did not test the aimed-crop idea fairly, because its boxes were near random; this is a negative result for this box finder, not for aimed crops. Random-crop miss rate against these boxes (48% of crops at scale 0.08 hold under half the box; 33% at 0.25) is only indicative for the same reason.
 - next: only if pursued: fix the box finder before any training (mask high-norm tokens, or use an earlier block's tokens, or the true-label prototype map), judged by box-crop vs random-crop top-1 alone (~10 min per variant, no training); rerun BOX only if box crops clearly beat random ones.
+
+### 2026-10-21 — Anastasia — box-quality sweep: which box finder finds the organism? (no training; `scripts/box_sweep.py`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_train_crops/box_sweep.{csv,json}`, `box_sweep_overlay.png` (launcher `notebooks/colab_launcher_ana_box_sweep.ipynb`, part 1 only, `ana-branch`)
+- setup: 7 box-finding variants (`src/boxes.py`) on 200 of the pilot's 1,000 classes (8,000 fit photos), pretrained backbone, nothing trained. Each scored by pretrained prototype-head top-1 on up to 5 box crops per class, against crops of the same size placed at random or in the centre. 12.0 min of features + 1.2 min of checks on the A100.
+
+| Variant | Photos with box | Median box area | Box | Random | Centre | Whole | Box − random |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| ddt_final (first pilot's boxes) | 69% | 0.29 | 0.763 | 0.752 | 0.841 | 0.895 | +1.1 |
+| ddt_final_masked_smooth | 53% | 0.42 | 0.816 | 0.824 | 0.880 | 0.912 | −0.8 |
+| ddt_block9_smooth | 90% | 0.27 | 0.607 | 0.764 | 0.841 | 0.886 | −15.7 |
+| ddt_block9_masked_smooth | 75% | 0.32 | 0.648 | 0.771 | 0.846 | 0.898 | −12.4 |
+| ddt_block6_smooth | 100% | 0.09 | 0.288 | 0.530 | 0.764 | 0.888 | −24.2 |
+| proto_final_smooth | 28% | 0.71 | 0.828 | 0.828 | 0.836 | 0.839 | 0.0 |
+| proto_final_masked_smooth | 28% | 0.71 | 0.828 | 0.828 | 0.836 | 0.839 | 0.0 |
+
+- results: **no variant finds the organism better than random placement, and every one is beaten by a centred crop of the same size.** The centre prior (photographers centre the subject) beats DDT boxes by 6–48 points. DDT on earlier layers is worse than random (−12 to −24): it latches onto repeated background texture. The final layer has no outlier tokens (0.0%, max/median norm 1.19), so "artifact tokens" do not explain the first pilot's poor final-layer boxes; blocks 6 and 9 do have them (1.5% / 1.8% of tokens, max/median 8.9× / 5.3×), and masking them helped block 9 a little (−15.7 → −12.4).
+- the prototype map (`proto`) looks right in the overlay (butterfly, damselfly, snail lit up), but its box rule (positive after subtracting the photo's mean) keeps about half of each photo, so only 28% of photos get a box under the 80% cap and those are large (median 71%): too loose to differ from random. A stricter threshold is untested. Caveat for any proto-based box: it is chosen by similarity to the class prototype and then scored by the same prototype head, so this check favours it.
+- the first pilot's random-crop miss rate (48% of crops under half the box) was measured against near-random boxes, so it does not measure how often crops miss the organism.
+- next: either one more sweep with a stricter threshold for the prototype map (top 20–30% of patches), counted only if it beats the centred crop clearly; or stop and report aimed crops as untested-for-lack-of-a-localiser.

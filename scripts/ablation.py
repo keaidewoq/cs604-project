@@ -133,7 +133,7 @@ def main():
 
     pilot_root, info = build_pilot_root(args.data_root, args.pilot_data_dir,
                                         int(pilot["num_classes_subset"]), int(pilot["holdout_per_class"]),
-                                        int(pilot.get("subset_seed", 0)))
+                                        int(pilot.get("subset_seed", 0)), int(pilot.get("class_block", 1)))
     out_dir = Path(args.output_dir) / f"ablation_{spec_path.stem}"
     (out_dir / "arms").mkdir(parents=True, exist_ok=True)
     print(f"[ablation] folder {out_dir}  pilot data {info}")
@@ -148,7 +148,7 @@ def main():
         heads["probe_head_file"] = str(clean_probe(base_cfg, pilot_root, out_dir, args.feature_dir))
 
     run_overrides = {k: v for k, v in pilot.items()
-                     if k not in ("num_classes_subset", "holdout_per_class", "subset_seed")}
+                     if k not in ("num_classes_subset", "holdout_per_class", "subset_seed", "class_block")}
     results = []
     for name, overrides in arms.items():
         marker = out_dir / "arms" / f"{name}.json"
@@ -173,7 +173,7 @@ def main():
     ref = next((r["final_val_acc"] for r in results if r["arm"].startswith("A_")), None)
     for r in results:
         r["delta_vs_A_points"] = round(100 * (r["final_val_acc"] - ref), 2) if ref is not None else None
-    cols = ["arm", "changes", "final_val_acc", "delta_vs_A_points", "best_val_acc", "best_epoch",
+    cols = ["arm", "changes", "final_val_acc", "delta_vs_A_points", "final_val_acc_near5", "best_val_acc", "best_epoch",
             "final_val_loss", "early_dip", "backbone_pct", "peak_vram_gb", "training_min", "wall_min", "run_dir"]
     with (out_dir / "ablation.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
