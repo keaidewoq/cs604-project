@@ -636,3 +636,22 @@ Frozen features + linear probe, internal holdout accuracy:
 - **taxonomy-aware smoothing does not improve top-1**: the three 0.1 arms tie with A (within ~0.5 points of seed noise), and doubling it (ID_02) loses 0.86. As expected from Bertinetto et al. (CVPR 2020, *Making Better Mistakes*), mistakes become slightly milder (near5 +0.3 to +0.5) without more correct answers: teaching that siblings are close does not help tell them apart, and more of it hurts. ID order and prototype similarity behave the same.
 - val_loss is not comparable across arms (different targets).
 - next: not promoted to a full run. The opposite direction, pushing relatives apart (an extra margin or harder weighting on neighbouring classes), targets the sibling problem directly and is untested.
+
+### 2026-10-26 — Anastasia — sibling margin: push relatives apart, pilot scale (`configs/ablation_sibling_margin.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_sibling_margin/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_sibling_margin.ipynb`, `ana-branch`)
+- setup: same class-block subset as the taxonomy smoothing pilot (100 blocks of 10 consecutive IDs, `c1000_h5_s0_b10`); base LoRA r24 without extras (4.12%); 3 epochs; one seed per arm. CosFace margins on the cosine head, training only (`src/losses.py`): `cosine_margin` (Van's key and loss; identical output to her `CosineMarginLoss`) makes the true class beat every class by m; `sibling_margin` adds a further margin against the true class's 10 neighbours within 5 IDs only. Error split: relatives = guess within 5 IDs, far = beyond.
+
+| Arm | Margin | Top-1 | vs A | near5 | Errors on relatives | Far errors (share of photos) |
+|---|---|---:|---:|---:|---:|---:|
+| A | none | **0.8346** | — | 0.9346 | 60% | 6.5% |
+| U10 | 0.1 vs every class | 0.8364 | +0.18 | 0.9360 | 61% | 6.4% |
+| S10 | 0.1 vs relatives only | 0.8214 | −1.32 | 0.9102 | 50% | 9.0% |
+| U10_S10 | 0.2 vs relatives, 0.1 vs the rest | 0.8122 | −2.24 | 0.8976 | 46% | 10.2% |
+| S20 | 0.2 vs relatives only | 0.7618 | **−7.28** | 0.8208 | 25% | 17.9% |
+
+- A reproduces the taxonomy pilot's A (0.8346 vs 0.8352).
+- **Van's uniform margin transfers as a tie on LoRA** (+0.18, within ~0.5 noise), not the +0.6 of her 1-epoch AdaptFormer screen.
+- **A margin against relatives hurts, increasingly with strength.** It does cut sibling confusions (relative errors fall from 10.0% of photos at A to 8.9% / 5.9% at S10 / S20), but far-away errors rise faster (6.5% → 9.0% → 17.9%): the model satisfies the margin by suppressing every class near the true one, which also suppresses the right answer for those classes' photos, so predictions scatter to unrelated classes.
+- with the taxonomy smoothing pilot this closes the loss-design route for siblings at this budget: **pulling relatives together ties, pushing them apart hurts.** Reshaping the objective does not give the features what they need to tell siblings apart; that points to information (more pixels on the deciding detail: resolution, zoom) or better features (backbone), not a different loss.
+- next: no full run for any margin arm.
