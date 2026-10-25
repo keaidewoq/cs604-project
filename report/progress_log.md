@@ -598,3 +598,23 @@ Frozen features + linear probe, internal holdout accuracy:
 - **17 classes are hard for both (≤2/5 each)**, and in 11 of them LoRA's wrong guesses are close-ID siblings: 8144 → 8138, 4804 → 4805, 6917 → 6914 (3 of 3 errors), 3119 → 3120, 2573 → 2562, 3063 → 3080, 4746 → 4745 (3 of 3), 4813 → 4805 / 4804, 6409 → 6405, 6793 → 6794, 117 → 116. The hardest classes are members of look-alike sibling groups.
 - **by class-ID range (500 IDs, ~50 classes each, about ±2 points noise), difficulty differs by group, beyond noise**: hardest 4500–4999 (LoRA 0.834 / full FT 0.824), 6500–6999 (0.827 / 0.851), 3000–3499 (0.863 / 0.856), 9500–9999 (0.868 / 0.868); easiest 5500–5999 (0.967 / 0.967), 5000–5499 (0.943 / 0.947). The two models agree on which ranges are hard. If the IDs follow iNat21's alphabetical taxonomy (Animalia → Fungi → Plantae), and the gallery is consistent with that (insects ~1000–2600, salamanders ~3070, snakes ~4930, plants above ~6000), the easiest range would be fungi and the hard ones vertebrates (birds / mammals / reptiles) and some plant groups; this mapping is a hypothesis, not checked against class names (the dataset is anonymised).
 - **errors stay in the same broad group**: of LoRA's 511 wrong guesses, 93 (18%) are within 5 IDs, 198 (39%) within 50 and 341 (67%) within 500, against ~0.1% / ~1% / ~10% for a random pilot class. No single class dominates as a wrong guess (the most frequent attractors are each guessed wrongly 4 times).
+
+### 2026-10-25 — Anastasia — what causes the errors? (no training; `scripts/error_causes.py`)
+
+- run_dir: `CS604_RUNS/error_causes/` (`causes.json`, `causes_per_error.csv`, `classes.csv`, `causes_<cause>.png`; launcher `notebooks/colab_launcher_ana_error_causes.ipynb`, `ana-branch`)
+- setup: the pilot LoRA checkpoint of the error analysis (`A_random_crops`, LoRA r24 no extras) embeds the pilot's 40,000 fit photos and 5,000 holdout photos; each of its 511 errors is tested for four causes (can overlap), and each flag is compared with the same flag among correctly classified photos.
+
+| Cause | Detected when | Share of errors | Among correct photos | Over-represented |
+|---|---|---:|---:|---:|
+| unseen look | holdout photo unlike every training photo of its class (best cosine below the 10th percentile of correct photos, 0.53) | **59%** | 10% | **5.9×** |
+| sibling | wrong guess within 5 IDs or among the true class's 5 most similar classes | **47%** | — | — |
+| messy class | ≥20% of the class's training photos sit closer to another class's prototype | 45% | 22% | 2.1× |
+| two looks | class's training photos split in two groups (top 20% split) and the holdout matches the smaller | 10% | 4.9% | 2.0× |
+| none of these | | 5% | | |
+
+- per class (1,000 classes): messy classes (243) average 0.811 holdout accuracy vs 0.898 overall (−8.7 points; Spearman of messy share with class accuracy −0.29, the strongest); two-look classes (182) 0.876 (−2.2; Spearman of split −0.07); consistency +0.21.
+- galleries (random examples per cause) say what the flags mean:
+  - **unseen look** is genuine and is mostly *a different part, stage, season or scale* than the class's training photos: seed pod vs leaves (8105), dried vs green plant (6852), one flower on a stalk vs flower clusters (6640), tree base vs foliage (6973), blurred or tiny subject (4465). Caveat: the detector uses the same model's features, so misclassified photos sit far from their class partly by construction; the 5.9× is an upper bound on how much is the photos' fault.
+  - **messy class** is mostly *crowded sibling neighbourhoods*, not mislabels: maidenhair ferns 9966 vs 9971, hedgehogs 4746 vs 4745, bees 674 vs 675, frogs 3037 vs 2981, starlings; plus holdout photos with almost no visible subject (a dark frame, an empty ground shot). No clear mislabelled training photo in the sample: label noise does not look like a major cause.
+  - **two looks** is real but a minority: ripe yellow vs dried black fruit (9591), adult moth vs hairy caterpillar (1020), museum specimen vs live animal (4813), flowering vs leaf-only plant (6793, 6988).
+- results: the two main problems are **(1) photos showing a part, life stage, season or scale the class's ~40 training photos barely cover** and **(2) look-alike siblings**, overlapping on 16% of errors. Classes with two clear looks in training account for only ~10% of errors, and mislabelled training photos were not evident. More of the dataset helps the first (the full-scale runs train on 45 photos per class, the pilot on 40); better-generalising features (resolution, a stronger backbone) and multi-view prediction (zoom, crops) target it directly; taxonomy-aware smoothing, zoom on the deciding detail and margins between relatives target the second.
