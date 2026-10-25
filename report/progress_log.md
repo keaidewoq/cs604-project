@@ -534,3 +534,21 @@ Frozen features + linear probe, internal holdout accuracy:
 - the prototype map (`proto`) looks right in the overlay (butterfly, damselfly, snail lit up), but its box rule (positive after subtracting the photo's mean) keeps about half of each photo, so only 28% of photos get a box under the 80% cap and those are large (median 71%): too loose to differ from random. A stricter threshold is untested. Caveat for any proto-based box: it is chosen by similarity to the class prototype and then scored by the same prototype head, so this check favours it.
 - the first pilot's random-crop miss rate (48% of crops under half the box) was measured against near-random boxes, so it does not measure how often crops miss the organism.
 - next: either one more sweep with a stricter threshold for the prototype map (top 20–30% of patches), counted only if it beats the centred crop clearly; or stop and report aimed crops as untested-for-lack-of-a-localiser.
+
+### 2026-10-21 — Anastasia — class IDs follow the taxonomy (no training; `CS604_RUNS/prototypes_336.pt`)
+
+- what: are classes with neighbouring IDs related? Cosine similarity between class prototypes (mean augreg2 feature of each class's 45 training photos at 336, the prototype head's starting rows), by ID distance. All 10,000 classes, CPU, seconds.
+
+| Pair | Mean prototype cosine | Share above the random-pair 95th percentile |
+|---|---:|---:|
+| random classes | 0.280 | 5% (by definition) |
+| 1 ID apart | **0.799** | 84% |
+| 5 IDs apart | 0.704 | 66% |
+| 10 IDs apart | 0.660 | 57% |
+| 100 IDs apart | 0.507 | 27% |
+| 1,000 IDs apart | 0.353 | 9% |
+| 3,000 IDs apart | 0.219 | 3% |
+
+- each class's most similar other class lies within 1 / 5 / 10 / 50 IDs for **24% / 50% / 60% / 77%** of classes (chance 0.02% / 0.10% / 0.20% / 1.0%); median ID distance to the most similar class: **5**. Of each class's 10 most similar classes, 35% lie within 10 IDs (chance 0.2%).
+- results: **class IDs are ordered by relatedness**, smoothly decaying with distance, as in iNaturalist 2021, whose IDs follow the taxonomy (kingdom → … → genus → species). Neighbouring IDs are very likely the same genus. Consistent with a teammate's observation that the model's mistakes are often look-alike relatives. The dataset's sizes also match iNat21: 450,000 + 50,000 = the 500,000-image "train_mini" (50 per class); test 100,000 = iNat21's validation size (10 per class). So models trained on iNat21 (e.g. BioCLIP, iNat21 checkpoints) would likely have seen our training and validation photos: avoid them.
+- caveat: prototypes measure visual similarity under the pretrained backbone, so this shows IDs track visual relatedness; the taxonomic reading rests on iNat21's documented ID order.
