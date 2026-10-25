@@ -300,7 +300,7 @@ def train(cfg, resume_dir=None):
         _, unexpected = model.load_state_dict(ckpt["state_dict"], strict=not ckpt["trainable_only"])
         if unexpected:
             raise ValueError(f"checkpoint has keys this config does not build: {unexpected[:5]}")
-    loss_fn = build_loss(cfg)
+    loss_fn = build_loss(cfg, model)
 
     groups = adamw_param_groups(
         model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get("head_lr"),
