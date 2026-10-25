@@ -618,3 +618,21 @@ Frozen features + linear probe, internal holdout accuracy:
   - **messy class** is mostly *crowded sibling neighbourhoods*, not mislabels: maidenhair ferns 9966 vs 9971, hedgehogs 4746 vs 4745, bees 674 vs 675, frogs 3037 vs 2981, starlings; plus holdout photos with almost no visible subject (a dark frame, an empty ground shot). No clear mislabelled training photo in the sample: label noise does not look like a major cause.
   - **two looks** is real but a minority: ripe yellow vs dried black fruit (9591), adult moth vs hairy caterpillar (1020), museum specimen vs live animal (4813), flowering vs leaf-only plant (6793, 6988).
 - results: the two main problems are **(1) photos showing a part, life stage, season or scale the class's ~40 training photos barely cover** and **(2) look-alike siblings**, overlapping on 16% of errors. Classes with two clear looks in training account for only ~10% of errors, and mislabelled training photos were not evident. More of the dataset helps the first (the full-scale runs train on 45 photos per class, the pilot on 40); better-generalising features (resolution, a stronger backbone) and multi-view prediction (zoom, crops) target it directly; taxonomy-aware smoothing, zoom on the deciding detail and margins between relatives target the second.
+
+### 2026-10-25 — Anastasia — taxonomy-aware label smoothing, pilot scale (`configs/ablation_taxonomy_smoothing.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_taxonomy_smoothing/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_taxonomy_smoothing.ipynb`, `ana-branch`)
+- setup: base LoRA r24 without extras (4.12%); 3 epochs; **the pilot's 1,000 classes are 100 blocks of 10 consecutive class IDs** (`class_block: 10`, pilot root `c1000_h5_s0_b10`), so each class's relatives are trained alongside it as in the full dataset; 40 fit / 5 holdout photos per class; one seed per arm. Only the training target differs (`src/losses.py`, `neighbour_smoothing`). `near5`: prediction within 5 IDs of the label.
+
+| Arm | Smoothing | Top-1 | vs A | near5 | Errors on relatives |
+|---|---|---:|---:|---:|---:|
+| A | 0.1 evenly over all classes (recipe) | **0.8352** | — | 0.9342 | 60% |
+| ID | 0.1 onto the 10 classes within 5 IDs | 0.8338 | −0.14 | 0.9392 | 63% |
+| PROTO | 0.1 onto the 10 most similar prototypes | 0.8338 | −0.14 | 0.9376 | 63% |
+| ID_MIX | 0.05 evenly + 0.05 onto ID neighbours | 0.8348 | −0.04 | 0.9394 | 63% |
+| ID_02 | 0.2 onto ID neighbours | 0.8266 | −0.86 | 0.9366 | 63% |
+
+- **siblings are the main difficulty once they are present**: the same recipe scores **0.835 on this block subset vs 0.898 on the random 1,000-class subset** (−6.3 points), and **60% of its errors land within 5 IDs** of the truth (18% on the random subset, where each class has ~1 relative in the pilot). The random-class pilots understate sibling confusion; at full scale, where every class has all its relatives, it is likely the dominant error type.
+- **taxonomy-aware smoothing does not improve top-1**: the three 0.1 arms tie with A (within ~0.5 points of seed noise), and doubling it (ID_02) loses 0.86. As expected from Bertinetto et al. (CVPR 2020, *Making Better Mistakes*), mistakes become slightly milder (near5 +0.3 to +0.5) without more correct answers: teaching that siblings are close does not help tell them apart, and more of it hurts. ID order and prototype similarity behave the same.
+- val_loss is not comparable across arms (different targets).
+- next: not promoted to a full run. The opposite direction, pushing relatives apart (an extra margin or harder weighting on neighbouring classes), targets the sibling problem directly and is untested.
