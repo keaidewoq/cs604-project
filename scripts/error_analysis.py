@@ -44,7 +44,7 @@ if str(ROOT) not in sys.path:
 from src.data import ImageListDataset, build_transforms
 from src.model import build_model
 from src.predict import load_checkpoint
-from src.utils import apply_overrides, get_device, load_config
+from src.utils import apply_overrides, get_device, load_config, set_seed
 
 TOPK = 10
 NEAR = 5
@@ -66,6 +66,7 @@ def score(run_dir, pilot_root, batch_size, workers, crop_pct):
     cfg = load_config(run_dir / "config.yaml")
     apply_overrides(cfg, data_root=str(pilot_root), batch_size=batch_size, num_workers=workers)
     device = get_device()
+    set_seed(int(cfg.seed))  # as src.train does: same frozen weights if the backbone is not pretrained
     model = build_model(cfg).to(device)
     ckpt = run_dir / "last.pt"
     load_checkpoint(model, ckpt, device)

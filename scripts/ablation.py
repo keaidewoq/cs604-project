@@ -15,7 +15,9 @@ minutes that arm used (it must run first), for comparisons at equal compute.
 String values may contain `{out_dir}` (this spec's results folder), for files that
 a step between runs writes there (scripts/select_params.py).
 Writes <output_dir>/ablation_<spec>/ablation.csv and ablation_summary.json.
-Rerunning with the same spec skips arms that already finished.
+Rerunning with the same spec skips arms that already finished, and resumes an arm whose
+training was interrupted (each arm trains in runs/<arm>/; `src.train --resume` continues
+from the last finished epoch with the remaining time budget).
 """
 
 from __future__ import annotations
@@ -41,10 +43,10 @@ from src.utils import Config, load_config, save_config
 ENV = {**os.environ, "PYTHONPATH": str(ROOT)}
 
 
-def run(cmd, log_path):
+def run(cmd, log_path, append=False):
     """Run a subprocess, stream its output, keep a copy in log_path; return the output."""
     lines = []
-    with open(log_path, "w", encoding="utf-8") as log:
+    with open(log_path, "a" if append else "w", encoding="utf-8") as log:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                 text=True, bufsize=1, env=ENV, cwd=ROOT)
         for line in proc.stdout:
@@ -54,6 +56,21 @@ def run(cmd, log_path):
         if proc.wait() != 0:
             raise SystemExit(f"failed (exit {proc.returncode}): {' '.join(map(str, cmd))}; log: {log_path}")
     return "".join(lines)
+
+
+def interrupted_run(arm_runs):
+    """(run_dir, state) of an arm's latest run with a checkpoint: state is "finished",
+    "resumable" or None (saved before resume support); (None, None) if there is none."""
+    ckpts = sorted(arm_runs.glob("*/last.pt")) if arm_runs.is_dir() else []
+    if not ckpts:
+        return None, None
+    import torch
+
+    ckpt = torch.load(ckpts[-1], map_location="cpu", weights_only=False)
+    resume = ckpt.get("resume")
+    if resume is None:
+        return ckpts[-1].parent, None
+    return ckpts[-1].parent, "finished" if resume.get("finished") else "resumable"
 
 
 def clean_prototypes(base_cfg, pilot_root, out_dir, base_prototypes):
@@ -158,12 +175,24 @@ def main():
             continue
         cfg = Config({**base_d, **run_overrides, **resolve_matches(overrides, out_dir / "arms"), **heads})
         cfg_path = out_dir / "arms" / f"{name}.yaml"
-        save_config(cfg, cfg_path)
+        log_path = out_dir / "arms" / f"{name}.log"
+        arm_runs = out_dir / "runs" / name
+        previous, state = interrupted_run(arm_runs)
         print(f"\n[ablation] ===== {name}: {overrides or 'no change'}")
-        text = run([sys.executable, "-u", "-m", "src.train", "--config", str(cfg_path),
-                    "--data_root", str(pilot_root), "--output_dir", str(out_dir / "runs")],
-                   out_dir / "arms" / f"{name}.log")
-        run_dir = re.findall(r"\[train\] run_dir=(\S+)", text)[-1]
+        if state == "resumable":
+            print(f"[ablation] {name}: resuming {previous}")
+            text = run([sys.executable, "-u", "-m", "src.train", "--resume", str(previous),
+                        "--data_root", str(pilot_root)], log_path, append=True)
+            run_dir = str(previous)
+        elif state == "finished":
+            print(f"[ablation] {name}: training already finished in {previous}, summarising")
+            text = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
+            run_dir = str(previous)
+        else:
+            save_config(cfg, cfg_path)
+            text = run([sys.executable, "-u", "-m", "src.train", "--config", str(cfg_path),
+                        "--data_root", str(pilot_root), "--output_dir", str(arm_runs)], log_path)
+            run_dir = re.findall(r"\[train\] run_dir=(\S+)", text)[-1]
         row = summarise_run(run_dir, {"arm": name, "changes": json.dumps(overrides or {})})
         row["backbone_pct"] = backbone_pct(text)
         row["training_min"] = float(read_run_stats(run_dir).get("training_minutes", "nan"))

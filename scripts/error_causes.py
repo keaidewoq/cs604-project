@@ -46,7 +46,7 @@ if str(ROOT) not in sys.path:
 from src.data import ImageListDataset, build_transforms
 from src.model import build_model
 from src.predict import load_checkpoint
-from src.utils import apply_overrides, get_device, load_config
+from src.utils import apply_overrides, get_device, load_config, set_seed
 
 CAUSES = ["sibling", "unseen_look", "two_looks", "messy_class"]
 
@@ -131,6 +131,7 @@ def main():
     cfg = load_config(Path(args.run_dir) / "config.yaml")
     apply_overrides(cfg, data_root=args.pilot_root, batch_size=args.batch_size, num_workers=args.workers)
     device = get_device()
+    set_seed(int(cfg.seed))  # as src.train does: same frozen weights if the backbone is not pretrained
     model = build_model(cfg).to(device)
     load_checkpoint(model, Path(args.run_dir) / "last.pt", device)
     model.eval()
