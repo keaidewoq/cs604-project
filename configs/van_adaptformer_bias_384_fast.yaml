@@ -1,0 +1,19 @@
+# Van's AdaptFormer (Task 2) + trainable biases and LayerNorm weights at 384 px:
+# van_adaptformer_bias_fast.yaml with img_size 384 and 384 prototypes. Nothing else changes
+# (adapters width 192, CosFace 0.1, lr 1e-3, head lr 4e-3, batch 128 x 2, speed options).
+# Backbone trainable share is unchanged (adapters do not depend on the resolution; the
+# position embedding stays frozen): about 4.27%, under the 5% limit.
+#
+# Why: on Van's laptop screen at equal compute (2026-10-16; 10 images/class, same time budget
+# per arm, fixed 5/class holdout), 384 beat 336 by +1.55 at crop 0.9 (61.18 vs 59.63%) and
+# +1.09 at crop 0.75, with 6.7 vs 9.4 epochs. The same screen predicted full FT's 384 gain
+# well (+0.86 screen, +1.0 CodaBench).
+#
+# Cost: ~1.4x per training image of 336 (laptop 127 vs 186 img/s), so expect about 8 epochs
+# in 144 minutes instead of ~11.9. Peak memory about 1.3x 336 (fits 40 GB).
+#
+# Colab: METHOD = "van_adaptformer_bias_384_fast", PROTO_PT = f"{DRIVE_OUT}/prototypes_384.pt",
+# TTA_CROP = 0.75.
+inherits: van_adaptformer_bias_fast.yaml
+img_size: 384
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_384.pt

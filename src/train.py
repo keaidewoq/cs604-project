@@ -211,14 +211,22 @@ def train(cfg):
     model = build_model(cfg).to(device)
     load_prototypes(cfg, model)
     load_probe_head(cfg, model)
-    loss_fn = build_loss(cfg)
+    loss_fn = build_loss(cfg, model)
 
     groups = adamw_param_groups(
         model, float(cfg.weight_decay), float(cfg.lr), head_lr=cfg.get("head_lr"),
         layer_decay=cfg.get("layer_decay"),
         prompt_lr=cfg.get("prompt_lr"),
     )
-    optimizer = AdamW(groups, lr=float(cfg.lr))
+    # Opt-in (Van): fused CUDA AdamW kernel, same update rule; off keeps the default kernel.
+    adamw_kwargs = {"fused": True} if bool(cfg.get("fused_adamw", False)) else {}
+    optimizer = AdamW(groups, lr=float(cfg.lr), **adamw_kwargs)
+    # Opt-in (Van): torch.compile for the training forward/backward only. `model` stays
+    # the plain module, so checkpoints, evaluation and PCA init are unchanged. Compiling
+    # happens in the first training steps, so its time counts against the time limit.
+    train_model = torch.compile(model) if bool(cfg.get("torch_compile", False)) else model
+    if adamw_kwargs or train_model is not model:
+        print(f"[train] fused_adamw={bool(adamw_kwargs)} torch_compile={train_model is not model}")
 
     accum = max(int(cfg.grad_accum_steps), 1)
     steps_per_epoch = math.ceil(len(loaders["train"]) / accum)
@@ -293,6 +301,22 @@ def train(cfg):
     best_acc = -1.0
     global_step = 0
     training_seconds = 0.0
+    if str(cfg.get("adapter_init", "lora")) == "pca":
+        # Opt-in (Van, method van_adaptformer): data-driven adapter init. Its time counts
+        # as training time, so it comes out of the time limit.
+        from src.peft.van_adaptformer import calibrate_adapters_pca
+
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        pca_start = time.monotonic()
+        n_pca = int(cfg.get("adapter_init_batches", 16))
+        pca = calibrate_adapters_pca(
+            model, (images for _, (images, _, _) in zip(range(n_pca), loaders["train"])),
+            device, use_bf16,
+        )
+        training_seconds = time.monotonic() - pca_start
+        print(f"[van_adaptformer] pca init: {n_pca} batches, {training_seconds:.1f}s, variance "
+              "explained per block " + " ".join(f"{v:.2f}" for v in pca["variance_explained"]))
     time_limit_reached = False
     if max_train_seconds is not None:
         print(f"[train] training-only time limit={max_train_minutes} minutes")
@@ -325,7 +349,7 @@ def train(cfg):
                 images = images.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
                 with amp_context(device, use_bf16):
-                    logits = model(images)
+                    logits = train_model(images)
                     loss = loss_fn(logits, labels)
                 (loss / accum).backward()
 

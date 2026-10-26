@@ -1,4 +1,5 @@
-"""Van's prediction-time "look, then zoom in" view (entry point: ``scripts/predict_zoom.py``).
+"""Van's prediction-time "look, then zoom in" view (opt-in: ``src.predict --zoom``;
+also used by ``scripts/predict_zoom.py``).
 
 The image is classified as usual. A class-matched saliency map then picks where the
 model found its evidence: the cosine between each final patch token and the

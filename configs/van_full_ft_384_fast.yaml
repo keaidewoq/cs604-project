@@ -1,0 +1,16 @@
+# Van's full FT at 384: van_full_ft_336_fast.yaml with img_size 384 and 384 prototypes. Nothing
+# else changes (same lr, layer decay, regularization, effective batch 256, speed options).
+#
+# Why: on Van's laptop screen at equal compute (2026-10-15/16; 10 images/class, 0.48 x 48 GB-hours,
+# fixed 5/class holdout), 384 beat 336 by +0.86 at crop 0.9 (64.06 vs 63.20%) and +0.42 at crop
+# 0.75, with 30% fewer epochs; progressive 224 -> 384 lost 4.3 points. Single seed, so this run
+# is the confirmation on CodaBench against the 336 full FT (0.807 plain).
+#
+# Cost: ~1.4x per training image of 336 on the laptop (108 vs 152 img/s), so expect about 7.5
+# epochs in 144 minutes instead of ~10.5. Peak memory about 1.4x 336 at batch 128 (fits 40 GB).
+#
+# Colab: METHOD = "van_full_ft_384_fast", PROTO_PT = f"{DRIVE_OUT}/prototypes_384.pt",
+# TTA_CROP = 0.75.
+inherits: van_full_ft_336_fast.yaml
+img_size: 384
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_384.pt
