@@ -8,3 +8,4 @@
 # (scripts/latency_merged.py).
 inherits: lora_r24_336_recipe.yaml
 lora_dora: true
+save_resume_state: true   # last.pt also keeps optimizer/schedule state, so a crashed run can resume (src.train --resume)

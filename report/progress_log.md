@@ -695,3 +695,26 @@ Frozen features + linear probe, internal holdout accuracy:
 - val acc (CodaBench), same pass: **0.8407 zoom + kNN** vs **0.8322 zoom only**: **+0.85 points** on top of Van's best result without balancing; the zoom-only file reproduces her 0.832 (ID 1004167). F1 macro 0.8381 vs 0.8292; precision 0.8585 vs 0.8503. **Team best without class-count balancing** (balancing: 0.845, pending the Prof).
 - the gain is smaller than on Ana's LoRA at 336 (+1.40 without zoom): zoom already fixes some of the same near misses, the model is stronger (fewer errors left to fix), and beta was not tuned for zoom-averaged scores at 448. The beta 10 / 40 files from the same pass were not submitted.
 - cost: no training; at prediction the bank (450,000 × 768, ~0.7 GB fp16, built once, ~25–30 min at 448) and the re-ranking step (well under 0.1 ms per photo) on top of the two zoom forward passes.
+
+### 2026-10-27 — Anastasia — which re-ranker is best? (no training of the model; `scripts/rerank_bakeoff.py`)
+
+- run_dir: `CS604_RUNS/rerank_bakeoff/` (`bakeoff.csv`, `bakeoff.json`, `linear_reranker.json`; launcher `notebooks/colab_launcher_ana_rerank_bakeoff.ipynb`, `ana-branch`); 17.7 min after the data download.
+- setup: the all-class holdout checkpoint (LoRA r24 no extras, 144 min on 40 photos per class of all 10,000 classes) on its 50,000 held-out photos; bank = its 400,000 training photos. Candidates = the model's top 5, from the plain view and from Van's zoom (crop 0.75 for both views). Every re-ranker chooses its setting (or is trained) on one half of the holdout classes and is scored on the other, then swapped. "+ balancing" = Van's class-count balancing (`src/van_balance.py`, ported unchanged; Sinkhorn to 5 photos per class) applied to the re-ranker's candidate scores.
+
+| Re-ranker (added to log p) | plain: acc (gain) | + balancing | zoom: acc (gain) | + balancing |
+|---|---:|---:|---:|---:|
+| model top-1 | 0.7831 | 0.7960 (+1.29) | 0.7904 | 0.8034 (+1.30) |
+| balancing alone (Van, top-100) | 0.7979 (+1.48) | | 0.8058 (+1.54) | |
+| **knn_mean3** (current: 3 best matches, beta 20) | **0.7963 (+1.32)** | **0.8093** | **0.8027 (+1.23)** | **0.8146** |
+| knn_max (best match) | 0.7949 (+1.18) | 0.8060 | 0.8007 (+1.02) | 0.8122 |
+| vote (weighted kNN over the whole bank) | 0.7945 (+1.14) | 0.8027 | 0.8007 (+1.03) | 0.8099 |
+| centres3 (3 k-means centres per class) | 0.7901 (+0.70) | 0.8020 | 0.7974 (+0.69) | 0.8089 |
+| ncm (class mean) | 0.7886 (+0.55) | 0.8008 | 0.7953 (+0.49) | 0.8087 |
+| knn_meanall (mean over all class photos) | 0.7844 (+0.13) | 0.7983 | 0.7917 (+0.13) | 0.8069 |
+| learned linear (all 12 signals) | 0.8040 (+2.09) | 0.8121 | 0.8047 (+1.43) | 0.8141 |
+| learned trees (same signals) | 0.7980 (+1.49) | 0.8107 | 0.7994 (+0.90) | 0.8126 |
+
+- **knn_mean3 (the current method) is the best of the hand-made re-rankers** on both views, with beta = 20 chosen independently on both halves every time, confirming the CodaBench settings. Matching individual training photos beats matching class averages (ncm, centres3, meanall: +0.1 to +0.7): the useful signal is "this photo closely resembles some training photo of the class", not the class's typical look.
+- **the learned linear re-ranker adds little once zoom is used**: on the zoom view it beats knn_mean3 by +0.20 (+0.16 / +0.23 on the two halves). Its larger gain on the plain view (+2.09) mostly comes from also reading the zoom view's log p (weight 1.71, the largest), i.e. it learns zoom + kNN; it lands where zoom + knn_mean3 does (0.8040 vs 0.8027). Its weights (standardised) put most on knn_mean3 (1.10) and knn_max (0.82), then centres3 (0.40), ncm (0.27), class spread (0.25, a boost for classes with varied photos), vote (0.21); knn_meanall, rank and sibling flag ≈ 0. Trees are worse than linear (fewer fixes, overfit-prone).
+- **balancing stacks with re-ranking**: on top of zoom + knn_mean3 it adds +1.19 (alone +1.54), giving the best result, **0.8146** (zoom + knn_mean3 + balancing), tied with zoom + learned linear + balancing (0.8141). Re-ranking and balancing fix mostly different errors.
+- decision: keep **zoom + knn_mean3** (simple, no learned component, transfers across checkpoints, CodaBench +0.85 / +1.40 already), and add **balancing** on top if the Prof allows it (holdout: +1.2 more). The learned linear re-ranker is not worth its extra complexity and transfer risk for +0.2.

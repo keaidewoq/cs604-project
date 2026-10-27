@@ -15,3 +15,4 @@ inherits: lora_r24_336_recipe.yaml
 method: selected
 sparse_mask_file: /content/drive/MyDrive/CS604_RUNS/gps_336/gps_mask_k42.pt
 unfreeze_lr: 1.0e-4     # the sparse pretrained entries; lr 3e-4 stays for the extras
+save_resume_state: true   # last.pt also keeps optimizer/schedule state, so a crashed run can resume (src.train --resume)

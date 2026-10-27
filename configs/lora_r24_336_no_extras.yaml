@@ -6,3 +6,4 @@
 # Launcher: notebooks/colab_launcher_ana_fullcheck.ipynb (METHOD = "lora_r24_336_no_extras").
 inherits: lora_r24_336_recipe.yaml
 unfreeze_extra: []
+save_resume_state: true   # last.pt also keeps optimizer/schedule state, so a crashed run can resume (src.train --resume)

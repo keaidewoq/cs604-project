@@ -409,7 +409,7 @@ def train(cfg, resume_dir=None):
     start_epoch = 1
     prior_wall_s = 0.0
     prior_peak_vram_gb = 0.0
-    save_resume = bool(cfg.get("save_resume_state", True))
+    save_resume = bool(cfg.get("save_resume_state", False))  # opt-in: optimizer state makes last.pt ~3x larger for full FT
     if ckpt is not None:
         r = ckpt["resume"]
         best_acc = r["best_acc"]
