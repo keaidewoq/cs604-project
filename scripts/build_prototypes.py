@@ -51,6 +51,9 @@ def main():
     parser.add_argument("--data_root", default=None)
     parser.add_argument("--per_class", type=int, default=None, help="Max train images per class")
     parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--base_prototypes", default=None,
+                        help="Existing prototypes.pt; classes with no images here keep their rows from it "
+                             "(rebuild only a class subset, e.g. without a pilot holdout)")
     args = parser.parse_args()
 
     cfg = load_config(ROOT / args.config if not Path(args.config).is_absolute() else args.config)
@@ -94,10 +97,23 @@ def main():
         sums.index_add_(0, labels, feats)
         counts.index_add_(0, labels, torch.ones_like(labels, dtype=torch.float32))
 
-    empty = int((counts == 0).sum())
+    empty_mask = counts == 0
+    empty = int(empty_mask.sum())
+    if empty and not args.base_prototypes:
+        raise RuntimeError(f"{empty} classes have no images; check train.txt (or pass --base_prototypes)")
+    prototypes = F.normalize(sums / counts.clamp(min=1)[:, None], dim=1).cpu()
     if empty:
-        raise RuntimeError(f"{empty} classes have no images; check train.txt")
-    prototypes = F.normalize(sums / counts[:, None], dim=1).cpu()
+        base = torch.load(args.base_prototypes, map_location="cpu", weights_only=False)
+        if isinstance(base, dict):
+            built = base.get("model_name")
+            if built and built != cfg.model_name:
+                raise ValueError(f"Base prototypes were built with {built}, not {cfg.model_name}")
+            base = base["prototypes"]
+        if tuple(base.shape) != tuple(prototypes.shape):
+            raise ValueError(f"Base prototypes shape {tuple(base.shape)} != {tuple(prototypes.shape)}")
+        keep = empty_mask.cpu()
+        prototypes[keep] = F.normalize(base[keep].float(), dim=1)
+        print(f"[prototypes] rebuilt {n_cls - empty} classes; kept {empty} rows from {args.base_prototypes}")
 
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -115,7 +131,8 @@ def main():
         "img_size": int(cfg.img_size),
         "train_images": len(samples),
         "classes": n_cls,
-        "empty_classes": 0,
+        "empty_classes": empty,
+        "base_prototypes": args.base_prototypes,
         "output": str(out),
     }
     out.with_suffix(".json").write_text(json.dumps(summary, indent=2), encoding="utf-8")

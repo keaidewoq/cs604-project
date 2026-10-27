@@ -1,29 +1,45 @@
-"""AdaptFormer: bottleneck *parallel* to the FFN (not implemented yet).
+"""AdaptFormer (Chen et al., NeurIPS 2022): a parallel bottleneck beside each MLP.
 
-Where the bottleneck goes
--------------------------
-Unlike Houlsby adapters, AdaptFormer does **not** touch the attention path.
-A bottleneck sits beside the FFN and is added with a scale `s`:
+    x = x + mlp(norm2(x))  ->  x = x + mlp(norm2(x)) + s * up(act(down(norm2(x))))
 
-    y = FFN(x) + s * Adapter(x)
+The adapter shares the MLP's input (the output of norm2), following the paper's
+AdaptMLP equation. `up` is zero-initialised, so training starts from the
+pretrained model. The adapter is attached with a forward hook and registered as
+`block.adaptformer`, so pretrained parameter names stay unchanged.
 
-Adapter is down-project (hidden -> adapter_dim) -> ReLU -> up-project
-(adapter_dim -> hidden). `adapter_dim` and `adaptformer_scale` come from
-configs/adaptformer.yaml.
+Config keys:
+    adapter_dim         bottleneck width (default 64)
+    adaptformer_scale   scale s on the adapter branch (default 0.1, as in the paper)
+    adapter_dropout     dropout inside the bottleneck (default 0.0)
+    adapter_blocks      "all" or a list of block indices
 
-Implementation sketch
----------------------
-1. Write the parallel bottleneck module.
-2. Replace or wrap `block.mlp` so the forward adds the scaled adapter output.
-3. Freeze the backbone (already done in `apply_method`) and leave adapter
-   parameters + the classification head trainable.
+Params per adapter: 2 * dim * width + width + dim. ViT-B, width 64, all 12 blocks:
+12 x 99,136 = 1.19M (~1.4% of the backbone; head excluded).
 """
 
 from __future__ import annotations
 
+from src.peft.adapter import Bottleneck, mark_trainable, select_blocks
+
+
+def _parallel_hook(adapter, scale):
+    # Forward hook on the MLP: inputs[0] is norm2(x), so this adds s * adapter(norm2(x)).
+    def hook(module, inputs, out):
+        return out + scale * adapter(inputs[0])
+
+    return hook
+
 
 def apply_adaptformer(model, cfg):
-    raise NotImplementedError(
-        "AdaptFormer is not implemented. Add a scaled bottleneck in parallel "
-        "with the FFN in each block (see this module's docstring)."
-    )
+    dim = model.embed_dim
+    width = int(cfg.get("adapter_dim", 64))
+    scale = float(cfg.get("adaptformer_scale", 0.1))
+    dropout = float(cfg.get("adapter_dropout", 0.0))
+    added = []
+    for _, block in select_blocks(model, cfg, "adapter_blocks"):
+        block.adaptformer = Bottleneck(dim, width, dropout)
+        block.mlp.register_forward_hook(_parallel_hook(block.adaptformer, scale))
+        added.append(block.adaptformer)
+    n = mark_trainable(added)
+    print(f"[adaptformer] {len(added)} parallel adapters, width {width}, scale {scale}: {n:,} params")
+    return model

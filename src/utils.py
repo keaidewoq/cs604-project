@@ -91,7 +91,7 @@ def set_seed(seed):
 def count_parameters(model):
     """Return (trainable, total, percent_trainable)."""
     total = sum(p.numel() for p in model.parameters())
-    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    trainable = sum(getattr(p, "_trainable_count", p.numel()) for p in model.parameters() if p.requires_grad)
     pct = 100.0 * trainable / total if total else 0.0
     return trainable, total, pct
 

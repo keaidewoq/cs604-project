@@ -1,0 +1,18 @@
+# Full-scale check of pilot arm G_gps_k42 (configs/ablation_param_selection.yaml): GPS
+# (Zhang et al., CVPR 2024) at the LoRA r24 budget, no LoRA.
+# For every output neuron of every block Linear (and the patch embedding), only the top-42
+# input connections by gradient magnitude train; all other entries stay at their pretrained
+# values. Plus the recipe's extras (norms, biases, pos_embed, cls_token).
+# Pilot: 0.8944 vs LoRA 0.8984 (-0.52) at 4.63%; 20.4 GB peak VRAM, no speed-up (full
+# gradients are computed, then masked). The arm closest to full FT, and full FT is where
+# the pilot's ranking failed (pilot -0.4 vs LoRA, full scale +2.2), so this is the arm most
+# likely to rank differently at full scale.
+# The mask is computed on the full training set first (launcher step 4c, written once to
+# CS604_RUNS/gps_336/gps_mask_k42.pt). unfreeze_lr 1e-4 is the pilot's value, not swept.
+# Trainable backbone: ~3.98M / 85.99M = 4.63% (head excluded; only masked entries count).
+# Launcher: notebooks/colab_launcher_ana_fullcheck.ipynb (METHOD = "gps_k42_336").
+inherits: lora_r24_336_recipe.yaml
+method: selected
+sparse_mask_file: /content/drive/MyDrive/CS604_RUNS/gps_336/gps_mask_k42.pt
+unfreeze_lr: 1.0e-4     # the sparse pretrained entries; lr 3e-4 stays for the extras
+save_resume_state: true   # last.pt also keeps optimizer/schedule state, so a crashed run can resume (src.train --resume)

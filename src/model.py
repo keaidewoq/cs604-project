@@ -7,6 +7,7 @@ import torch.nn as nn
 
 from src.heads import replace_head
 from src.peft import build_peft
+from src.peft.selected import apply_sparse_mask, resolve_unfreeze_modules, unfreeze_modules
 from src.utils import PEFT_METHODS, format_params
 
 EXTRA_PARTS = ("norm", "bias", "pos_embed", "cls_token")
@@ -20,25 +21,45 @@ def _unfreeze_head(model):
         param.requires_grad = True
 
 
-def _unfreeze_extra(model, parts):
+def _below_block(name, start, keep_embed=False):
+    """True if parameter/module `name` sits before block `start` (embeddings count as before 0).
+
+    keep_embed (`keep_embed_trainable`): pos_embed and cls_token do not count as before,
+    so they can still train (backward then runs through every block: no speed-up).
+    """
+    if start <= 0:
+        return False
+    if keep_embed and name in ("pos_embed", "cls_token"):
+        return False
+    if name.startswith("blocks."):
+        return int(name.split(".")[1]) < start
+    return name.startswith(("patch_embed", "pos_embed", "cls_token", "reg_token", "norm_pre"))
+
+
+def _unfreeze_extra(model, parts, start=0, keep_embed=False):
     """Also train small backbone pieces next to a PEFT method (`unfreeze_extra`).
 
     norm: LayerNorm weights and biases; bias: biases of every Linear / conv
     (BitFit-style); pos_embed, cls_token: the learned embeddings. These are
     flagged `_no_weight_decay`, so AdamW does not pull pretrained values to 0.
+    With `start` (first_trainable_block) > 0, pieces before that block stay frozen,
+    including pos_embed and cls_token (unless keep_embed), so backward can stop at block `start`.
     """
     unknown = [p for p in parts if p not in EXTRA_PARTS]
     if unknown:
         raise ValueError(f"Unknown unfreeze_extra {unknown}; choose from {list(EXTRA_PARTS)}")
     head_ids = {id(p) for p in model.get_classifier().parameters()}
     picked = []
-    for module in model.modules():
+    for name, module in model.named_modules():
+        if _below_block(name, start):
+            continue
         if "norm" in parts and isinstance(module, nn.LayerNorm):
             picked.extend(p for p in module.parameters(recurse=False))
         if "bias" in parts and isinstance(module, (nn.Linear, nn.Conv2d)) and module.bias is not None:
             picked.append(module.bias)
     for name in ("pos_embed", "cls_token"):
-        if name in parts and isinstance(getattr(model, name, None), nn.Parameter):
+        if name in parts and isinstance(getattr(model, name, None), nn.Parameter) \
+                and not _below_block(name, start, keep_embed):
             picked.append(getattr(model, name))
     n = 0
     for param in picked:
@@ -47,7 +68,21 @@ def _unfreeze_extra(model, parts):
         param.requires_grad = True
         param._no_weight_decay = True
         n += param.numel()
-    print(f"[unfreeze_extra] {', '.join(parts)}: {n:,} params")
+    kept = ""
+    if start > 0:
+        kept = f" (blocks {start}+ only; embeddings {'trainable' if keep_embed else 'frozen'})"
+    print(f"[unfreeze_extra] {', '.join(parts)}: {n:,} params{kept}")
+
+
+def _check_frozen_below(model, start, keep_embed=False):
+    """With first_trainable_block > 0, nothing before that block may train, or backward runs through it anyway."""
+    leaks = [name for name, p in model.named_parameters() if p.requires_grad and _below_block(name, start, keep_embed)]
+    if leaks:
+        raise ValueError(f"first_trainable_block={start} but these still train: {leaks[:5]}")
+    if keep_embed:
+        print(f"[frozen] blocks 0-{start - 1} frozen; pos_embed/cls_token train, so backward runs through every block")
+    else:
+        print(f"[frozen] embeddings and blocks 0-{start - 1} frozen; backward stops at block {start}")
 
 
 def _backbone_params(model):
@@ -62,7 +97,8 @@ def log_backbone_trainable(model, base_total):
     the pretrained model itself (how the brief reports e.g. LoRA = 0.34%).
     """
     total = base_total
-    trainable = sum(p.numel() for p in _backbone_params(model) if p.requires_grad)
+    # sparse (GPS) weights count only their masked entries
+    trainable = sum(getattr(p, "_trainable_count", p.numel()) for p in _backbone_params(model) if p.requires_grad)
     pct = 100.0 * trainable / total if total else 0.0
     print(f"[params] backbone trainable {format_params(trainable)}/{format_params(total)} ({pct:.2f}%, head excluded)")
     return trainable, total, pct
@@ -90,8 +126,17 @@ def apply_method(model, cfg):
             from src.peft.vpt import apply_vpt
 
             model = apply_vpt(model, cfg)
+        start = int(cfg.get("first_trainable_block", 0))
+        keep_embed = bool(cfg.get("keep_embed_trainable", False))
         if cfg.get("unfreeze_extra"):
-            _unfreeze_extra(model, list(cfg.unfreeze_extra))
+            _unfreeze_extra(model, list(cfg.unfreeze_extra), start, keep_embed)
+        names = resolve_unfreeze_modules(cfg)
+        if names:
+            unfreeze_modules(model, names)
+        if cfg.get("sparse_mask_file"):
+            apply_sparse_mask(model, cfg.sparse_mask_file)
+        if start > 0:
+            _check_frozen_below(model, start, keep_embed)
         trainable, total, pct = log_backbone_trainable(model, base_total)
         model.adaptation_stats = {
             "adaptation_parameters": trainable,
@@ -112,6 +157,10 @@ def build_model(cfg):
     extra = {}
     if cfg.get("drop_path_rate"):
         extra["drop_path_rate"] = float(cfg.drop_path_rate)
+    # Progressive resizing trains some epochs below img_size; timm then resamples
+    # pos_embed on the fly (a no-op at img_size, so eval and latency are unchanged).
+    if cfg.get("low_res_size"):
+        extra["dynamic_img_size"] = True
     model = timm.create_model(
         cfg.model_name,
         pretrained=bool(cfg.get("pretrained", True)),

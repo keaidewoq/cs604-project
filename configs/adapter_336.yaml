@@ -1,0 +1,18 @@
+# Serial bottleneck adapters (Houlsby) at 336, with an lr pilot sweep.
+# Select in the launcher with METHOD = "adapter_336".
+# Adapter params: 24 x 99,136 = 2.38M (~2.8% of backbone; head excluded).
+inherits: adapter.yaml     # method: adapter, adapter_dim: 64, lr: 1e-3
+img_size: 336
+adapter_dim: 64
+lr: 1.0e-3                 # replaced by the pilot's choice in best_config.yaml
+epochs: 7                  # upper bound; the launcher lowers it to fit the time budget
+warmup: 0.3                # epochs, ~5% of the run
+
+pilot:
+  num_classes_subset: 1000
+  holdout_per_class: 5
+  tie_tolerance: 0.003
+  sweep:
+    lr: [3.0e-4, 1.0e-3, 3.0e-3]
+  epochs: 3
+  warmup: 0.15

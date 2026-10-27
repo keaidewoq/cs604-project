@@ -14,6 +14,16 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - next:
 ```
 
+### 2026-10-06 — Van — full FT recipe tuned on a laptop (`configs/van_full_ft_proto_llrd.yaml`)
+
+- run_dir: laptop screens in Van's own pipeline (RTX 5080 laptop); the Colab run of this config (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` at f5d654a) is under `CS604_RUNS`, folder name TBC
+- val acc (ours / CodaBench): internal holdout (5 training images/class held out, trained on the other 40) **72.98%** after 3 epochs, **73.97%** after 6 / **CodaBench 0.757** (ID 963899, 2026-10-06; all 45 images/class, 144 training minutes, plain center crop 0.9, no test-time augmentation)
+- trainable % / peak VRAM / GPU-hours: 100% / 5.8 GB at batch 64 / 6 epochs = 2.1 laptop hours (about 0.7 of the 48 GB-hour budget)
+- what changed vs `full_ft_proto.yaml`: prototype-initialized **cosine** head; backbone lr 4e-4 with **layer-wise lr decay 0.75** (block i gets lr x 0.75^(12 - i)); head lr 4e-3; 5% warmup then cosine to zero **fitted to the time limit**; label smoothing 0.1; drop_path 0.1; gradient clipping 1.0; batch 256.
+- findings (one change at a time, 3 epochs): without layer decay 63.1% (vs 69.8%); head lr 10x the backbone +1.5 points; prototype start beats first training a linear probe (LP-FT) by 1.6–2.0 points; crop scale, colour jitter and head lr 30x no difference; seed-to-seed spread 0.33 points.
+- trainer additions (all off by default, so existing configs run exactly as before): `layer_decay`, `drop_path_rate`, `clip_grad_norm`, `schedule_fit_time` (with `max_train_minutes`, the cosine reaches zero at the time limit instead of being cut off mid-decay).
+- next: fill in epochs reached, peak VRAM, GPU-hours and latency from the run folder. Re-predict the same `last.pt` with a center crop of 0.7 plus flip averaging (`--crop_pct 0.7 --tta_flip`), which added +1.5 to +1.9 points on the internal holdout; no retraining needed.
+
 ## Carry-overs (from other branches; not rerun in this trainer yet)
 
 ### Qian — full FT CodaBench (`qq_branch`)
@@ -264,6 +274,84 @@ Frozen features + linear probe, internal holdout accuracy:
 - cost: fastest training of all 336 runs: **~951 s/epoch (~473 img/s)** vs 1,017 s full FT and 1,272 s LoRA; lowest peak VRAM (15.54 vs 20.05 GB full FT). Adapters cannot be merged into the weights: latency **11.60 ms/image at batch 1 (+46% vs full FT's 7.94)**, 0.73 ms/image at batch 64 (+15%). LoRA, once merged, has no extra latency (7.68 ms), so Adapter is cheaper to train but slower to run.
 - next: AdaptFormer covered by Van's run (0.779 / 0.790, 4.13%). Try Van's CosFace margin (0.1) on LoRA r24; measure merged-LoRA latency.
 
+### 2026-10-12 — Anastasia — LoRA r24 recipe ablation + DoRA, pilot scale (`configs/ablation_lora_r24.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_lora_r24/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_ablation.ipynb`, `ana-branch`); arms A–F on 2026-10-11, G–I on 2026-10-12
+- setup: one change at a time from `lora_r24_336_recipe.yaml`; 1,000-class pilot subset (seed 0), 40 fit images/class, 3 epochs (5% warmup + cosine), scored on a labelled 5/class holdout; one seed per arm. Both starting heads rebuilt from the fit images only (pilot-class prototypes recomputed; linear probe trained on the same images), so no head has seen the holdout. Not ablated: batch 256 and weight decay 0.05 (kept in all arms).
+
+| Arm | Change | Holdout top-1 | vs A (points) | Backbone trainable | Pilot min |
+|---|---|---:|---:|---:|---:|
+| A | full recipe | **0.8984** | — | 4.65% | 6.3 |
+| B | no norms / biases / pos_embed / cls_token | 0.8970 | −0.14 | 4.12% | 5.9 |
+| C | rank 16 instead of 24 | 0.8918 | −0.66 | 3.28% | 6.3 |
+| D | linear head from a linear probe (LP-FT) | 0.8692 | −2.92 | 4.65% | 6.3 |
+| E | head lr 1e-4 instead of 3e-3 | 0.8370 | −6.14 | 4.65% | 6.3 |
+| F | B + C + D + E (≈ the 0.717 run's setup) | 0.8538 | −4.46 | 2.74% | 6.0 |
+| G | D with head lr 1e-4 (probe head, slow lr) | 0.8572 | −4.12 | 4.65% | 6.5 |
+| H | linear head started from prototypes | 0.8892 | −0.92 | 4.65% | 6.3 |
+| I | DoRA instead of LoRA (extension) | 0.8996 | +0.12 | 4.75% | 7.7 |
+
+- results: **the head setup drives most of the gain.** Head start × head lr: prototype cosine head 0.8984 (fast) / 0.8370 (slow); linear-probe head 0.8692 (fast) / 0.8572 (slow). A fast head lr helps both starts, but the prototype start depends on it 5× more (−6.1 vs −1.2 points): it starts as class means and must be trained into a classifier, while a probe head is already one. **The prototype start wins only with a fast head lr** (+2.9 fast, −2.0 slow), so the two must be chosen together; the 0.717 run's combination (probe + slow) was not even the best for a probe head (+1.2 with a fast lr). Of the 2.9-point gap between the prototype cosine head (A) and LP-FT (D), ~2.0 comes from the prototype start (H − D) and ~0.9 from the cosine head (A − H). Rank 24 over 16: +0.66. Extras (norms, biases, embeddings): +0.14, within seed noise (~0.3), so dropping them saves 0.53% of the backbone at no measurable cost. F's −4.5 covers most of the full-scale gap (0.717 → 0.785); the rest is plausibly scale plus batch size and weight decay.
+- DoRA (I): +0.12 points (a tie) at +0.10% parameters, but **22% slower** to train (7.7 vs 6.3 min). Plausibly rank 24 already gives LoRA enough capacity (DoRA's reported gains are largest at low rank), and the head, not the adapter, is the bottleneck here. DoRA merges like LoRA (`lora_dora`, tested: merged = unmerged). Confirmed at full scale in the next entry.
+- limitations: pilot scale (absolute accuracies inflated by the easier 1,000-class task; use for direction and ranking); one seed per arm; G's best epoch (0.8588) was slightly above its final (0.8572).
+- next: report the head start × head lr table and the A/H/D split; final PEFT model stays LoRA r24 (optionally without extras, 4.12%).
+
+### 2026-10-13 — Anastasia — DoRA r24 + extras @ 336 with Van's recipe (`configs/lora_r24_336_dora.yaml`)
+
+- run_dir: `CS604_RUNS/lora_20261012_130611` (launcher `notebooks/colab_launcher_ana_dora336.ipynb`, `ana-branch`)
+- val acc (ours / CodaBench): no internal holdout / **0.783** plain (submission 983071); **0.793** with crop 0.7 + flip (submission 983064)
+- trainable % / peak VRAM / GPU-hours: **4.75% of the backbone** (4.08M / 85.99M, head excluded; +82,944 magnitude params vs LoRA) / **28.06 GB** / 2.40 (144.0 training min, time limit reached; A100 40 GB)
+- what changed vs `lora_r24_336_recipe.yaml` (0.785): only `lora_dora: true`. DoRA (Liu et al., ICML 2024) splits each adapted weight into a direction (updated by LoRA) and a learned per-output magnitude, closer to how full FT updates weights.
+- results: **tie with LoRA** (−0.2 plain, ±0 with crop + flip), matching the pilot (arm I: +0.12). DoRA trained **25% slower** (~1,585 vs ~1,272 s/epoch) and reached only **~5.45 epochs** vs ~6.8, so it matched LoRA with ~20% fewer epochs, but at a fixed 144-min budget the slowdown cancels the per-epoch gain. Peak memory +45% (28.06 vs 19.40 GB): each step builds the full adapted weight of all 48 layers to compute its norms. Crop + flip added +1.0, the largest TTA gain so far. Consistent with the ablation: rank 24 already gives LoRA enough capacity, and the head setup, not the adapter, limits accuracy here.
+- cost: latency measured **unmerged 23.14–24.36 ms/image at batch 1** (1.41 ms/image at batch 64), the slowest of all runs, because every forward pass recomputes the weight norms of all 48 layers. **Merged** (`scripts/latency_merged.py`, same A100 session): **7.71 ms at batch 1, 0.649 ms at batch 64**, identical to a plain ViT-B with the same head (7.71 / 0.651 ms), so DoRA, like LoRA, has no inference cost once merged. (A second merged-latency session on the LoRA r24 checkpoint gave 8.35 ms vs 8.20 ms plain; the first gave 7.68 vs 7.58. Merged stays within ~0.15 ms of plain both times.)
+- next: final PEFT model stays LoRA r24 (same accuracy, faster and lighter to train).
+
+### 2026-10-16 — Anastasia — LoRA from block k up + progressive resizing, pilot scale (`configs/ablation_lora_depth_res.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_lora_depth_res/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_depth_res.ipynb`, `ana-branch`)
+- setup: same pilot as the r24 ablation (1,000 classes, 40 fit / 5 holdout per class, prototype heads rebuilt from fit images), A = `lora_r24_336_recipe.yaml`. Two new opt-in options: `first_trainable_block: k` (LoRA only in blocks k..11; norms, biases, `pos_embed` and `cls_token` below k frozen, so backward stops at block k) and `low_res_size: 224` / `low_res_fraction: 0.67` (train at 224 for the first 67% of progress, then 336; eval and inference at 336). J–M: same 3 epochs as A (accuracy cost). `*_t` arms: same training minutes as A (5.75 min, via `max_train_minutes: {match: A_full_recipe}`), i.e. what the speed-up buys under a time budget.
+
+| Arm | Change | Holdout top-1 | vs A | Trainable | Epochs | Speed-up | Peak VRAM |
+|---|---|---:|---:|---:|---:|---:|---:|
+| A | full recipe | **0.8986** | — | 4.65% | 3 | 1.00× | 19.40 GB |
+| J | blocks 4–11, r40 | 0.8894 | −0.92 | 4.67% | 3 | 1.29× | 13.59 GB |
+| K | blocks 6–11, r54 | 0.8830 | −1.56 | 4.70% | 3 | 1.43× | 10.64 GB |
+| L | 224 → 336 | 0.8866 | −1.20 | 4.65% | 3 | 1.55× | 19.39 GB |
+| M | J + L | 0.8878 | −1.08 | 4.67% | 3 | 1.87× | 13.59 GB |
+| J_t | J, A's minutes | 0.8890 | −0.96 | 4.67% | 4 | 1.33× | 13.59 GB |
+| L_t | L, A's minutes | 0.8898 | −0.88 | 4.65% | 6 | 2.00× | 19.39 GB |
+| M_t | M, A's minutes | 0.8872 | −1.14 | 4.67% | 7 | 2.33× | 13.59 GB |
+
+- results: **neither speed-up helps, even at equal compute.** All seven arms lost 0.9–1.6 points (beyond ~0.3 seed noise, all in the same direction). Extra epochs bought almost nothing (L 3 epochs 0.8866 vs L_t 6 epochs 0.8898; M_t with 7 epochs still −1.1), so at pilot scale LoRA plateaus within ~3 epochs and the time budget is not the bottleneck. Training at 224 costs ~1.2 points and a final phase at 336 doesn't recover it. The speed-ups and VRAM savings are real on the A100 (J 13.6 GB, K 10.6 GB vs 19.4 GB), useful only on a memory-limited GPU.
+- caveat on interpretation: J and K also froze `pos_embed` + `cls_token` (~0.44M, most of A's extras) and concentrated the same budget in fewer blocks, so their loss does **not** show that the early blocks specifically matter. The param-selection pilot (next entry) found no depth effect, which points to concentration rather than depth. A control run (`configs/ablation_lora_depth_control.yaml`: fixed r24 on fewer blocks, and J with `pos_embed` trainable) is set up to separate the two; results in the 2026-10-19 depth-controls entry.
+- limitations: pilot scale (1,000 classes may plateau sooner than 10,000); one seed per arm.
+- next: keep A as the LoRA submission; no lr / `low_res_fraction` sweep or full run.
+
+### 2026-10-17 — Anastasia — parameter-selection pilot: depth, fine-tuned angle, gradient at equal budget (`configs/ablation_param_selection.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_param_selection/` (`scripts/ablation.py` + `scripts/select_params.py`, launcher `notebooks/colab_launcher_ana_param_selection.ipynb`, `ana-branch`)
+- question: at a fixed budget of ~4.6% of the backbone, which parameters should be trained? Same pilot as above (1,000 classes, 40 fit / 5 holdout per class, 3 epochs, one seed per arm). Directly trained pretrained weights use their own `unfreeze_lr` (3e-5 for whole matrices, 1e-4 for GPS entries; the latter a guess, not swept).
+- arms: **A** LoRA r24 everywhere (current recipe). **F** full FT at pilot scale, Van's LLRD recipe (`F_llrd`) and one flat lr 3e-5 (`F_flat`). **S0 / S5 / S11** (surgical, Lee et al. ICLR 2023): block *i*'s full attention (qkv + proj, 2.36M) + LoRA r8 elsewhere. **Y** (partial FT, Ye et al. 2023): rank matrices by angle between pretrained and `F_flat` weights; `Y_layer` = top whole attention layer + LoRA r8, `Y_matrix` = top single matrices filled to budget, no LoRA. **G** (GPS, Zhang et al. CVPR 2024): top-K weights per output neuron by accumulated gradient on fit images (cross-entropy, not GPS's contrastive loss, since the head starts from prototypes), K = 42 and K = 10. Y and G selections use only fit images (no holdout leakage).
+
+| Arm | Holdout top-1 | vs A | Backbone trainable | Peak VRAM | Training min |
+|---|---:|---:|---:|---:|---:|
+| A: LoRA r24 everywhere | **0.8996** | — | 4.65% | 19.40 GB | 5.86 |
+| F_llrd: full FT, LLRD | 0.8960 | −0.36 | 100% | 20.05 GB | 4.75 |
+| F_flat: full FT, flat lr | 0.8956 | −0.40 | 100% | 20.05 GB | 4.63 |
+| G_k42: GPS | 0.8944 | −0.52 | 4.63% | 20.37 GB | 4.64 |
+| Y_layer: block 11 attention + LoRA r8 | 0.8908 | −0.88 | 4.61% | 19.30 GB | 5.78 |
+| S5: block 5 attention + LoRA r8 | 0.8900 | −0.96 | 4.61% | 19.30 GB | 5.80 |
+| S11: block 11 attention + LoRA r8 | 0.8894 | −1.02 | 4.61% | 19.30 GB | 5.77 |
+| G_k10: GPS | 0.8892 | −1.04 | 1.51% | 20.37 GB | 4.64 |
+| S0: block 0 attention + LoRA r8 | 0.8888 | −1.08 | 4.61% | 19.30 GB | 5.78 |
+| Y_matrix: 4 single matrices, no LoRA | 0.8738 | −2.58 | 4.65% | 13.51 GB | 4.06 |
+
+- selections: `Y_layer` picked `blocks.11.attn.qkv` + `blocks.11.attn.proj`, the same as S11, so the two are identical runs; their 0.14-point difference (0.8908 vs 0.8894) is a measured run-to-run noise estimate (GPU nondeterminism), consistent with the ~0.3 tie threshold. `Y_matrix` picked `blocks.11.attn.qkv` and `attn.proj` of blocks 0, 9, 10: 4 of 49 matrices, no MLP, because the larger `fc1` matrices next in the ranking didn't fit the remaining budget.
+- angles (`F_flat`, degrees between pretrained and fine-tuned weights, `angles.csv`): all 49 matrices between 0.79° (`patch_embed`, the lowest) and 1.22° (`blocks.11.attn.qkv`). `qkv` (0.92 → 1.22) and `fc1` (0.90 → 1.16) rise steadily with depth; `proj` and `fc2` are mostly flat (block-0 `proj` outlier at 1.16°). Full FT changes every layer a little and the high-level layers most.
+- results: **spreading the budget beats concentrating it.** The two best ways to spend ~4.6% (LoRA everywhere, GPS) touch every layer; one full-rank attention block costs ~1 point at any depth, and the most concentrated arm (`Y_matrix`) loses 2.6. **Depth makes no difference** (S0 ≈ S5 ≈ S11, within noise), so the early-layer hypothesis from Lee et al. is not supported here; with the angles (patch embedding moved least), iNat vs ImageNet is not a low-level appearance shift. How much a layer moves under full FT doesn't predict how useful it is to tune at a fixed budget. G_k10 is the best accuracy per parameter (−1.0 at 1.51%), but GPS saves parameters, not compute: full gradients are still computed and masked (20.37 GB, no speed-up).
+- caveat: **full FT does not beat LoRA at pilot scale** (−0.4), unlike full scale (0.807 vs 0.785). The pilot (40k images, 1,000 classes, 3 epochs) can rank PEFT variants but can't show the capacity limit that makes full FT win at 450k images; all "vs F" conclusions are pilot-only. Consistent with a data-size crossover, but the settings also differ in class count and epochs. Angle comparisons across matrix types are weaker than within a type (angle is relative to ‖W‖). Pilot angles come from 3 epochs at lr 3e-5, so all changes are small.
+- next: depth-control run (`configs/ablation_lora_depth_control.yaml`) to test "spread vs concentrated" directly (C16_all vs J24_embed at ~3.2%) and the `pos_embed` confound (J40 vs J40_embed); results in the 2026-10-19 depth-controls entry. Angle-vs-depth figure for the report.
+
 ### 2026-10-11 — Qian — BitFit ablation test
 
 - run_dir: `CS604_RUNS/qq_bitfit_ablation_336_subset_seed42_v2/` (`qq_bitfit_ablation`; `colab_launcher_qq.ipynb`). Selected arm reused from `runs/pilot/all_biases_lr0.001/seed42/`; other arms under `runs/screen/`.
@@ -368,6 +456,103 @@ Frozen features + linear probe, internal holdout accuracy:
 - what changed: LoRA r24 + extras, no VPT; 1,000 classes, 40 fit + 5 holdout/class, fitting-only prototypes per resolution, seed 42. Equal 12-minute arms: 336/384 with current crops or 75% crop + 25% whole-image/padding, then 448 with the mixture. E gains **+0.28 pp** over matching 384 and **+0.40 pp** over the 336 baseline. One seed; full-data gain unconfirmed.
 - next: `qq_branch_v2`, `configs/lora_r24_crop_pad_448.yaml`: fresh pretrained weights, all **450,000 images**, **144 training minutes**, reuse all-data `prototypes_448.pt`; predict with **crop 0.75 + autozoom (mass 0.7), no flip** via `scripts/predict_zoom.py`.
 
+### 2026-10-19 — Anastasia — LoRA depth controls: fixed rank on fewer blocks, `pos_embed` control, spread vs concentrated (`configs/ablation_lora_depth_control.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_lora_depth_control/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_depth_control.ipynb`, `ana-branch`)
+- setup: same pilot as the depth/res and param-selection screens (1,000 classes, 40 fit / 5 holdout per class, prototype heads rebuilt from fit images, 3 epochs, one seed per arm); A = `lora_r24_336_recipe.yaml`. New opt-in option `keep_embed_trainable` (with `first_trainable_block > 0`, `pos_embed` + `cls_token` still train; costs the speed-up, since backward then runs through every block). J40 and C16 rerun here so every comparison is within one session.
+
+| Arm | Change | Holdout top-1 | vs A | Trainable | Peak VRAM | Training min |
+|---|---|---:|---:|---:|---:|---:|
+| A | full recipe | **0.8986** | — | 4.65% | 19.40 GB | 5.76 |
+| C16 | r16, all blocks | 0.8932 | −0.54 | 3.28% | 19.34 GB | 5.78 |
+| J40_embed | r40, blocks 4–11, embeddings train | 0.8926 | −0.60 | 5.06%* | 17.39 GB | 5.08 |
+| J40 | r40, blocks 4–11 (rerun of depth/res J) | 0.8890 | −0.96 | 4.67% | 13.59 GB | 4.43 |
+| J24_embed | r24, blocks 4–11, embeddings train | 0.8856 | −1.30 | 3.23% | 17.31 GB | 5.04 |
+| J24 | r24, blocks 4–11 | 0.8830 | −1.56 | 2.84% | 13.51 GB | 4.39 |
+| K24 | r24, blocks 6–11 | 0.8812 | −1.74 | 2.13% | 10.53 GB | 3.99 |
+
+\*over the 5% cap; a control only, not a submission.
+
+- results: **J's loss is about one third frozen embeddings, two thirds dropping the early blocks' capacity.** Training `pos_embed` + `cls_token` recovers 0.36 of J40's 0.96 points (J40_embed) and 0.26 of J24's 1.56 (J24_embed). **Spreading the budget beats concentrating it, confirmed directly:** at the same ~3.2–3.3%, r16 in all 12 blocks (C16, −0.54) beats r24 in blocks 4–11 with embeddings (J24_embed, −1.30) by **0.76 points**. Extra rank helps when the blocks are fixed (r40 over r24 in blocks 4–11: +0.60 frozen, +0.70 with embeddings). Reproducibility: J40 −0.96 here vs −0.92 in the depth/res screen; C16 −0.54 here vs C −0.66 in the r24 ablation, both within ~0.1 point.
+- consistent with the earlier screens: with LoRA in every block, the extras were worth only +0.14 (r24 ablation, arm B), but once blocks 0–3 are frozen, `pos_embed` alone is worth ~0.3–0.4, so early-block LoRA appears to compensate for frozen embeddings. Together with the param-selection pilot (no depth effect for one full-rank block), the evidence favours "spread capacity across all layers" over "early layers matter".
+- decision for the full-scale J run (`configs/lora_r40_blocks4_336.yaml`): **keep embeddings frozen.** J40_embed is over the 5% cap and gives up most of the speed-up (5.08 vs 4.43 training min, 17.4 vs 13.6 GB), and the full run's question is whether J's speed-up buys accuracy when epochs are limited.
+- limitations: pilot scale; one seed per arm.
+
+### 2026-10-19 — Anastasia — GPS k42 @ 336, full scale (`configs/gps_k42_336.yaml`)
+
+- run_dir: `CS604_RUNS/selected_20261019_072529`; mask `CS604_RUNS/gps_336/gps_mask_k42.pt` (launcher `notebooks/colab_launcher_ana_fullcheck.ipynb`, `METHOD = "gps_k42_336"`, `ana-branch`)
+- val acc (ours / CodaBench): no internal holdout / **0.779** plain; crop 0.7 + flip not submitted (TTA added +0.6 to +1.0 on every other 336 run)
+- trainable % / peak VRAM / GPU-hours: **4.63% of the backbone** (3.98M / 85.99M, head excluded; only masked entries counted) / **20.37 GB** / 2.40 (144.0 training min, time limit reached; A100 40 GB)
+- what it is: full-scale check of pilot arm G_gps_k42 (−0.52 vs LoRA A). GPS (Zhang et al., CVPR 2024): for every output neuron of every block Linear and the patch embedding, only the top 42 input connections by gradient magnitude train (mask from 400 batches = 51,200 training images, ~5/class, through the prototype head, cross-entropy); all other entries stay at their pretrained values. No LoRA. Plus the recipe's extras (norms, biases, pos_embed, cls_token). Sparse entries at `unfreeze_lr` 1e-4 (the pilot's value, not swept), extras at 3e-4; otherwise the LoRA r24 recipe (prototype cosine head, head lr 3e-3, batch 256, wd 0.05 off for these tensors, label smoothing 0.1, 5% warmup + cosine fitted to 144 min).
+- training: **~8.7 epochs** (8 full + 70% of the 9th), **~993 s/epoch (~453 img/s)**: 22% faster per epoch than LoRA (1,272 s, ~6.8 epochs) and about as fast as full FT (1,017 s, ~8.5). No LoRA branches means no extra matmuls; the full weight gradients are computed and masked, so it costs full-FT-like time and memory (20.37 vs 20.05 GB full FT, 19.40 LoRA), not less. Final train loss 1.863 (full FT @336 ended at 1.87; same loss and label smoothing).
+- cost: latency **7.13 ms/image at batch 1, 0.640 ms/image at batch 64** (forward only, bf16, A100). Nothing to merge: the trained entries are ordinary weights, so this is a plain ViT-B (LoRA merged 7.68–8.35 and DoRA merged 7.71 in other sessions; session-to-session variation is ~0.6 ms).
+- results: **0.6 points below LoRA r24** (0.779 vs 0.785), just above Adapter (0.776) and 2.8 below full FT (0.807). **The pilot predicted this:** −0.52 on the pilot, −0.6 at full scale. So the pilot ranked GPS correctly even though GPS is the arm most like full FT, where the pilot failed (pilot −0.4 vs LoRA, full scale +2.2). Despite ~28% more epochs than LoRA (8.7 vs 6.8) and a train loss as low as full FT's, it scored lower, so its limit is what the sparse entries can express, not training time, the same conclusion as the depth/res screen. Under the 5% cap, LoRA r24 everywhere stays the best way to spend the budget.
+- next: full-scale checks of B (`lora_r24_336_no_extras`) and J (`lora_r40_blocks4_336`).
+
+### 2026-10-20 — Anastasia — LoRA r24 without extras @ 336, full scale (`configs/lora_r24_336_no_extras.yaml`)
+
+- run_dir: `CS604_RUNS/lora_20261020_062136` (launcher `notebooks/colab_launcher_ana_fullcheck.ipynb`, `METHOD = "lora_r24_336_no_extras"`, `ana-branch`). A first attempt crashed during epoch 6 (5 epochs, ~1,187 s/epoch) before resume support existed; this is a clean rerun from scratch.
+- val acc (ours / CodaBench): no internal holdout / **0.784** plain; crop 0.7 + flip not submitted
+- trainable % / peak VRAM / GPU-hours: **4.12% of the backbone** (3.54M / 85.99M, head excluded) / **19.30 GB** / 2.40 (144.0 training min, time limit reached; A100 40 GB)
+- what changed vs `lora_r24_336_recipe.yaml` (0.785): only `unfreeze_extra: []`, so LayerNorms, biases, `pos_embed` and `cls_token` stay frozen and only the LoRA layers train in the backbone. Full-scale check of pilot arm B.
+- results: **tie with LoRA r24** (0.784 vs 0.785, −0.1, inside ~0.3 seed noise), matching the pilot (arm B: −0.14). The extras (0.46M, 0.53% of the backbone) add nothing measurable when LoRA covers every block, even at 336 px where `pos_embed` is resampled from 224. They do matter once early blocks are frozen (depth-control pilot: ~0.3–0.4), so early-block LoRA appears to make up for frozen embeddings. **Leaner equivalent LoRA: 4.12% instead of 4.65% at the same accuracy.**
+- pilot vs full scale so far: DoRA (pilot +0.12 → full −0.2), GPS (−0.52 → −0.6), B (−0.14 → −0.1) agree; full FT vs LoRA (pilot −0.4 → full +2.2) does not. The pilot ranks PEFT variants reliably but cannot predict PEFT vs full FT.
+- cost: **~7.3 epochs** (7 full + 28% of the 8th) at **~1,185 s/epoch (~380 img/s)**, 7% faster per epoch than LoRA r24 with extras (~1,272 s, ~6.8 epochs): without the extras, nothing trainable sits outside the LoRA branches. Peak VRAM 19.30 vs 19.40 GB. So the extra 0.5 epoch also bought nothing measurable, consistent with GPS and the time-matched pilot arms. Latency **unmerged 15.37 ms/image at batch 1** (1.07 ms at batch 64); merged latency TBC via `colab_launcher_ana_lora_merge_latency.ipynb` (`RUN_NAME = "lora_20261020_062136"`), expected ≈ plain ViT as for LoRA r24 (7.68–8.35 ms).
+
+### 2026-10-20 — Anastasia — random vs aimed training crops, pilot scale (`configs/ablation_train_crops.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_train_crops/` (`scripts/ablation.py` + `scripts/find_boxes.py`, launcher `notebooks/colab_launcher_ana_train_crops.ipynb`, `ana-branch`)
+- question: today's training crops (timm RandomResizedCrop, 8–100% of the photo) can show little or none of a small organism. Do crops aimed at the organism help? Base = LoRA r24 without extras (CodaBench 0.784, 4.12%); same pilot as the other ablations (1,000 classes, 40 fit / 5 holdout per class, 3 epochs, one seed per arm). Only the training crop differs.
+- boxes: DDT class co-localization (Wei et al., IJCAI 2017 / Pattern Recognition 2019) on the pretrained backbone, nothing trained: per class, the first principal component of the final patch tokens of its 40 fit images gives a score map per image; sign by the boundary prior (photo edges score lower); box = largest positive blob + 10% margin; no box if no blob of 4+ patches or the box covers over 80% of the photo. Fit images only. **10.2 min on the A100** for 40,000 images (data preparation, outside the training budget, like prototype building).
+
+| Arm | Training crops | Holdout top-1 | vs A |
+|---|---|---:|---:|
+| A | random, 8–100% of the photo | **0.8978** | — |
+| S25 | random, 25–100% ("just bigger") | 0.8950 | −0.28 |
+| BOX | random, but must contain the box ("aimed") | 0.8950 | −0.28 |
+
+- box quality: **the boxes mostly did not find the organism.** 27,312 of 40,000 images (68%) got a box (median 29% of the photo); the rest kept random crops. Class-prototype top-1 on box crops 0.591 vs 0.581 on random crops of the same size (whole image 0.763), so the boxes are barely better than random placement. The overlay shows scattered single-patch hot spots across backgrounds rather than blobs on the organism; good boxes on some clear subjects (sea anemone, ruler-photographed flower). For 643 of 1,000 classes the class-prototype sign rule would have picked the opposite sign, so the score map's polarity is itself unreliable. Likely cause: high-norm outlier ("artifact") patch tokens in the final layer of supervised ViTs (Darcet et al., ICLR 2024), which can dominate a PCA of patch features; untested.
+- results: **all three arms tie** (within ~0.3 seed noise). Bigger crops (S25) do not help, matching Van's full-FT test (scale 0.35 at 224: no effect). BOX did not test the aimed-crop idea fairly, because its boxes were near random; this is a negative result for this box finder, not for aimed crops. Random-crop miss rate against these boxes (48% of crops at scale 0.08 hold under half the box; 33% at 0.25) is only indicative for the same reason.
+- next: only if pursued: fix the box finder before any training (mask high-norm tokens, or use an earlier block's tokens, or the true-label prototype map), judged by box-crop vs random-crop top-1 alone (~10 min per variant, no training); rerun BOX only if box crops clearly beat random ones.
+
+### 2026-10-21 — Anastasia — box-quality sweep: which box finder finds the organism? (no training; `scripts/box_sweep.py`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_train_crops/box_sweep.{csv,json}`, `box_sweep_overlay.png` (launcher `notebooks/colab_launcher_ana_box_sweep.ipynb`, part 1 only, `ana-branch`)
+- setup: 7 box-finding variants (`src/boxes.py`) on 200 of the pilot's 1,000 classes (8,000 fit photos), pretrained backbone, nothing trained. Each scored by pretrained prototype-head top-1 on up to 5 box crops per class, against crops of the same size placed at random or in the centre. 12.0 min of features + 1.2 min of checks on the A100.
+
+| Variant | Photos with box | Median box area | Box | Random | Centre | Whole | Box − random |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| ddt_final (first pilot's boxes) | 69% | 0.29 | 0.763 | 0.752 | 0.841 | 0.895 | +1.1 |
+| ddt_final_masked_smooth | 53% | 0.42 | 0.816 | 0.824 | 0.880 | 0.912 | −0.8 |
+| ddt_block9_smooth | 90% | 0.27 | 0.607 | 0.764 | 0.841 | 0.886 | −15.7 |
+| ddt_block9_masked_smooth | 75% | 0.32 | 0.648 | 0.771 | 0.846 | 0.898 | −12.4 |
+| ddt_block6_smooth | 100% | 0.09 | 0.288 | 0.530 | 0.764 | 0.888 | −24.2 |
+| proto_final_smooth | 28% | 0.71 | 0.828 | 0.828 | 0.836 | 0.839 | 0.0 |
+| proto_final_masked_smooth | 28% | 0.71 | 0.828 | 0.828 | 0.836 | 0.839 | 0.0 |
+
+- results: **no variant finds the organism better than random placement, and every one is beaten by a centred crop of the same size.** The centre prior (photographers centre the subject) beats DDT boxes by 6–48 points. DDT on earlier layers is worse than random (−12 to −24): it latches onto repeated background texture. The final layer has no outlier tokens (0.0%, max/median norm 1.19), so "artifact tokens" do not explain the first pilot's poor final-layer boxes; blocks 6 and 9 do have them (1.5% / 1.8% of tokens, max/median 8.9× / 5.3×), and masking them helped block 9 a little (−15.7 → −12.4).
+- the prototype map (`proto`) looks right in the overlay (butterfly, damselfly, snail lit up), but its box rule (positive after subtracting the photo's mean) keeps about half of each photo, so only 28% of photos get a box under the 80% cap and those are large (median 71%): too loose to differ from random. A stricter threshold is untested. Caveat for any proto-based box: it is chosen by similarity to the class prototype and then scored by the same prototype head, so this check favours it.
+- the first pilot's random-crop miss rate (48% of crops under half the box) was measured against near-random boxes, so it does not measure how often crops miss the organism.
+- next: either one more sweep with a stricter threshold for the prototype map (top 20–30% of patches), counted only if it beats the centred crop clearly; or stop and report aimed crops as untested-for-lack-of-a-localiser.
+
+### 2026-10-21 — Anastasia — class IDs follow the taxonomy (no training; `CS604_RUNS/prototypes_336.pt`)
+
+- what: are classes with neighbouring IDs related? Cosine similarity between class prototypes (mean augreg2 feature of each class's 45 training photos at 336, the prototype head's starting rows), by ID distance. All 10,000 classes, CPU, seconds.
+
+| Pair | Mean prototype cosine | Share above the random-pair 95th percentile |
+|---|---:|---:|
+| random classes | 0.280 | 5% (by definition) |
+| 1 ID apart | **0.799** | 84% |
+| 5 IDs apart | 0.704 | 66% |
+| 10 IDs apart | 0.660 | 57% |
+| 100 IDs apart | 0.507 | 27% |
+| 1,000 IDs apart | 0.353 | 9% |
+| 3,000 IDs apart | 0.219 | 3% |
+
+- each class's most similar other class lies within 1 / 5 / 10 / 50 IDs for **24% / 50% / 60% / 77%** of classes (chance 0.02% / 0.10% / 0.20% / 1.0%); median ID distance to the most similar class: **5**. Of each class's 10 most similar classes, 35% lie within 10 IDs (chance 0.2%).
+- results: **class IDs are ordered by relatedness**, smoothly decaying with distance, as in iNaturalist 2021, whose IDs follow the taxonomy (kingdom → … → genus → species). Neighbouring IDs are very likely the same genus. Consistent with a teammate's observation that the model's mistakes are often look-alike relatives. The dataset's sizes also match iNat21: 450,000 + 50,000 = the 500,000-image "train_mini" (50 per class); test 100,000 = iNat21's validation size (10 per class). So models trained on iNat21 (e.g. BioCLIP, iNat21 checkpoints) would likely have seen our training and validation photos: avoid them.
+- caveat: prototypes measure visual similarity under the pretrained backbone, so this shows IDs track visual relatedness; the taxonomic reading rests on iNat21's documented ID order.
+
 ### 2026-10-19 — Qian — LoRA r24 crop/padding @ 448 (`configs/lora_r24_crop_pad_448.yaml`)
 
 - run_dir: `CS604_RUNS/lora_r24_crop_pad_448_seed42/lora_20261019_014714/last.pt` (`qq_branch_v2`).
@@ -390,3 +575,158 @@ Frozen features + linear probe, internal holdout accuracy:
 - trainable % / peak VRAM / GPU-hours: allocated backbone **4.9446% LoRA / 4.9459% AdaLoRA**, head excluded; final active AdaLoRA t8/t16/t20 **2.1562 / 3.4531 / 4.1434%**. Peak **17.29 / 18.79 GiB** (LoRA / AdaLoRA); ~**0.20 training GPU-hours/arm**, 12 minutes each.
 - what changed: PEFT AdaLoRA init rank 24, target averages 8/16/20; same 448px arm E recipe, cosine head + extras, fixed 1,000 classes (40 fit + 5 holdout/class), fit-only prototypes, seed 42, BF16, A100 40GB, batch 64 x 4. Evaluation: crop 0.9, no flip/zoom. All targets reached and masks fixed. Best AdaLoRA (t20) trails LoRA by **2.72 pp**, with **115.0 vs 189.8 img/s** and **2.07 vs 3.42 epochs**; one-seed subset screen.
 - next: retain **LoRA r24** as the reference; this sweep does not support promoting AdaLoRA to full-data training.
+
+### 2026-10-25 — Anastasia — error analysis: where do the errors come from? (no training; `scripts/error_analysis.py`)
+
+- run_dir: `CS604_RUNS/error_analysis/` (`summary.json`, `topk.png`, `errors_{lora,full_ft}.csv`, `gallery_*.png`; launcher `notebooks/colab_launcher_ana_error_analysis.ipynb`, `ana-branch`)
+- setup: two pilot checkpoints scored on their own untouched holdout (1,000 random classes × 5 photos = 5,000): `lora` = `A_random_crops` of the training-crop pilot (LoRA r24, no extras, 4.12%), `full_ft` = `F_full_ft_llrd` of the parameter-selection pilot (Van's LLRD recipe). Same classes and fit photos, so errors compare photo by photo. Eval crop 0.9, no TTA. Full-scale checkpoints were not used: they trained on these photos.
+
+| | top-1 | top-2 | top-3 | top-5 | top-10 | errors | answer was 2nd guess | answer in top 5 | guess within 5 IDs |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| lora | 0.898 | 0.946 | 0.959 | 0.972 | 0.984 | 511 | 48% | 73% | 18% |
+| full_ft | 0.896 | 0.946 | 0.961 | 0.974 | 0.983 | 520 | 48% | 75% | 16% |
+
+- **errors are near misses**: median rank of the true class when wrong is 3; for **half of all errors the answer was the second guess** (4.9% of all photos), and for three quarters it was in the top 5 (top-5 − top-1 = 7.5 points). The top-1 → top-2 step (+4.9) dwarfs the later ones (+1.3, +0.9, ...): the opportunity is concentrated in choosing between the top two candidates, which is what prediction-time re-ranking targets (zoom, class-count balancing). Only 1.6% of photos have the answer beyond the top 10.
+- **relatives**: 18% (LoRA) / 16% (full FT) of wrong guesses are within 5 class IDs of the truth. In this random 1,000-class pilot each class has on average 1.0 other pilot class within 5 IDs, so a random wrong guess would be a relative ~0.1% of the time: relatives are ~180× over-represented among errors. On the full dataset, where every class keeps all its ~10 neighbours, the sibling share of errors should be much higher; this pilot (random classes) understates it. The class-block pilot (`class_block: 10`) is the right subset to measure it.
+- **LoRA vs full FT at pilot scale**: the curves are indistinguishable (as before, the pilot does not show the 2.2-point full-scale gap), but they make **different errors**: 146 of LoRA's 511 errors (29%) are right under full FT, and 155 of full FT's 520 (30%) are right under LoRA; 75% of the photos full FT fixes were LoRA's second guess. 365 errors (71%) are shared: a hard core neither recipe solves.
+- gallery (40 random LoRA errors, examples): most are look-alike pairs with consecutive or close IDs (moths 1641 vs 1628, salamanders 3076 vs 3080, snakes 4932 vs 4934 / 4961, skimmers 2558 vs 2559, moths 1553 vs 1625); others are tiny or unclear subjects in wide scenes (meadow 9934, grassland 6366), close-ups of a part (leaf edge 6981, bud 8217), and training photos of the true class that look unlike the holdout photo (habitat-only or different life stage). `category` column in `errors_lora.csv` not yet filled.
+
+### 2026-10-25 — Anastasia — which classes are hardest? (no training; from the error analysis above)
+
+- data: `errors_lora.csv` / `errors_full_ft.csv` from `CS604_RUNS/error_analysis/`; the pilot's 1,000 classes rebuilt from its seed (`random.Random(0).sample(range(10000), 1000)`, as in `scripts/pilot_sweep.build_pilot_root`), which matches every true class and guess in both files. 5 holdout photos per class, so one class's accuracy moves in steps of 20 points: single classes are hints, patterns over many classes are reliable.
+- per class: most classes are easy. Photos right out of 5 (LoRA / full FT): 5/5 **623 / 625** classes, 4/5 271 / 268, 3/5 82 / 78, 2/5 20 / 23, 1/5 4 / 3, 0/5 0 / 3.
+- **17 classes are hard for both (≤2/5 each)**, and in 11 of them LoRA's wrong guesses are close-ID siblings: 8144 → 8138, 4804 → 4805, 6917 → 6914 (3 of 3 errors), 3119 → 3120, 2573 → 2562, 3063 → 3080, 4746 → 4745 (3 of 3), 4813 → 4805 / 4804, 6409 → 6405, 6793 → 6794, 117 → 116. The hardest classes are members of look-alike sibling groups.
+- **by class-ID range (500 IDs, ~50 classes each, about ±2 points noise), difficulty differs by group, beyond noise**: hardest 4500–4999 (LoRA 0.834 / full FT 0.824), 6500–6999 (0.827 / 0.851), 3000–3499 (0.863 / 0.856), 9500–9999 (0.868 / 0.868); easiest 5500–5999 (0.967 / 0.967), 5000–5499 (0.943 / 0.947). The two models agree on which ranges are hard. If the IDs follow iNat21's alphabetical taxonomy (Animalia → Fungi → Plantae), and the gallery is consistent with that (insects ~1000–2600, salamanders ~3070, snakes ~4930, plants above ~6000), the easiest range would be fungi and the hard ones vertebrates (birds / mammals / reptiles) and some plant groups; this mapping is a hypothesis, not checked against class names (the dataset is anonymised).
+- **errors stay in the same broad group**: of LoRA's 511 wrong guesses, 93 (18%) are within 5 IDs, 198 (39%) within 50 and 341 (67%) within 500, against ~0.1% / ~1% / ~10% for a random pilot class. No single class dominates as a wrong guess (the most frequent attractors are each guessed wrongly 4 times).
+
+### 2026-10-25 — Anastasia — what causes the errors? (no training; `scripts/error_causes.py`)
+
+- run_dir: `CS604_RUNS/error_causes/` (`causes.json`, `causes_per_error.csv`, `classes.csv`, `causes_<cause>.png`; launcher `notebooks/colab_launcher_ana_error_causes.ipynb`, `ana-branch`)
+- setup: the pilot LoRA checkpoint of the error analysis (`A_random_crops`, LoRA r24 no extras) embeds the pilot's 40,000 fit photos and 5,000 holdout photos; each of its 511 errors is tested for four causes (can overlap), and each flag is compared with the same flag among correctly classified photos.
+
+| Cause | Detected when | Share of errors | Among correct photos | Over-represented |
+|---|---|---:|---:|---:|
+| unseen look | holdout photo unlike every training photo of its class (best cosine below the 10th percentile of correct photos, 0.53) | **59%** | 10% | **5.9×** |
+| sibling | wrong guess within 5 IDs or among the true class's 5 most similar classes | **47%** | — | — |
+| messy class | ≥20% of the class's training photos sit closer to another class's prototype | 45% | 22% | 2.1× |
+| two looks | class's training photos split in two groups (top 20% split) and the holdout matches the smaller | 10% | 4.9% | 2.0× |
+| none of these | | 5% | | |
+
+- per class (1,000 classes): messy classes (243) average 0.811 holdout accuracy vs 0.898 overall (−8.7 points; Spearman of messy share with class accuracy −0.29, the strongest); two-look classes (182) 0.876 (−2.2; Spearman of split −0.07); consistency +0.21.
+- galleries (random examples per cause) say what the flags mean:
+  - **unseen look** is genuine and is mostly *a different part, stage, season or scale* than the class's training photos: seed pod vs leaves (8105), dried vs green plant (6852), one flower on a stalk vs flower clusters (6640), tree base vs foliage (6973), blurred or tiny subject (4465). Caveat: the detector uses the same model's features, so misclassified photos sit far from their class partly by construction; the 5.9× is an upper bound on how much is the photos' fault.
+  - **messy class** is mostly *crowded sibling neighbourhoods*, not mislabels: maidenhair ferns 9966 vs 9971, hedgehogs 4746 vs 4745, bees 674 vs 675, frogs 3037 vs 2981, starlings; plus holdout photos with almost no visible subject (a dark frame, an empty ground shot). No clear mislabelled training photo in the sample: label noise does not look like a major cause.
+  - **two looks** is real but a minority: ripe yellow vs dried black fruit (9591), adult moth vs hairy caterpillar (1020), museum specimen vs live animal (4813), flowering vs leaf-only plant (6793, 6988).
+- results: the two main problems are **(1) photos showing a part, life stage, season or scale the class's ~40 training photos barely cover** and **(2) look-alike siblings**, overlapping on 16% of errors. Classes with two clear looks in training account for only ~10% of errors, and mislabelled training photos were not evident. More of the dataset helps the first (the full-scale runs train on 45 photos per class, the pilot on 40); better-generalising features (resolution, a stronger backbone) and multi-view prediction (zoom, crops) target it directly; taxonomy-aware smoothing, zoom on the deciding detail and margins between relatives target the second.
+
+### 2026-10-25 — Anastasia — taxonomy-aware label smoothing, pilot scale (`configs/ablation_taxonomy_smoothing.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_taxonomy_smoothing/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_taxonomy_smoothing.ipynb`, `ana-branch`)
+- setup: base LoRA r24 without extras (4.12%); 3 epochs; **the pilot's 1,000 classes are 100 blocks of 10 consecutive class IDs** (`class_block: 10`, pilot root `c1000_h5_s0_b10`), so each class's relatives are trained alongside it as in the full dataset; 40 fit / 5 holdout photos per class; one seed per arm. Only the training target differs (`src/losses.py`, `neighbour_smoothing`). `near5`: prediction within 5 IDs of the label.
+
+| Arm | Smoothing | Top-1 | vs A | near5 | Errors on relatives |
+|---|---|---:|---:|---:|---:|
+| A | 0.1 evenly over all classes (recipe) | **0.8352** | — | 0.9342 | 60% |
+| ID | 0.1 onto the 10 classes within 5 IDs | 0.8338 | −0.14 | 0.9392 | 63% |
+| PROTO | 0.1 onto the 10 most similar prototypes | 0.8338 | −0.14 | 0.9376 | 63% |
+| ID_MIX | 0.05 evenly + 0.05 onto ID neighbours | 0.8348 | −0.04 | 0.9394 | 63% |
+| ID_02 | 0.2 onto ID neighbours | 0.8266 | −0.86 | 0.9366 | 63% |
+
+- **siblings are the main difficulty once they are present**: the same recipe scores **0.835 on this block subset vs 0.898 on the random 1,000-class subset** (−6.3 points), and **60% of its errors land within 5 IDs** of the truth (18% on the random subset, where each class has ~1 relative in the pilot). The random-class pilots understate sibling confusion; at full scale, where every class has all its relatives, it is likely the dominant error type.
+- **taxonomy-aware smoothing does not improve top-1**: the three 0.1 arms tie with A (within ~0.5 points of seed noise), and doubling it (ID_02) loses 0.86. As expected from Bertinetto et al. (CVPR 2020, *Making Better Mistakes*), mistakes become slightly milder (near5 +0.3 to +0.5) without more correct answers: teaching that siblings are close does not help tell them apart, and more of it hurts. ID order and prototype similarity behave the same.
+- val_loss is not comparable across arms (different targets).
+- next: not promoted to a full run. The opposite direction, pushing relatives apart (an extra margin or harder weighting on neighbouring classes), targets the sibling problem directly and is untested.
+
+### 2026-10-26 — Anastasia — sibling margin: push relatives apart, pilot scale (`configs/ablation_sibling_margin.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_sibling_margin/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_sibling_margin.ipynb`, `ana-branch`)
+- setup: same class-block subset as the taxonomy smoothing pilot (100 blocks of 10 consecutive IDs, `c1000_h5_s0_b10`); base LoRA r24 without extras (4.12%); 3 epochs; one seed per arm. CosFace margins on the cosine head, training only (`src/losses.py`): `cosine_margin` (Van's key and loss; identical output to her `CosineMarginLoss`) makes the true class beat every class by m; `sibling_margin` adds a further margin against the true class's 10 neighbours within 5 IDs only. Error split: relatives = guess within 5 IDs, far = beyond.
+
+| Arm | Margin | Top-1 | vs A | near5 | Errors on relatives | Far errors (share of photos) |
+|---|---|---:|---:|---:|---:|---:|
+| A | none | **0.8346** | — | 0.9346 | 60% | 6.5% |
+| U10 | 0.1 vs every class | 0.8364 | +0.18 | 0.9360 | 61% | 6.4% |
+| S10 | 0.1 vs relatives only | 0.8214 | −1.32 | 0.9102 | 50% | 9.0% |
+| U10_S10 | 0.2 vs relatives, 0.1 vs the rest | 0.8122 | −2.24 | 0.8976 | 46% | 10.2% |
+| S20 | 0.2 vs relatives only | 0.7618 | **−7.28** | 0.8208 | 25% | 17.9% |
+
+- A reproduces the taxonomy pilot's A (0.8346 vs 0.8352).
+- **Van's uniform margin transfers as a tie on LoRA** (+0.18, within ~0.5 noise), not the +0.6 of her 1-epoch AdaptFormer screen.
+- **A margin against relatives hurts, increasingly with strength.** It does cut sibling confusions (relative errors fall from 10.0% of photos at A to 8.9% / 5.9% at S10 / S20), but far-away errors rise faster (6.5% → 9.0% → 17.9%): the model satisfies the margin by suppressing every class near the true one, which also suppresses the right answer for those classes' photos, so predictions scatter to unrelated classes.
+- with the taxonomy smoothing pilot this closes the loss-design route for siblings at this budget: **pulling relatives together ties, pushing them apart hurts.** Reshaping the objective does not give the features what they need to tell siblings apart; that points to information (more pixels on the deciding detail: resolution, zoom) or better features (backbone), not a different loss.
+- next: no full run for any margin arm.
+
+### 2026-10-26 — Anastasia — LoRA no extras on all 10,000 classes with a labelled holdout; top-k and kNN re-ranking (`configs/allclass_holdout_lora_no_extras.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_allclass_holdout_lora_no_extras/runs/A_all_classes_144min/lora_20261026_123804`; analysis `CS604_RUNS/allclass_holdout_analysis/{errors,rerank}/` (launcher `notebooks/colab_launcher_ana_allclass_holdout.ipynb`, `ana-branch`)
+- setup: LoRA r24 without extras (4.12%), the full-run recipe and **144 training minutes**, on **all 10,000 classes with 5 photos per class held out** (50,000 labelled holdout photos never trained on; 40 per class, 400,000, for training; split seed 0). Prototypes rebuilt from the 40 fit photos per class. The first full-scale model with a labelled holdout (the CodaBench runs train on all 45 photos and val labels are hidden).
+- holdout top-1 **0.778** (CodaBench 0.784 for the same recipe trained on all 45 photos per class): the holdout tracks CodaBench closely, slightly lower with 40 instead of 45 photos per class.
+
+| | top-1 | top-2 | top-3 | top-5 | top-10 | errors: truth 2nd | truth 3rd–5th | truth beyond 5th | errors on relatives (≤5 IDs) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| all 10,000 classes | **0.778** | 0.860 | 0.892 | 0.920 | 0.944 | 37% | 27% | 36% | 34% |
+| random 1,000-class pilot (for comparison) | 0.898 | 0.946 | 0.959 | 0.972 | 0.984 | 48% | 25% | 27% | 18% |
+
+- **on the real task errors spread further down the list**: the top-1 → top-2 step is +8.2 points (pilot +4.9) and top-5 − top-1 is 14.3 points (pilot 7.5); only 37% of errors have the truth second (pilot 48%), 27% third to fifth, 36% beyond fifth (5.6% of all photos beyond the top 10). A third of errors are relatives within 5 IDs; the random-class pilot understated both the gap and the sibling share, as expected.
+- **kNN re-ranking helps: +1.29 points on held-out halves** (0.778 → 0.791). For the model's top K candidates, `score = log p + beta * knn`, with knn = mean of the 3 best cosines between the photo and the candidate's own training photos (`scripts/rerank_knn.py`). Settings were chosen on one half of the holdout classes and scored on the other, then swapped: **both halves independently chose K = 5, m = 3, beta = 20** and gained +1.33 / +1.25 (0.7782 → 0.7915, 0.7773 → 0.7898); fixes vs breaks 693 / 361 and 683 / 371, about 2 : 1. Gain ≫ noise (~0.26 points per 25,000-photo half, and the comparison is paired). Re-ranking over the top 5 (not 2) matches errors reaching ranks 3–5.
+- what it costs: no training and no trainable parameters; at prediction it compares each photo with the 5 × 45 training photos of its top-5 candidates, using stored features of the training photos (450,000 × 768, ~0.7 GB in fp16). Report the stored bank and the extra similarity step under latency and memory. The stored training-photo features are a non-parametric memory, not trained parameters; worth stating plainly (and checking with the Prof) for Task 2.
+- next: apply it to the full-scale LoRA checkpoint with a bank of all 450,000 training photos (K = 5, m = 3, beta = 20, fixed in advance) and submit to CodaBench; optionally combined with zoom.
+
+### 2026-10-27 — Anastasia — kNN re-ranking on CodaBench (`scripts/predict_rerank.py`)
+
+- run_dir: `CS604_RUNS/rerank_submission/val/` (launcher `notebooks/colab_launcher_ana_rerank_submission.ipynb`, `ana-branch`); checkpoint `CS604_RUNS/lora_20261020_062136` (LoRA r24 without extras, full scale); bank `CS604_RUNS/rerank_submission/bank_lora_20261020_062136.pt` (features of all 450,000 training photos from that checkpoint).
+- what: the model's top 5 classes re-scored as `log p + 20 * knn`, knn = mean of the 3 best cosines between the photo and the candidate's own training photos. K = 5, m = 3, beta = 20 fixed in advance on the all-class holdout (2026-10-26), not tuned on CodaBench. Plain and re-ranked predictions from the same pass, submitted together.
+- val acc (CodaBench): **0.7982 re-ranked** vs **0.7842 plain** (same pass): **+1.40 points**, in line with the holdout's +1.29. The plain file reproduces this checkpoint's earlier 0.784, so the pipeline is unchanged apart from re-ranking. F1 macro 0.7952 vs 0.7813; precision 0.8201 vs 0.8068.
+- trainable % / peak VRAM / GPU-hours: unchanged (4.12% of the backbone; no training). Extra at prediction: the bank (450,000 × 768 features, ~0.7 GB in fp16, built once in ~15 min) and the re-ranking step, **0.0295 ms per photo** at batch 128 (`rerank_stats.json`; A100, excluding the forward pass), negligible next to the forward pass (merged LoRA ≈ plain ViT-B, 7.7–8.4 ms at batch 1 in other sessions; this checkpoint's merged latency is still TBC). Re-ranking changed **3,785 of 50,000 predictions (7.6%)**; the net +1.40 points = 700 more correct. Stored training-photo features are a lookup memory, not trained parameters.
+- comparison: matches zoom on the LoRA r24 + extras checkpoint (0.799, two forward passes) with one forward pass plus a lookup; the two act differently (zoom: a closer view; kNN: matching individual training photos) and have not been combined yet.
+
+### 2026-10-27 — Anastasia — are rank-2 errors concentrated in some classes? (no training; all-class holdout)
+
+- data: `CS604_RUNS/allclass_holdout_analysis/errors/errors_lora_all.csv` (LoRA r24 no extras, 144 min, all 10,000 classes, 5 holdout photos each); rank-2 error = the true class was the model's second guess: 4,123 of 50,000 photos (8.25%).
+- **spread widely, only mildly concentrated**: classes with 0 / 1 / 2 / 3 / 4 rank-2 errors (of 5 photos): 6,736 / 2,533 / 619 / 96 / 16, against 6,503 / 2,922 / 525 / 47 / 2 if they hit photos at random. The top 5% / 10% / 20% of classes hold 27% / 45% / 69% of rank-2 errors, against 25% / 39% / 64% by chance (simulated). A minority of classes (112 with ≥3 of 5) are repeat offenders, but most rank-2 errors are scattered one-offs across a third of all classes.
+- **mostly siblings, rarely the same pair twice**: 50% of rank-2 errors guess a class within 5 IDs (34% of all errors). The 4,123 errors involve 3,571 distinct (true, guess) pairs; only 257 pairs are confused in both directions, holding 15% of rank-2 errors (e.g. 8336 ↔ 8341, 2099 ↔ 2100, 5771 ↔ 5772, 6894 ↔ 6895, 140 ↔ 141). There is no short list of problem pairs to target.
+- **by class-ID range (1,000 IDs)** rank-2 errors are fairly even (6.9 to 9.6 per 100 photos), while top-1 accuracy varies much more (0.694 to 0.834): the hard ranges (3000–3999: 0.694, 4000–4999: 0.725) fail more deeply (only 30–35% of their errors at rank 2), the easier ones more often by a near miss (40–42%).
+- implication: rank-2 flips are a broad, near-uniform property of the model, not a few bad classes or pairs; a general correction (kNN re-ranking, +1.40 on CodaBench) fits better than anything targeted at specific pairs.
+
+### 2026-10-27 — Anastasia — kNN re-ranking on top of Van's full FT 448 + zoom (`scripts/predict_rerank.py --zoom`)
+
+- run_dir: `CS604_RUNS/rerank_submission_van/full_ft_20261017_122237/val/` (launcher `notebooks/colab_launcher_ana_rerank_van.ipynb`: clones `van-dev` for Van's code, adds only `scripts/predict_rerank.py` from `ana-branch`); checkpoint Van's full FT at 448 `CS604_RUNS/full_ft_20261017_122237` (Task 1); bank: features of all 450,000 training photos from that checkpoint (plain view, 448 px).
+- what: Van's crop 0.9 + zoom prediction (the script's zoom-only output is identical, prediction for prediction, to `src.predict --zoom` at crop 0.9 and 0.75 in a CPU check), then the top 5 classes of those zoom probabilities re-scored with `log p + 20 * knn` (mean of the 3 best cosines to the candidate's training photos). K = 5, m = 3, beta = 20 fixed from Ana's all-class holdout (LoRA at 336, no zoom), not re-tuned for this model.
+- val acc (CodaBench), same pass: **0.8407 zoom + kNN** vs **0.8322 zoom only**: **+0.85 points** on top of Van's best result without balancing; the zoom-only file reproduces her 0.832 (ID 1004167). F1 macro 0.8381 vs 0.8292; precision 0.8585 vs 0.8503. **Team best without class-count balancing.** Balancing (0.845 on Van's full FT) is excluded by team decision: it relies on knowing how many photos each class has, which a deployed model would not know.
+- the gain is smaller than on Ana's LoRA at 336 (+1.40 without zoom): zoom already fixes some of the same near misses, the model is stronger (fewer errors left to fix), and beta was not tuned for zoom-averaged scores at 448. The beta 10 / 40 files from the same pass were not submitted.
+- cost: no training; at prediction the bank (450,000 × 768, ~0.7 GB fp16, built once, ~25–30 min at 448) and the re-ranking step (well under 0.1 ms per photo) on top of the two zoom forward passes.
+
+### 2026-10-27 — Anastasia — which re-ranker is best? (no training of the model; `scripts/rerank_bakeoff.py`)
+
+- run_dir: `CS604_RUNS/rerank_bakeoff/` (`bakeoff.csv`, `bakeoff.json`, `linear_reranker.json`; launcher `notebooks/colab_launcher_ana_rerank_bakeoff.ipynb`, `ana-branch`); 17.7 min after the data download.
+- setup: the all-class holdout checkpoint (LoRA r24 no extras, 144 min on 40 photos per class of all 10,000 classes) on its 50,000 held-out photos; bank = its 400,000 training photos. Candidates = the model's top 5, from the plain view and from Van's zoom (crop 0.75 for both views). Every re-ranker chooses its setting (or is trained) on one half of the holdout classes and is scored on the other, then swapped. "+ balancing" = Van's class-count balancing (`src/van_balance.py`, ported unchanged; Sinkhorn to 5 photos per class) applied to the re-ranker's candidate scores.
+
+| Re-ranker (added to log p) | plain: acc (gain) | + balancing | zoom: acc (gain) | + balancing |
+|---|---:|---:|---:|---:|
+| model top-1 | 0.7831 | 0.7960 (+1.29) | 0.7904 | 0.8034 (+1.30) |
+| balancing alone (Van, top-100) | 0.7979 (+1.48) | | 0.8058 (+1.54) | |
+| **knn_mean3** (current: 3 best matches, beta 20) | **0.7963 (+1.32)** | **0.8093** | **0.8027 (+1.23)** | **0.8146** |
+| knn_max (best match) | 0.7949 (+1.18) | 0.8060 | 0.8007 (+1.02) | 0.8122 |
+| vote (weighted kNN over the whole bank) | 0.7945 (+1.14) | 0.8027 | 0.8007 (+1.03) | 0.8099 |
+| centres3 (3 k-means centres per class) | 0.7901 (+0.70) | 0.8020 | 0.7974 (+0.69) | 0.8089 |
+| ncm (class mean) | 0.7886 (+0.55) | 0.8008 | 0.7953 (+0.49) | 0.8087 |
+| knn_meanall (mean over all class photos) | 0.7844 (+0.13) | 0.7983 | 0.7917 (+0.13) | 0.8069 |
+| learned linear (all 12 signals) | 0.8040 (+2.09) | 0.8121 | 0.8047 (+1.43) | 0.8141 |
+| learned trees (same signals) | 0.7980 (+1.49) | 0.8107 | 0.7994 (+0.90) | 0.8126 |
+
+- **knn_mean3 (the current method) is the best of the hand-made re-rankers** on both views, with beta = 20 chosen independently on both halves every time, confirming the CodaBench settings. Matching individual training photos beats matching class averages (ncm, centres3, meanall: +0.1 to +0.7): the useful signal is "this photo closely resembles some training photo of the class", not the class's typical look.
+- **the learned linear re-ranker adds little once zoom is used**: on the zoom view it beats knn_mean3 by +0.20 (+0.16 / +0.23 on the two halves). Its larger gain on the plain view (+2.09) mostly comes from also reading the zoom view's log p (weight 1.71, the largest), i.e. it learns zoom + kNN; it lands where zoom + knn_mean3 does (0.8040 vs 0.8027). Its weights (standardised) put most on knn_mean3 (1.10) and knn_max (0.82), then centres3 (0.40), ncm (0.27), class spread (0.25, a boost for classes with varied photos), vote (0.21); knn_meanall, rank and sibling flag ≈ 0. Trees are worse than linear (fewer fixes, overfit-prone).
+- **balancing stacks with re-ranking**: on top of zoom + knn_mean3 it adds +1.19 (alone +1.54), giving the best result, **0.8146** (zoom + knn_mean3 + balancing), tied with zoom + learned linear + balancing (0.8141). Re-ranking and balancing fix mostly different errors.
+- decision: keep **zoom + knn_mean3** (simple, no learned component, transfers across checkpoints, CodaBench +0.85 / +1.40 already), without balancing: the team agreed class-count balancing cannot justify a higher score, since it relies on known per-class counts that a deployed model would not have (on this holdout it would add +1.2; reported only as an analysis). The learned linear re-ranker is not worth its extra complexity and transfer risk for +0.2.
+
+### 2026-10-27 — Anastasia — team decision: no class-count balancing
+
+- decision (team): class-count balancing (Van's `src/van_balance.py`, Sinkhorn to the split's known photos per class) is **not used for any submitted result**. It raises accuracy (full FT 448: 0.828 → 0.845; holdout: +1.2 to +1.5 on top of any model or re-ranker) only by using the fact that val has exactly 5 and test exactly 10 photos per class; a deployed classifier would not know the class counts of the photos it receives, so the gain does not reflect better recognition. Balanced numbers in this log are analysis only. The code stays in the repo for the re-ranker comparison.
+- final prediction pipeline without balancing: model → (zoom) → kNN re-ranking (K = 5, m = 3, beta = 20).
+
+### 2026-10-27 — Anastasia — merged-LoRA latency, third session (`scripts/latency_merged.py`)
+
+- run: `colab_launcher_ana_lora_merge_latency.ipynb` on `lora_20261007_051926` (LoRA r24 + extras; RUN_NAME was not switched to the no-extras run, so this times the with-extras checkpoint). A100-SXM4-40GB, bf16, synthetic 336 px, 30 warm-ups + 200 iterations; `inference_latency_merged.json` in that run folder.
+- batch 1: **merged 7.78 ms = plain ViT-B with the same head 7.78 ms**; unmerged 14.24 ms. Batch 64: merged 0.647, plain 0.648, unmerged 1.066 ms/image. Merging is exact: 0 LoRA layers left, fp32 max logit difference 1.5e-5, fp32 top-1 agreement 100% (bf16 96.5% on 256 synthetic images, from bf16 rounding of near-ties).
+- third session agreeing with the first two (7.68 / 8.35 ms merged vs 7.58 / 8.20 plain): merged LoRA costs nothing at inference. Once merged, LoRA r24 without extras is the same plain ViT-B, so its latency is taken as this 7.78 ms (CSV rows for 0.784 and the kNN 0.7982, which adds 0.03 ms of re-ranking).
+

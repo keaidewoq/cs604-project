@@ -1,0 +1,56 @@
+# Follow-up to ablation_lora_depth_res.yaml and ablation_param_selection.yaml.
+# Run: python scripts/ablation.py --spec configs/ablation_lora_depth_control.yaml --data_root /content/data \
+#        --output_dir /content/drive/MyDrive/CS604_RUNS
+# Launcher: notebooks/colab_launcher_ana_depth_control.ipynb
+#
+# J (LoRA r40 in blocks 4-11) lost 0.9 points to A, but changed three things at once:
+# no LoRA in blocks 0-3, more rank in blocks 4-11, and frozen pos_embed / cls_token
+# (0.44M of A's 0.46M extras at 336 px). Then param selection found that spreading the
+# budget over every layer beats concentrating it. These arms separate the pieces.
+#
+#   arm               LoRA                 pos_embed   trainable
+#   A                 r24, blocks 0-11     trains      4.65%
+#   J40               r40, blocks 4-11     frozen      4.67%   (= depth_res J, rerun here)
+#   J24               r24, blocks 4-11     frozen      2.84%
+#   K24               r24, blocks 6-11     frozen      2.13%
+#   J40_embed         r40, blocks 4-11     trains      5.06%   pilot control only: over the 5% cap
+#   J24_embed         r24, blocks 4-11     trains      3.23%
+#   C16_all           r16, blocks 0-11     trains      3.28%   (= r24 ablation's C, rerun here)
+#
+# Read:
+#   J40 vs J40_embed, J24 vs J24_embed   what freezing pos_embed / cls_token costs
+#   J40 vs J24                           what the extra rank in blocks 4-11 buys
+#   J24_embed vs C16_all                 same ~3.2% budget, same embeddings: fewer blocks at
+#                                        higher rank vs all blocks at lower rank (spread vs
+#                                        concentrated, directly)
+#   A, J24, K24 (+ C16_all)              accuracy per trainable %, for the decision table
+# The *_embed arms train pos_embed, so backward runs through every block: no speed-up.
+base: lora_r24_336_recipe.yaml          # relative to this file
+base_prototypes: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+pilot:
+  num_classes_subset: 1000
+  holdout_per_class: 5
+  subset_seed: 0
+  epochs: 3
+  warmup: 0.15                          # 5% of 3 epochs, as in the full run
+arms:
+  A_full_recipe: {}
+  J40_blocks4_r40:
+    first_trainable_block: 4
+    lora_rank: 40
+    lora_alpha: 40
+  J24_blocks4_r24:
+    first_trainable_block: 4
+  K24_blocks6_r24:
+    first_trainable_block: 6
+  J40_blocks4_r40_embed:
+    first_trainable_block: 4
+    lora_rank: 40
+    lora_alpha: 40
+    keep_embed_trainable: true
+  J24_blocks4_r24_embed:
+    first_trainable_block: 4
+    keep_embed_trainable: true
+  C16_all_blocks_r16:
+    lora_rank: 16
+    lora_alpha: 16
