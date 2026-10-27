@@ -108,21 +108,22 @@ def lookup(vals, ids, cand):
 def class_stats(bank, idx, device):
     """Per class: mean feature, 3 k-means centres, spread (1 - mean cosine to the mean)."""
     C, L = idx.shape
+    bank_d = bank.to(device)  # index and bank on the same device
     means = torch.zeros(C, bank.shape[1])
     centres = torch.zeros(C, 3, bank.shape[1])
     spread = torch.zeros(C)
     for s in range(0, C, 1024):
         rows = idx[s:s + 1024].to(device)
         valid = rows >= 0
-        x = bank[rows.clamp_min(0)].float() * valid[..., None]          # (b, L, D)
+        x = bank_d[rows.clamp_min(0)].float() * valid[..., None]        # (b, L, D)
         n = valid.sum(1, keepdim=True).clamp_min(1)
         mu = F.normalize(x.sum(1) / n, dim=-1)
         sim = (x * mu[:, None]).sum(-1)
         spread[s:s + 1024] = (1 - (sim * valid).sum(1) / n.squeeze(1)).cpu()
         # 3-means per class, initialised at the photo closest to the mean and the two farthest
         far = sim.masked_fill(~valid, 2).argsort(1)[:, :2]
-        cen = torch.stack([x[torch.arange(len(x)), sim.masked_fill(~valid, -2).argmax(1)],
-                           x[torch.arange(len(x)), far[:, 0]], x[torch.arange(len(x)), far[:, 1]]], 1)
+        ar = torch.arange(len(x), device=x.device)
+        cen = torch.stack([x[ar, sim.masked_fill(~valid, -2).argmax(1)], x[ar, far[:, 0]], x[ar, far[:, 1]]], 1)
         for _ in range(10):
             assign = torch.einsum("bld,bkd->blk", x, cen).argmax(-1).masked_fill(~valid, -1)
             for k in range(3):
