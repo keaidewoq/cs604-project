@@ -50,6 +50,23 @@ raised Task 1 to 0.845, but only by using the fact that val has exactly 5 and te
 
 ---
 
+## Motivation
+
+Fine-grained recognition at scale is hard twice over: 10,000 classes, many of which
+differ only in small details from their closest relatives, with just 45 training images
+each. On top of that, we have a fixed budget of 96 GB-hours. The obvious response to a
+tight budget is to make each epoch cheaper so more of them fit, for example by training
+at low resolution. But it is not clear that training longer is what limits accuracy on a
+task like this. We ask: **under a fixed compute budget, what actually limits
+fine-grained accuracy, and where should the budget be spent?** We look at this for full
+fine-tuning and for parameter-efficient adaptation that trains under 5% of the backbone.
+
+(Report vs slides: in the report, the abstract and a short contributions list at the end
+of the introduction state the answer in one line each. In the presentation, hold it back
+and let the sibling finding in Section 2.4 be the turning point.)
+
+---
+
 ## 1. Problem and constraints
 
 - **Data.** 10,000 classes, 45 training images per class (450,000), val 5 per class,
@@ -70,7 +87,8 @@ raised Task 1 to 0.845, but only by using the fact that val has exactly 5 and te
 ## 2. The story: problems we found and what we did about them
 
 This is the spine for both the report and the presentation. Each step is: what we
-believed, what the evidence said, what we changed.
+believed, what the evidence said, what we changed. Together the steps answer the
+question in the Motivation: where a fixed budget should go.
 
 ### 2.1 Starting point: "the budget is the enemy, so buy more epochs"
 
@@ -105,6 +123,23 @@ Section 4.1). What mattered:
 4. **Head lr 10× the backbone**: +1.5 from a probe start; from prototypes 10× and 30× tie.
 
 CodaBench: **0.663 → 0.757** with the same 224 px and budget.
+
+**Why each change worked.** "Measured" = our runs show the mechanism; "hypothesis" =
+our best explanation.
+
+| Change | Effect | Why |
+| --- | --- | --- |
+| Layer-wise lr decay 0.75, top lr 4e-4 | removing it −6.7 | Early layers hold general features (edges, textures) from IN21k. With 45 images per class, large updates there overwrite features that transfer, while the top layers must change most for 10,000 new classes. **Measured:** without decay even 1e-4 is −2.6 vs 1e-5 (Anastasia's pilot), so a high lr is only safe with decay. Matches standard practice (BEiT, ELECTRA). |
+| Warmup + cosine fitted to the 144-min clock | 1 epoch beats 11 at a constant rate; CodaBench 0.621 → 0.663 | A constant lr keeps the optimiser noisy, so it never settles. Decaying to zero lets the weights settle. Fitting the schedule to the clock guarantees the low-lr phase actually happens before the time limit stops the run. **Measured.** |
+| Prototype cosine head instead of LP-FT | +1.6 to +2.0 although the probe starts 16 points higher; reproduced at 336 (−2.2) and for LoRA (−2.9) | **Hypothesis:** a trained probe is already confident, so loss gradients are small and the backbone hardly adapts. Prototypes are reasonable but not confident, so the backbone keeps receiving signal. Lowering the head lr didn't rescue LP-FT (Anastasia), which rules out the head being disrupted. |
+| Head lr 10× the backbone | +1.5 from a probe start; 10× and 30× tie from prototypes | The 7.7M-parameter head is new and must move faster than a pretrained backbone that only needs nudging. |
+| Crop scale, colour jitter, head lr 30× | ties | Augmentation was not the bottleneck: the model was short on information, not regularisation. This sets up 2.3. |
+
+Fixed, not tuned (standard ViT fine-tuning): label smoothing 0.1, drop_path 0.1, wd 0.05
+(none on norms/biases), clip 1.0, batch 256, bf16.
+
+Slide line: **the recipe gained 9.4 points by not damaging what the pretrained model
+already knows, without adding epochs.**
 
 **Evidence that epochs are not the bottleneck:**
 
@@ -557,7 +592,8 @@ depth-concentrated budgets.
 
 ## 7. Suggested presentation flow (15 min)
 
-1. Task and constraints (1 slide): 10,000 species, 45 photos each, 96 GB-h.
+1. Task, constraints and the question (1 slide): 10,000 species, 45 photos each, 96 GB-h.
+   "Under a fixed budget, what limits fine-grained accuracy?" Don't give the answer yet.
 2. Where we started (1): 0.61 full FT ≈ frozen probe. "We thought we needed more epochs."
 3. Problem 1, optimisation (2): layer decay, schedule, prototype head; 0.663 → 0.757.
 4. Problem 2, fine-grained detail (2): low-res/progressive loses; resolution curve; 0.757 → 0.825.
@@ -581,3 +617,77 @@ depth-concentrated budgets.
   curves, error examples (sibling pairs), zoom example boxes.
 - The report needs one consistent holdout description per table (Van's 10,000-class holdout
   vs the 1,000-class pilots).
+
+### 8.1 Gaps in the Task 2 (PEFT) story, and experiments to close them
+
+**Gaps in how the survey (Section 2.5) was run:**
+
+- a. **Mixed resolution:** methods compared at 224, 336 and 448 in one table.
+- b. **Mixed recipes:** early runs predate the shared recipe of 2026-10-07, e.g. LoRA r16
+  (0.717) used head lr 1e-4, below the LoRA lr, the opposite of the 10× rule; last-block
+  (0.668) came from a 5-epoch screen with a random linear head.
+- c. **Mixed prediction views:** even the 448 comparison mixes crop + flip (last-block,
+  BitFit) with zoom (LoRA, AF + LoRA), and that LoRA run also had 25% whole-image crops.
+- d. **Mixed holdouts:** some evidence is from 1,000-class pilots.
+- e. **Single seeds:** the 0.779–0.785 cluster at 336 is within seed noise (~0.3).
+- f. **Weak reason for AdaptFormer over LoRA:** "starts as the identity" also holds for
+  LoRA (B = 0), and they tie at 336. The gains came from biases/norms, LoRA and 448.
+- g. **No equal-parameter control:** AF + LoRA (4.94%) vs AF + biases (4.27%) may be the
+  extra 0.7% of parameters, not the combination.
+
+**Leaderboard: none of these experiments needs CodaBench.** They are all scored on our own
+labelled holdout. The leaderboard only matters if a result would change a submitted model,
+and we are not changing the two finals: the Phase 2 test files stay the Task 1 0.8407
+pipeline and the Task 2 0.8308 pipeline (Section 8). The experiments explain the design;
+they don't replace it. Deadline: all runs finished by **2026-10-30**.
+
+**Experiments, ranked by story fixed per GPU-hour:**
+
+1. **[READY TO RUN]** **Controlled method comparison** (fixes a–d). Spec
+   `configs/ablation_peft_controlled.yaml`, shared recipe `configs/peft_controlled_336.yaml`,
+   launcher `notebooks/colab_launcher_ana_peft_controlled.ipynb`. All 10,000 classes, 5
+   per class held out (subset seed 0, the same holdout as the all-class LoRA run), 336 px,
+   prototype cosine head from the fit images, head lr 3e-3, 20 training minutes each
+   (~1 epoch), plain crop 0.9, no extras. Each method keeps its earlier lr.
+
+   | Arm | Method | Backbone % | Question |
+   | --- | --- | --- | --- |
+   | A | LoRA r24, qkv/proj/fc1/fc2, all blocks | 4.12 | reference |
+   | B | LoRA r40, blocks 4–11 only | 4.57 | spread vs concentrated (B has *more* params) |
+   | C | AdaptFormer w192 (paper version) | 4.13 | LoRA vs AdaptFormer, same budget |
+   | D | Serial adapter w96 | 4.14 | |
+   | E | BitFit | 0.12 | all-layer methods vs small/concentrated ones |
+   | F | Last-block attention | 2.75 | |
+   | G | Prefix, length 50 | 1.07 | |
+
+   Becomes the main Task 2 table and carries the "spread capacity across layers" claim.
+   Cost: ~25 min per arm on an A100, 11 arms with the seeds ≈ 4.6 h, split over two Colab
+   sessions (the launcher lists the split). All arms on A100s: equal minutes only compare
+   on one GPU type.
+2. **[TODO, Van]** **Equal-parameter controls at 4.94%** (fixes g, helps f). These need
+   Van's AdaptFormer (`src/peft/van_adaptformer.py` on `van-448-finals`, not on our branch),
+   so run them in Van's laptop holdout setup (336, 40/5 split, 3 epochs, same recipe), next
+   to the existing 76.76 (AF + biases/norms, 4.27%) and 77.33 (AF + LoRA r16, 4.96%):
+   - **AF width 224 + biases/norms, no LoRA:** `adapter_dim: 224` on
+     `van_adaptformer_bias_final.yaml`. 12 × (2·768·224 + 224 + 768) + 12 scales + 122,112
+     = 4,262,796, the same as AF + LoRA (4,262,412).
+   - **LoRA r28 on qkv/proj/fc1/fc2 + biases/norms, no AF:** 28 × 147,456 + 122,112 =
+     4,250,880, same budget. Van's recipe (CosFace 0.1, head lr 4e-3); check that Van's
+     framework can run LoRA without the adapter.
+
+   Reading: if AF + LoRA beats both, the combination matters. If AF w224 ties AF + LoRA,
+   it was just the extra parameters.
+3. **[READY TO RUN]** **Seeds** (fixes e): arms A_seed1/2 and C_seed1/2 in experiment 1. That
+   gives 3 seeds each for LoRA and AdaptFormer, so the difference can be called real or a tie.
+4. **[CUT]** **Images-per-class curve.** The pilot builder can't cap training images per
+   class, and this doesn't fit by 2026-10-30. Report the existing point instead: at 10 per
+   class and 448, full FT 64.79 vs AF 62.72. Full FT still wins at low data per class, so
+   the 1,000-class pilot crossover is probably about total dataset size. State it as a
+   limitation.
+5. **[CUT]** **AdaptFormer at 512.** A full run would compete with the finals for the last
+   day. Report as future work: the PEFT resolution curve had not flattened at 448
+   (+1.54 per step).
+
+**No-experiment fixes:** split Section 2.5 into a "first round" table and a "controlled"
+table; rank only on plain-view accuracy; add a recipe/date column so pre-shared-recipe
+rows are visible.
