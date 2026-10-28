@@ -26,7 +26,7 @@ Two kinds of accuracy appear below. Keep them apart in the report:
 | Method | ViT-B/16 full FT at 448 px, prototype cosine head, layer-wise lr decay | AdaptFormer (width 192) + LoRA r16 on qkv + trainable biases/LayerNorms, at 448 px |
 | CodaBench, single view | **0.825** | **0.812** |
 | CodaBench, crop 0.9 + zoom (2 passes) | **0.832** | **0.822** |
-| CodaBench, + kNN re-ranking | **0.8407** (Anastasia, 2026-10-27) | not run yet **[TODO]** |
+| CodaBench, + kNN re-ranking | **0.8407** (Anastasia, 2026-10-27) | **0.8308** (2026-10-28) |
 | Trainable params (backbone, course %) | 100% (93,930,241 incl. head) | **4,262,412 = 4.94%** of the 86.25M backbone at 448 |
 | Trainable params incl. 10,000-class head | 93.93M | 11.94M (12.18% of 98.07M) |
 | Inference latency, batch 1 / batch 64, one pass (A100, bf16) | 8.47 / 1.17 ms per image | 13.45 / 1.56 ms per image (11.27 / 1.33 with LoRA merged) |
@@ -35,6 +35,10 @@ Two kinds of accuracy appear below. Keep them apart in the report:
 | Peak VRAM | 17.80 GB | 14.66 GB |
 | Epochs in budget | 5.5 | 5.5 |
 | Run folder | `CS604_RUNS/full_ft_20261017_122237` | `CS604_RUNS/van_adaptformer_20261021_083823` |
+
+The 0.8407 row is crop 0.9, a second zoom pass, then a top-5 re-rank. Both latency rows
+are A100 timings of these two 448 checkpoints from one session (Section 5.3); the zoom row
+is the submitted two-pass path. Re-ranking adds under 0.1 ms per image on top.
 
 References from the course PDF (a PhD student's numbers): zero-shot with an initialised
 head 43.7%, full FT 70.8%, LoRA 68.3% at 0.34%. Our first submissions were 0.610 (full FT)
@@ -49,9 +53,10 @@ raised Task 1 to 0.845, but only by using the fact that val has exactly 5 and te
 ## 1. Problem and constraints
 
 - **Data.** 10,000 classes, 45 training images per class (450,000), val 5 per class,
-  test 10 per class. Class IDs are ordered by relatedness (neighbouring IDs are visually
-  related; Section 2.4). So this is
-  **species-level identification**: many classes are look-alike siblings in the same genus.
+  test 10 per class. Neighbouring class IDs are visually close under the pretrained
+  features (Section 2.4). The genus reading assumes iNaturalist’s ID order; class names
+  are not in the release, so that part is a hypothesis. The practical fact is
+  **fine-grained identification**: many classes are look-alike siblings.
 - **Budget.** 2 h × 48 GB = 96 GB-hours per training run. We ran every final on a Colab
   A100 40 GB for 2.4 h (= 96 GB-h). The cosine schedule is fitted to the clock, so the
   learning rate reaches zero exactly at the time limit.
@@ -148,13 +153,17 @@ larger than full FT's and had not flattened at 448.
 
 **Diagnosis (no training).**
 
-- Class IDs follow the taxonomy: prototype cosine 0.80 for IDs 1 apart vs 0.28 for random
-  pairs; for half the classes the most similar class is within 5 IDs (Anastasia).
-- Errors are siblings: 46% of full-FT holdout errors fall within ±10 IDs of the truth
-  (Van); on the full 10,000-class holdout 34% of LoRA errors are within 5 IDs, and the true
-  class is 2nd in 37% of errors (Anastasia).
-- The other big cause: test photos showing a part, life stage or season that the ~45
-  training photos barely cover (59% of errors flagged "unseen look").
+- Class IDs track visual similarity: prototype cosine 0.80 for IDs 1 apart vs 0.28 for
+  random pairs; for half the classes the most similar class is within 5 IDs (Anastasia).
+  Calling those neighbours a genus is the iNaturalist reading, not something we could
+  check against class names.
+- Errors are siblings, and the 1,000-class pilots understate it. On a random 1,000-class
+  pilot, 18% of LoRA errors fall within 5 IDs and the true class is 2nd in 48% of errors.
+  On the full 10,000-class holdout those figures are **34%** and **37%** (Anastasia). Van’s
+  full-FT holdout puts 46% of errors within ±10 IDs.
+- The other big cause, measured on the 1,000-class pilot: photos showing a part, life
+  stage or season that the training photos barely cover (59% of errors flagged
+  "unseen look").
 
 **Changing the loss to separate siblings did not help:**
 
@@ -180,11 +189,16 @@ prediction time.
    of it from a 2× copy, classify again, average. Beats flip at the same two passes
    (+0.85 / +0.62 holdout). The saliency location matters: a centred box of the same size is
    +0.28 worse for AdaptFormer. CodaBench +0.5 to +1.3 depending on the model.
-3. **kNN re-ranking (Anastasia).** Re-score the top 5 classes with `log p + 20 × mean of
-   the 3 best cosines to that class's training photos`. Settings fixed on the holdout
-   (+1.29, both halves chose the same values). CodaBench: LoRA 0.784 → 0.798; **Task 1
-   zoom 0.832 → 0.8407**. No training; needs a stored bank of 450,000 training features
-   (~0.7 GB fp16).
+3. **kNN re-ranking (Anastasia).** The head stays. Only its top 5 classes are re-scored,
+   `log p + 20 × mean of the 3 best cosines to that class's training photos`. K = 5, m = 3
+   and beta = 20 were fixed on the 10,000-class holdout before any CodaBench file
+   (+1.29; both halves chose the same values). CodaBench, same pass: LoRA plain
+   **0.7842 → 0.7982** (+1.40); Task 1 crop 0.9 + zoom **0.8322 → 0.8407** (+0.85);
+   Task 2 crop 0.9 + zoom **0.822 → 0.8308** (+0.88, 2,580 of 50,000 predictions
+   changed). Same K, m and beta on all three; not retuned. No training. The bank is
+   the 450,000 training features (~0.7 GB fp16), built once (~15 min at 336, ~25–30 min
+   at 448), outside the 144-minute training clock. Re-ranking is 0.03 ms per image on
+   the 336 LoRA run and 0.062 ms per image at batch 64 on the Task 2 run.
 4. **Class-count balancing (Van; excluded).** Sinkhorn rebalancing to the known 5 per class:
    +1.7 on CodaBench (0.828 → 0.845). Excluded by team decision (Section 6).
 
@@ -211,14 +225,22 @@ head with a 10× head lr, warmup + cosine to the clock, label smoothing 0.1).
 | LoRA r24 + VPT-Deep | Qian | 4.74 | 336 | | 0.793 (crop+flip) |
 | LoRA r24 + 25% whole-image crops | Qian | 4.94 | 448 | | 0.810 (zoom) |
 | AdaptFormer + biases/norms | Van | 4.27 | 336 / 384 / 448 | 0.804 (448) | 0.814 (448, zoom) |
-| **AdaptFormer + biases/norms + LoRA r16** | Van | **4.94** | 448 | **0.812** | **0.822** (zoom) |
+| **AdaptFormer + biases/norms + LoRA r16** | Van | **4.94** | 448 | **0.812** | **0.8308** (zoom + kNN) |
 
 Pilot-only (1,000 classes, not submitted): AdaLoRA −2.7 vs LoRA (Qian).
+
+The "Best view" column is not a ranking. It mixes plain crop, flip, zoom and kNN.
+On plain crop at 336, AdaptFormer, GPS, DoRA and LoRA sit in **0.779–0.785**. The
+controlled comparison is at 448: last-block **0.685**, BitFit **0.762**, LoRA
+**0.810** (zoom), AdaptFormer + LoRA **0.822** (zoom). Early rows also used weaker
+recipes, so part of the gap below is the head and the schedule, not only which
+weights were trained.
 
 **What the survey taught us:**
 
 - **Spread the budget across all layers.** Methods touching every block (LoRA, adapters,
-  AdaptFormer, GPS) beat concentrated ones (last block, a few full matrices) by 5–10 points.
+  AdaptFormer, GPS) beat concentrated ones (last block, a few full matrices). At 448
+  that gap is about 6–14 points.
   Anastasia's controls: one full-rank attention block costs ~1 point at any depth; r16 in all
   12 blocks beats r24 in 8 blocks at equal parameters (+0.76).
 - **The head setup matters more than the adapter type.** In Anastasia's LoRA ablation the
@@ -300,12 +322,14 @@ flowchart TB
   P1 --> P2
 ```
 
-`*` = trainable. All Linear/LayerNorm biases also train. Training loss: cross-entropy with
-label smoothing 0.1 and a CosFace margin 0.1 on the cosine head.
+`*` = trainable. All Linear/LayerNorm biases also train. Task 2 loss: cross-entropy with
+label smoothing 0.1 and a CosFace margin 0.1 on the cosine head. The kNN box above is
+Task 1 only; Task 2 stops at the averaged softmax.
 
-Task 1 uses the same pipeline with every weight trainable: layer-wise lr decay 0.75 (top
-block 4e-4), head lr 4e-3, wd 0.05 (none on norms/biases), drop_path 0.1, clip 1.0,
-batch 256, bf16, 5% warmup then cosine ending at the 144-minute limit.
+Task 1 uses the same views with every weight trainable and no CosFace margin: layer-wise
+lr decay 0.75 (top block 4e-4), head lr 4e-3, wd 0.05 (none on norms/biases), drop_path
+0.1, clip 1.0, label smoothing 0.1, batch 256, bf16, 5% warmup then cosine ending at the
+144-minute limit.
 
 ---
 
@@ -347,7 +371,7 @@ vs AdaLoRA at 448 (Qian), selected attention layers (Qian).
 | Model | Plain | Crop + flip | Zoom | Zoom + kNN | (+ balancing, not used) |
 | --- | --- | --- | --- | --- | --- |
 | Full FT 448 (Task 1) | 0.825 | 0.827 | 0.832 | **0.8407** | 0.845 (crop 0.75 + zoom) |
-| AF + LoRA 448 (Task 2) | 0.812 | | **0.822** | **[TODO]** | |
+| AF + LoRA 448 (Task 2) | 0.812 | | **0.822** | **0.8308** | |
 | LoRA r24 336 (Anastasia) | 0.785 | 0.793 | 0.799 | | |
 | LoRA r24 no extras 336 | 0.784 | | | 0.798 (no zoom) | |
 
@@ -363,7 +387,7 @@ Task 1: 0.610 → 0.621 → 0.663 → **0.757** (LLRD recipe) → 0.773 (crop + 
 
 Task 2: 0.668 (last block) → 0.717 (LoRA r16, 336) → 0.734 (BitFit) → 0.779 / 0.785
 (AdaptFormer / LoRA r24) → 0.802 (AF + biases/norms, zoom) → 0.814 (448) → **0.822**
-(+ LoRA r16).
+(+ LoRA r16, zoom) → **0.8308** (+ kNN).
 
 **[Figure idea]** one line chart, two series, x = submission order, annotated with the
 change that caused each jump. This is the presentation's main slide.
@@ -379,6 +403,11 @@ Backbone at 448 px = 86,250,240 (ViT-B with a 785-token position embedding); hea
 | Biases + LayerNorm weights | 122,112 |
 | LoRA r16 on qkv, 12 blocks | 589,824 |
 | **Backbone total** | **4,262,412 = 4.94%** |
+
+The course percentage is that 4.94%: new backbone parameters divided by the original
+backbone, head excluded (Prof, 2026-10-03). The 11.94M figure adds the 10,000-class
+head. The 98.07M denominator also adds the new adapter weights, so 12.18% is not the
+course number.
 
 **[TODO]** check the component split against the run's printed `[params]` line (the
 total 11,942,413 trainable incl. head is from `run_stats.txt`).
@@ -430,16 +459,22 @@ Teammates' zoom timings (the `inference_latency_zoom.json` files in `CS604_RUNS`
 So at batch 1 zoom costs 2.5–2.8× a single pass, not 2×: the box search and the resize of
 the 2× copy add fixed overhead. At batch 64 it is about 2.2×.
 
-kNN re-ranking adds 0.03 ms per image plus a 0.7 GB feature bank.
+kNN re-ranking adds **0.0295 ms per image** at batch 128 on the 336 LoRA checkpoint
+(`rerank_stats.json`), plus a 0.7 GB fp16 feature bank. On the 448 full fine-tune the
+same step is under 0.1 ms per image. The bank is built once (~15 min at 336, ~25–30 min
+at 448) and is not part of the 144-minute training clock.
 
 ### 5.4 Training GPU-hours and implementation details
 
 - Every final: one A100-SXM4-40GB, 144.0 training minutes, stopped by the clock
   (`time_limit_reached=True`), 2.40 h × 40 GB = 96 GB-h. The cosine schedule is fitted to the
   time limit (`schedule_fit_time`).
-- Excluded from the budget (state this explicitly): building class prototypes (one
-  frozen-backbone pass), PCA calibration for AdaptFormer (8 batches, ~10 s, inside the run),
-  the kNN feature bank (~25–30 min at 448). **[TODO: check with the Prof if needed.]**
+- Outside the 144-minute training clock, and stated separately: building class prototypes
+  (one frozen-backbone pass), PCA calibration for AdaptFormer (8 batches, ~10 s), and the
+  kNN feature bank (one forward pass over the training set: ~15 min at 336, ~25–30 min at
+  448). The bank stores features; it does not train parameters. **[TODO]** confirm with
+  the Prof that this pass is reported beside the budget rather than inside it. The 0.8407
+  file depends on the bank.
 - Tuning compute (not part of the budget): Task 1 laptop tuning ~17.5 h on an RTX 5080
   Laptop (16 GB); Task 2 AdaptFormer screens ~40 min to 2 h each on the same laptop;
   teammates' pilots 4–12 min each on an A100. **[TODO: total per person.]**
@@ -457,15 +492,19 @@ numbers in `step_log.csv` / `epoch_log.csv`. Epoch-mean training loss of the fin
 
 Task 2's loss is higher because it includes the CosFace margin times the learned
 temperature (the temperature grows from 20 to ~68 during training), so the two curves are
-not comparable in level. The finals train on all 45 images per class, so they have no
-validation curve. For train-vs-validation curves, use the holdout screens
-(`full_proto_336_len3`, `af_bn_bias_norm_e3`: holdout loss per epoch in `metrics.csv`).
+not comparable in level. Both curves are still falling at the time limit. The evidence
+that more epochs would not have been the better use of the budget is the 224 length
+curve (6 → 12 epochs, +0.53) and the equal-compute resolution screen, not these two
+plots. The finals train on all 45 images per class, so they have no validation curve.
+For train-versus-validation curves, use the holdout screens (`full_proto_336_len3`,
+`af_bn_bias_norm_e3`: holdout loss per epoch in `metrics.csv`).
 
 ---
 
 ## 6. Trade-offs and what we recommend
 
-**Accuracy.** Full FT wins: 0.832 vs 0.822 with zoom (+1.0), 0.825 vs 0.812 single view.
+**Accuracy.** Full FT wins: 0.8407 vs 0.8308 with zoom and kNN (+1.0), 0.832 vs 0.822
+with zoom alone, 0.825 vs 0.812 single view.
 The gap fell from 2.8 points at 336 in early October (0.807 vs 0.779) to 1.0. PEFT does not
 beat full FT here, unlike the PDF's expectation for small data: 45 images × 10,000 classes
 is 450,000 images, and the pilots on 1,000 classes (40k images) show the crossover
@@ -487,13 +526,18 @@ rest is the AdaptFormer branch, which cannot be merged. With zoom, as submitted:
 | If you care most about | Choose |
 | --- | --- |
 | Best accuracy | Full FT 448 + zoom + kNN (0.8407) |
-| Best accuracy under 5% | AdaptFormer + LoRA 448 + zoom (0.822) |
+| Best accuracy under 5% | AdaptFormer + LoRA 448 + zoom + kNN (0.8308) |
 | Lowest latency under 5% | LoRA r24 merged (0.785 plain / 0.799 zoom at 336, same speed as plain ViT-B) |
 | Fewest parameters | BitFit 0.12% (0.762 at 448) |
 
-**Prediction-time extras.** Zoom costs 2.2–2.8× the single-pass latency for +0.5 to +1.0; kNN costs a
-0.7 GB bank and ~0 latency for +0.85 to +1.4. Both are honest gains (no label information).
-Class-count balancing (+1.7) is excluded because it uses the known test class counts.
+**Prediction-time extras.** Zoom costs 2.2–2.8× the single-pass latency for +0.5 to +1.0. kNN re-ranking
+keeps the head and only reorders its top 5 classes. On CodaBench that is **+1.40** for
+plain LoRA at 336 (0.7842 → 0.7982) and **+0.85** on top of Task 1 zoom
+(0.8322 → 0.8407) and **+0.88** on Task 2 zoom (0.822 → 0.8308). It costs a 0.7 GB
+bank, built once outside the training clock, and under 0.1 ms per image. Both gains use
+training photos only,
+not val or test labels. Class-count balancing (+1.7, 0.828 → 0.845) is excluded because
+it uses the known test class counts.
 
 **What we'd say mattered most, ranked by CodaBench gain:**
 
@@ -528,8 +572,12 @@ depth-concentrated budgets.
 ## 8. Open items before the report
 
 - **[TODO Ana]** Exact numbers for the 2,000-class resolution ablation (224 / 336 / 224→336).
-- **[TODO]** kNN re-ranking on the Task 2 final (no training, prediction only).
-- **[TODO]** Test-phase submissions (2 allowed, 31 Oct – 6 Nov): which two files?
+- Task 2 re-rank is scored: **0.8308** on 2026-10-28 (crop 0.9 + zoom + K = 5, m = 3,
+  beta = 20). Post it. The public board was still on 0.8236, so the “+0.72” is against
+  that post, not against the 0.822 zoom file.
+- **[TODO]** Phase 2 allows two test files, 31 Oct – 6 Nov. File 1: the Task 1
+  0.8407 pipeline (`full_ft_20261017_122237`, crop 0.9 + zoom + kNN). File 2: the Task 2
+  0.8308 pipeline (`van_adaptformer_20261021_083823`, crop 0.9 + zoom + the same kNN).
 - **[TODO]** Figures: CodaBench progression chart, resolution curve, framework diagram, loss
   curves, error examples (sibling pairs), zoom example boxes.
 - The report needs one consistent holdout description per table (Van's 10,000-class holdout
