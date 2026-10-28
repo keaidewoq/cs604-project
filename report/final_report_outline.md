@@ -130,6 +130,18 @@ needs no extra network.
 **Retrieval at prediction time.** kNN / retrieval-augmented classification. **[TODO: find
 the right reference]**
 
+**Also cited where our experiments use them:**
+
+- *Making Better Mistakes* (Bertinetto et al., CVPR 2020) predicts what our taxonomy-aware
+  smoothing showed: milder mistakes, not more correct answers.
+- Partial fine-tuning by fine-tuned angle (Ye et al., 2023): one of the parameter-selection
+  rules we compared.
+- DDT co-localisation (Wei et al., IJCAI 2017): the box finder we tried for aimed crops.
+- ViT outlier tokens (Darcet et al., ICLR 2024): the explanation we tested for why those
+  boxes failed. The final layer had none, so it did not explain the failure.
+
+**[TODO]** Check each reference.
+
 ---
 
 ## 3. Method
@@ -140,13 +152,20 @@ the right reference]**
   10 per class. Neighbouring class IDs are visually close under the pretrained features
   (Section 5.3). The genus reading assumes iNaturalist's ID order; class names are not in
   the release, so that part is a hypothesis. The practical fact is **fine-grained
-  identification**: many classes are look-alike siblings.
+  identification**: many classes are look-alike siblings. The split sizes match
+  iNaturalist 2021: train + val = 500,000 = its "train_mini" (50 per class), and test
+  100,000 = its validation set (10 per class).
 - **Budget.** 2 h × 48 GB = 96 GB-hours per training run. Every final ran on one A100 40 GB
   for 2.4 h (= 96 GB-h).
-- **Backbone.** `vit_base_patch16_224.augreg2_in21k_ft_in1k` (timm).
+- **Backbone.** `vit_base_patch16_224.augreg2_in21k_ft_in1k` (timm), the course default,
+  confirmed as a team decision on 2026-10-05. DINOv2 was screened but not used.
+  **[TODO]** Reconcile the Prof's rule: Van's notes (2026-10-03) say "comparable-size ViTs
+  allowed", while the log entry for the DINOv2 probe says augreg2 is required.
 - **Rules** (confirmed with the Prof, 2026-10-03). The classifier head is always trained
-  and not counted in the 5% limit; the 5% applies to the backbone. No val or test labels
-  are used.
+  and not counted in the 5% limit; the 5% applies to the backbone.
+- **Integrity.** No val or test labels are used. Because the data appears to be iNat21,
+  we avoided any model trained on iNat21 (e.g. BioCLIP, iNat21 checkpoints): those would
+  likely have seen our validation and test photos.
 
 ### 3.2 Overview
 
@@ -322,6 +341,14 @@ split against the run's printed `[params]` line.
   are compared only with each other. Some supporting results use
   1,000-class pilot holdouts; their absolute numbers are higher and only comparable within
   one pilot, and every such table says so.
+- **Why the holdout and pilots can be trusted** (worth a sentence, since most ablations
+  use them):
+  - The holdout tracks CodaBench: a DINOv2 probe scored 73.7 on the holdout vs 74.2 on
+    CodaBench, and the equal-compute screen predicted each resolution step.
+  - Pilots rank PEFT variants the same way as full scale: DoRA (+0.12 pilot, −0.2 full),
+    GPS (−0.52, −0.6) and no extras (−0.14, −0.1) all agree.
+  - They **cannot** rank PEFT against full FT: LoRA beats full FT on a pilot (by 0.4), but
+    full FT is +2.2 at full scale.
 - **Training budget.** Every final: one A100-SXM4-40GB, 144.0 training minutes, stopped by
   the clock, 2.40 h × 40 GB = 96 GB-h.
 - **Outside the training clock** (reported separately): class prototypes (one frozen pass),
@@ -464,9 +491,26 @@ Supporting evidence already in hand:
   10,000 classes, 224 px, 5 epochs): complete attention in the last block **65.41**
   (2.75%); QKV in the last block 64.91 (2.07%); QKV in the last *two* blocks 64.06
   (4.13%), worse than one block with half the parameters.
-- **Spread vs concentrated LoRA** (Anastasia, 1,000-class pilots): one full-rank attention
-  block costs ~1 point at any depth; LoRA r16 in all 12 blocks beats r24 in 8 blocks at
-  equal parameters (+0.76).
+- **Which parameters to train, at the same ~4.6% budget** (Anastasia, parameter-selection
+  pilot, 1,000 classes, 3 epochs, holdout %):
+
+  | Rule | Arm | Holdout | vs LoRA |
+  | --- | --- | --- | --- |
+  | Spread: low rank everywhere | LoRA r24, all layers | **89.96** | — |
+  | Spread: sparse entries everywhere | GPS, top 42 inputs per neuron | 89.44 | −0.52 |
+  | One full-rank block + LoRA r8 elsewhere, by depth | block 0 / 5 / 11 attention | 88.88 / 89.00 / 88.94 | −1.08 / −0.96 / −1.02 |
+  | By fine-tuned angle, whole layer + LoRA r8 | block 11 attention | 89.08 | −0.88 |
+  | Most concentrated: 4 whole matrices, no LoRA | by fine-tuned angle | 87.38 | −2.58 |
+  | Reference: full FT (layer decay / flat lr) | 100% | 89.60 / 89.56 | −0.36 / −0.40 |
+
+  Spreading the budget beats concentrating it, and **depth makes no difference**: one
+  full-rank block costs ~1 point whether it is block 0, 5 or 11, so the "early layers
+  matter" idea (surgical fine-tuning) is not supported here. Under full FT the patch
+  embedding moved least and the deep layers most, so the shift from ImageNet to this data
+  is not a low-level appearance change. The full-FT rows show a pilot limit (Section 4.1):
+  at pilot scale LoRA ties or beats full FT.
+- **Spread vs concentrated at equal parameters** (Anastasia, depth controls): LoRA r16 in
+  all 12 blocks beats r24 in 8 blocks by 0.76 at ~3.2%.
 - **The head setup matters more than the adapter type** (Anastasia, LoRA recipe
   ablation): head start × head lr swings 6 points, while rank 16 → 24 is +0.66, DoRA
   +0.12 and extras +0.14.
@@ -514,6 +558,16 @@ appendix as Table A1, labelled as uncontrolled: it mixes resolutions, recipes an
 
 Confirmed on CodaBench: 77.9 (336) → 79.4 (+ biases/norms, 384) → 80.4 (448) → **81.2**
 (+ LoRA r16, 448), single view.
+
+**Capacity is not the limit.** AdaptFormer fits its own training images almost as well as
+full FT (95.0% vs 95.5% top-1 on seen images) but generalises 1.4 points worse. Wider
+adapters (beyond 192), depth-graded widths and extra regularisation (RandAugment, adapter
+dropout) all tied. So the PEFT gap is about what the features generalise, not how many
+parameters train, which fits the information story.
+
+**[TODO, Van]** The draft says AdaptFormer trained ~1.3× faster than full FT on the laptop,
+but both A100 finals fit the same 5.5 epochs in 144 minutes. Say which holds before the
+report claims a speed advantage.
 
 ### 4.7 Prediction-time views
 
@@ -636,6 +690,12 @@ had not flattened at 448.
   0.28 for random pairs, and for half the classes the most similar class is within 5 IDs.
 - On the 10,000-class holdout, 34% of errors fall within 5 IDs of the true class. The
   full-FT holdout puts 46% of errors within ±10 IDs.
+- **Siblings are the main difficulty once they are present** (Anastasia, sibling-block
+  pilot). The same LoRA recipe was trained on two 1,000-class subsets: one of random
+  classes, and one made of 100 blocks of 10 neighbouring IDs, so each class trains next to
+  its relatives as in the full data. It scores **83.5 on the sibling blocks vs 89.8 on
+  random classes (−6.3)**, and 60% of its errors land within 5 IDs (18% on random
+  classes).
 - **Errors are near misses.** When the model is wrong, the true class is usually still
   near the top of its ranking (LoRA r24, 10,000-class holdout):
 
@@ -651,9 +711,24 @@ had not flattened at 448.
 - **This is what motivated kNN re-ranking (Section 3.6).** The answer is often already
   among the top 5 candidates, and many of those candidates are look-alike siblings. So
   re-order them by closeness to individual training photos.
-- The other large cause, measured on a 1,000-class pilot: photos showing a part, life
-  stage or season that the training photos barely cover (59% of errors flagged "unseen
-  look").
+- **What causes the errors** (Anastasia, LoRA on a 1,000-class pilot, 511 errors; causes
+  can overlap):
+
+  | Cause | Detected when | Share of errors | Among correct photos |
+  | --- | --- | --- | --- |
+  | Unseen look | the photo is unlike every training photo of its class | **59%** | 10% |
+  | Sibling | the wrong guess is within 5 IDs, or among the true class's 5 most similar classes | **47%** | — |
+  | Messy class | ≥20% of the class's training photos sit closer to another class | 45% | 22% |
+  | Two looks | the class's training photos split into two groups, and the photo matches the smaller | 10% | 4.9% |
+  | None of these | | 5% | |
+
+  - *Unseen look* is mostly a different part, life stage, season or scale from the training
+    photos: seed pod vs leaves, dried vs green, a tree base vs foliage. The detector uses
+    the model's own features, so 59% is an upper bound.
+  - *Messy class* is mostly crowded sibling neighbourhoods, not mislabelled photos. No
+    clear label noise turned up in the samples, so bad labels are not a major cause.
+  - The two big causes, unseen looks and siblings, overlap on 16% of errors. Both are
+    about information: the deciding detail or view isn't in what the model sees.
 
 **[TODO: figure]** Example sibling pairs, and zoom boxes on correctly fixed errors.
 
@@ -701,8 +776,16 @@ This supports the hypothesis in Section 1.
 ### 5.6 What didn't work
 
 Progressive low-resolution training, longer training at 224 px, LP-FT, taxonomy-aware
-losses and sibling margins, bigger or aimed training crops, heavier augmentation, and
-depth-concentrated budgets. For PEFT specifically:
+losses and sibling margins, bigger training crops (25–100% instead of 8–100%: a tie),
+heavier augmentation, and depth-concentrated budgets.
+
+**Untested, not failed: crops aimed at the organism.** The idea needs a box around the
+organism, and no box finder we tried found it better than random placement. A centred crop
+of the same size beat every variant (unsupervised DDT boxes on final or earlier layers,
+with or without masking outlier tokens, and prototype maps). The aimed-crop arm therefore
+trained on near-random boxes and tied. Report this as untested for lack of a localiser.
+
+For PEFT specifically:
 
 - SSF: a tie with biases/norms, and 21% slower.
 - DoRA: a tie at 336 (−0.2), −0.28 at 448, 24–25% slower and up to 45% more memory.

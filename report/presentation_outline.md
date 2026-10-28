@@ -62,7 +62,7 @@ for the gap experiments.
 | 14 | Results, and what 5% costs | 1:00 | 14:00 |
 | 15 | What didn't work | 0:30 | 14:30 |
 | 16 | The answer (both tasks) | 0:30 | 15:00 |
-| B1–B8 | Backup slides for Q&A | | |
+| B1–B10 | Backup slides for Q&A | | |
 
 ---
 
@@ -164,13 +164,16 @@ for the gap experiments.
     away (Van)
   - Neighbouring class IDs look alike: prototype cosine **0.80** vs 0.28 for random pairs
     (Anastasia)
-  - **34%** of errors fall within 5 IDs of the true class
+  - **34%** of errors fall within 5 IDs of the true class. Train next to relatives and
+    the same recipe drops **6.3 points** (83.5 vs 89.8)
   - Errors are near misses: the truth is 2nd in **37%** of errors, 3rd–5th in **27%**
 - **Visual:** left, a sibling pair with the small deciding detail circled; right, a bar
   chart of where the true class sits among errors (2nd / 3rd–5th / beyond 5th).
   Data: report outline Section 5.3.
-- **Say:** this is the reveal. **The answer to slide 2's question: information, not
-  iterations.** The model needs to see small details, and it often almost has the right
+- **Say:** explain the 6.3-point drop in one sentence: the same recipe, trained on 1,000
+  classes that come in blocks of 10 neighbours instead of at random, loses 6.3 points, and
+  60% of its errors are relatives. This is the reveal. **The answer to slide 2's
+  question: information, not iterations.** The model needs to see small details, and it often almost has the right
   answer. The next three slides each follow from this.
 
 ---
@@ -276,15 +279,19 @@ for the gap experiments.
   - Methods: LoRA, AdaptFormer, serial adapter, BitFit, last-block attention, prefix;
     plus LoRA concentrated in blocks 4–11
   - LoRA vs AdaptFormer: 3 seeds each, so we can say whether the difference is real
-  - Already pointing the same way (Qian): prefixes in all 12 blocks beat the last block by
-    6.5 points; a 10× longer prefix adds nothing
+  - Already pointing the same way: prefixes in all 12 blocks beat the last block by 6.5
+    points, while a 10× longer prefix adds nothing (Qian); at the same 4.6%, LoRA
+    everywhere beats any one full-rank block, and depth doesn't matter (Anastasia)
 - **Visual:** bar chart of holdout accuracy per method, coloured by "all layers" vs
   "concentrated / small", with backbone % under each bar and error bars for the 3-seed
   arms. Data: `ablation_ablation_peft_controlled/arms/*.json`.
 - **Say:** explain why we re-ran the survey: the first round mixed resolutions, recipes
   and views (slide 3), so it couldn't rank methods fairly. Qian's ablations back it up:
   all biases beat any one type of bias, and QKV in the last two blocks is worse than in
-  one.
+  one. Anastasia's parameter-selection pilot adds that *which* block gets the full-rank
+  budget doesn't matter (block 0, 5 or 11 all lose ~1 point to LoRA everywhere), while
+  the most concentrated choice loses 2.6. AdaptFormer fits its training images almost as
+  well as full FT (95.0 vs 95.5), so the gap is generalisation, not capacity.
 - **Ready now:** if the 30 Oct results are late, this slide can run on Qian's prefix
   placement chart alone: last block 65.1 → last 4 blocks 69.0 → all blocks 71.7.
 
@@ -347,7 +354,9 @@ for the gap experiments.
     gain), longer prefixes, SSF, concentrating the budget in a few layers
 - **Visual:** the two-column list, crossed-out style.
 - **Say:** mention the excluded class-count balancing in one line (+1.7, but it uses the
-  known per-class counts of val and test, so we don't report it as a result).
+  known per-class counts of val and test, so we don't report it as a result). If asked
+  about crops aimed at the organism: untested rather than failed. No box finder located
+  the organism better than random placement, so that arm never got good boxes.
 
 ---
 
@@ -372,7 +381,12 @@ for the gap experiments.
 
 - **B1. How we evaluated without spending submissions.** Labelled holdout (5 training
   photos per class held out, never trained on), seed noise ~0.3, and the 1,000-class
-  pilots vs the 10,000-class holdout.
+  pilots vs the 10,000-class holdout. Why it can be trusted:
+  - the holdout tracks CodaBench (73.7 vs 74.2);
+  - pilots rank PEFT variants the same way as full scale (DoRA, GPS, no extras);
+  - but pilots can't compare PEFT with full FT (pilot −0.4 vs full scale +2.2).
+
+  Integrity: the data matches iNat21's sizes, so we avoided iNat21-trained models.
 - **B2. Task 1 ablation table.** Report outline Table 2.
 - **B3. First-round PEFT survey.** Report outline Table A1, labelled as uncontrolled.
 - **B4. kNN details.** Re-ranker comparison; settings chosen on one half of the holdout and
@@ -386,6 +400,11 @@ for the gap experiments.
 - **B8. Per-method PEFT ablations (Qian).** Report outline Table 5b: last-block scope,
   prefix placement and length, BitFit scope, head and resolution, VPT, LoRA at 448,
   LoRA vs DoRA vs AdaLoRA.
+- **B9. What causes the errors.** Report outline Section 5.3 table: unseen look 59%,
+  sibling 47%, messy class 45% (crowded sibling neighbourhoods, not mislabels), two looks
+  10%. No evident label noise.
+- **B10. Which parameters to train at 4.6%.** Report outline Section 4.5 parameter-selection
+  table: spread beats concentrated, depth doesn't matter.
 
 ---
 
