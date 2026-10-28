@@ -126,7 +126,7 @@ CodaBench: **0.663 → 0.757** with the same 224 px and budget.
 | --- | --- | --- |
 | Progressive 224 → 384, equal compute (full FT, 10 img/class) | Van | **−4.3** vs plain 384, despite 2.5× the epochs |
 | LoRA 224 → 336, equal epochs / equal time (pilot) | Anastasia | −1.20 / −0.88 |
-| Full FT 224 then 336 (2,000-class subset) | Anastasia | 336 beat it **[TODO Ana: exact numbers for the report]** |
+| Full FT 224 then 336 (last 15%), equal time (2,000-class subset, 29 min/arm) | Anastasia | **−1.85** vs plain 336 (82.87 vs 84.72), despite 2× the epochs; plain 224 81.03 |
 
 **Going up in resolution won at equal compute, even though each epoch costs more:**
 
@@ -571,7 +571,6 @@ depth-concentrated budgets.
 
 ## 8. Open items before the report
 
-- **[TODO Ana]** Exact numbers for the 2,000-class resolution ablation (224 / 336 / 224→336).
 - Task 2 re-rank is scored: **0.8308** on 2026-10-28 (crop 0.9 + zoom + K = 5, m = 3,
   beta = 20). Post it. The public board was still on 0.8236, so the “+0.72” is against
   that post, not against the 0.822 zoom file.
