@@ -29,7 +29,8 @@ Two kinds of accuracy appear below. Keep them apart in the report:
 | CodaBench, + kNN re-ranking | **0.8407** (Anastasia, 2026-10-27) | not run yet **[TODO]** |
 | Trainable params (backbone, course %) | 100% (93,930,241 incl. head) | **4,262,412 = 4.94%** of the 86.25M backbone at 448 |
 | Trainable params incl. 10,000-class head | 93.93M | 11.94M (12.18% of 98.07M) |
-| Inference latency, batch 1 / batch 64 (A100, bf16, one pass) | 7.16 / 1.17 ms per image | 12.38 / 1.56 ms per image |
+| Inference latency, batch 1 / batch 64, one pass (A100, bf16) | 8.47 / 1.17 ms per image | 13.45 / 1.56 ms per image (11.27 / 1.33 with LoRA merged) |
+| Inference latency, batch 1 / batch 64, with zoom (submitted path) | 23.43 / 2.54 ms per image | 33.78 / 3.32 ms per image (29.88 / 2.86 with LoRA merged) |
 | Training | A100 40 GB, 144.0 min, 2.40 h, 96 GB-h | A100 40 GB, 144.0 min, 2.40 h, 96 GB-h |
 | Peak VRAM | 17.80 GB | 14.66 GB |
 | Epochs in budget | 5.5 | 5.5 |
@@ -387,18 +388,38 @@ total 11,942,413 trainable incl. head is from `run_stats.txt`).
 **Every latency in this report is measured on a Colab NVIDIA A100-SXM4-40GB** (the GPU the
 finals trained on), with the same protocol: synthetic inputs already on the GPU, bf16,
 30 warm-ups + 200 timed iterations, excluding image loading, preprocessing and transfers.
-Laptop (RTX 5080) timings from the screening work are not used. Different Colab sessions
-vary by up to ~0.6 ms at batch 1 (Anastasia's three sessions on the same checkpoint).
+Laptop (RTX 5080) timings from the screening work are not used.
+
+**The two finals, timed in one session (2026-10-28)** with `scripts/van_latency_zoom.py`
+(`notebooks/van_latency_colab.ipynb`); results in `inference_latency_zoom.json` in each run
+folder. "Zoom" is the exact submission path of `src.predict --zoom` (plain pass, CAM box,
+crop from the 2× copy, second pass, softmax average).
+
+| Final model (448 px) | One pass, batch 1 | One pass, batch 64 (per image) | Zoom, batch 1 | Zoom, batch 64 (per image) |
+| --- | --- | --- | --- | --- |
+| Task 1 full FT | 8.47 ms | 1.17 ms | 23.43 ms | 2.54 ms |
+| Task 2 AF + LoRA, as trained | 13.45 ms | 1.56 ms | 33.78 ms | 3.32 ms |
+| Task 2 AF + LoRA, LoRA merged | 11.27 ms | 1.33 ms | 29.88 ms | 2.86 ms |
+
+Merging the LoRA into the qkv weights (W + B·A·alpha/rank) is exact: all 12 layers merged,
+fp32 top-1 agreement 100% on 128 images, max logit difference 8e-6. So the merged row is the
+same model with the same predictions. The AdaptFormer branch is a separate non-linear
+bottleneck and cannot be merged; it is the remaining cost over full FT (+33% at batch 1,
++14% at batch 64, merged).
+
+Session-to-session variation: an earlier session timed the same two finals' single pass at
+7.16 / 1.17 ms (Task 1) and 12.38 / 1.56 ms (Task 2) (`inference_latency.json`). Batch 64
+is stable; batch 1 moves by about 1 ms between sessions, so compare models only within one
+session, as in the table above.
+
+Other models, single pass, from earlier sessions on the same A100 setup:
 
 | Model (one forward pass) | Batch 1 | Batch 64 (per image) | Source file |
 | --- | --- | --- | --- |
-| Task 1 full FT 448 | 7.16 ms | 1.17 ms | `full_ft_20261017_122237/inference_latency.json` |
-| Task 2 AF + LoRA 448 | 12.38 ms | 1.56 ms | `van_adaptformer_20261021_083823/inference_latency.json` |
 | LoRA r24 336, merged (= plain ViT-B) | 7.78 ms | 0.65 ms | `lora_20261007_051926/inference_latency_merged.json` |
 | LoRA r24 336, unmerged | 14.2–15.4 ms | 1.07 ms | same, and Anastasia's CSV rows |
 
-Zoom runs two forward passes plus the box search. Measured on the same A100 setup (the
-`inference_latency_zoom.json` files in `CS604_RUNS`):
+Teammates' zoom timings (the `inference_latency_zoom.json` files in `CS604_RUNS`):
 
 | Model with zoom | Batch 1 | Larger batch (per image) | Single pass, batch 1 |
 | --- | --- | --- | --- |
@@ -406,16 +427,10 @@ Zoom runs two forward passes plus the box search. Measured on the same A100 setu
 | LoRA r24 336, unmerged (Wenqi) | 36.79 ms | 2.29 ms (batch 64) | 14.4–15.0 ms |
 | LoRA r24 448, unmerged (Qian) | 41.96 ms | 4.27 ms (batch 32) | not measured |
 
-So at batch 1 zoom costs about 2.5× a single pass, not 2×: the box search and the second
-resize add fixed overhead.
+So at batch 1 zoom costs 2.5–2.8× a single pass, not 2×: the box search and the resize of
+the 2× copy add fixed overhead. At batch 64 it is about 2.2×.
 
 kNN re-ranking adds 0.03 ms per image plus a 0.7 GB feature bank.
-
-**[TODO Van]** Zoom latency of our two 448 finals and AF + LoRA with the LoRA merged (the
-AdaptFormer branch cannot be merged; LoRA can) are not measured yet. Run
-`notebooks/van_latency_colab.ipynb` (van-dev) on an A100 40 GB: it writes
-`inference_latency_zoom.json` into `full_ft_20261017_122237` and
-`van_adaptformer_20261021_083823`, with the same protocol as above.
 
 ### 5.4 Training GPU-hours and implementation details
 
@@ -463,8 +478,11 @@ adapters plus the 31 MB head instead of a 375 MB model.
 saved memory (14.7 vs 17.8 GB peak), not time: gradients still flow through the whole
 frozen backbone. A smaller GPU could run Task 2, not Task 1.
 
-**Inference cost.** AdaptFormer cannot be merged: +73% latency at batch 1 (12.4 vs 7.2 ms),
-+33% at batch 64. LoRA merges exactly into the weights (zero cost). So:
+**Inference cost.** Measured in one A100 session: Task 2 as trained is +59% at batch 1
+(13.45 vs 8.47 ms) and +33% at batch 64 (1.56 vs 1.17 ms). Its LoRA merges exactly into the
+weights, which brings that to +33% / +14% (11.27 ms / 1.33 ms) with identical predictions; the
+rest is the AdaptFormer branch, which cannot be merged. With zoom, as submitted: 23.4 ms
+(Task 1) vs 29.9 ms (Task 2 merged) at batch 1. So:
 
 | If you care most about | Choose |
 | --- | --- |
@@ -473,7 +491,7 @@ frozen backbone. A smaller GPU could run Task 2, not Task 1.
 | Lowest latency under 5% | LoRA r24 merged (0.785 plain / 0.799 zoom at 336, same speed as plain ViT-B) |
 | Fewest parameters | BitFit 0.12% (0.762 at 448) |
 
-**Prediction-time extras.** Zoom costs a second pass for +0.5 to +1.0; kNN costs a
+**Prediction-time extras.** Zoom costs 2.2–2.8× the single-pass latency for +0.5 to +1.0; kNN costs a
 0.7 GB bank and ~0 latency for +0.85 to +1.4. Both are honest gains (no label information).
 Class-count balancing (+1.7) is excluded because it uses the known test class counts.
 
@@ -511,7 +529,6 @@ depth-concentrated budgets.
 
 - **[TODO Ana]** Exact numbers for the 2,000-class resolution ablation (224 / 336 / 224→336).
 - **[TODO]** kNN re-ranking on the Task 2 final (no training, prediction only).
-- **[TODO Van]** Zoom latency at 448 for both finals; AF + LoRA latency with LoRA merged (`notebooks/van_latency_colab.ipynb`, A100).
 - **[TODO]** Test-phase submissions (2 allowed, 31 Oct – 6 Nov): which two files?
 - **[TODO]** Figures: CodaBench progression chart, resolution curve, framework diagram, loss
   curves, error examples (sibling pairs), zoom example boxes.
