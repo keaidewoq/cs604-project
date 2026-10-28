@@ -384,14 +384,18 @@ total 11,942,413 trainable incl. head is from `run_stats.txt`).
 
 ### 5.3 Inference latency
 
-Forward pass, synthetic input, bf16, 30 warm-ups + 200 timed iterations, A100 40 GB:
+**Every latency in this report is measured on a Colab NVIDIA A100-SXM4-40GB** (the GPU the
+finals trained on), with the same protocol: synthetic inputs already on the GPU, bf16,
+30 warm-ups + 200 timed iterations, excluding image loading, preprocessing and transfers.
+Laptop (RTX 5080) timings from the screening work are not used. Different Colab sessions
+vary by up to ~0.6 ms at batch 1 (Anastasia's three sessions on the same checkpoint).
 
-| Model | Batch 1 | Batch 64 (per image) |
-| --- | --- | --- |
-| Task 1 full FT 448 | 7.16 ms | 1.17 ms |
-| Task 2 AF + LoRA 448 | 12.38 ms | 1.56 ms |
-| LoRA r24 336, merged (= plain ViT-B) | 7.78 ms | 0.65 ms |
-| LoRA r24 336, unmerged | 14.2–15.4 ms | 1.07 ms |
+| Model (one forward pass) | Batch 1 | Batch 64 (per image) | Source file |
+| --- | --- | --- | --- |
+| Task 1 full FT 448 | 7.16 ms | 1.17 ms | `full_ft_20261017_122237/inference_latency.json` |
+| Task 2 AF + LoRA 448 | 12.38 ms | 1.56 ms | `van_adaptformer_20261021_083823/inference_latency.json` |
+| LoRA r24 336, merged (= plain ViT-B) | 7.78 ms | 0.65 ms | `lora_20261007_051926/inference_latency_merged.json` |
+| LoRA r24 336, unmerged | 14.2–15.4 ms | 1.07 ms | same, and Anastasia's CSV rows |
 
 Zoom runs two forward passes plus the box search. Measured on the same A100 setup (the
 `inference_latency_zoom.json` files in `CS604_RUNS`):
@@ -407,10 +411,11 @@ resize add fixed overhead.
 
 kNN re-ranking adds 0.03 ms per image plus a 0.7 GB feature bank.
 
-**[TODO]** These are not in the Colab output folders and need measuring: zoom latency of
-our two 448 finals (`full_ft_20261017_122237`, `van_adaptformer_20261021_083823`; both
-folders have only `inference_latency.json`, single pass), and AF + LoRA with the LoRA
-merged (the AdaptFormer branch cannot be merged; LoRA can).
+**[TODO Van]** Zoom latency of our two 448 finals and AF + LoRA with the LoRA merged (the
+AdaptFormer branch cannot be merged; LoRA can) are not measured yet. Run
+`notebooks/van_latency_colab.ipynb` (van-dev) on an A100 40 GB: it writes
+`inference_latency_zoom.json` into `full_ft_20261017_122237` and
+`van_adaptformer_20261021_083823`, with the same protocol as above.
 
 ### 5.4 Training GPU-hours and implementation details
 
@@ -506,7 +511,7 @@ depth-concentrated budgets.
 
 - **[TODO Ana]** Exact numbers for the 2,000-class resolution ablation (224 / 336 / 224→336).
 - **[TODO]** kNN re-ranking on the Task 2 final (no training, prediction only).
-- **[TODO]** Zoom latency at 448 for both finals; AF + LoRA latency with LoRA merged.
+- **[TODO Van]** Zoom latency at 448 for both finals; AF + LoRA latency with LoRA merged (`notebooks/van_latency_colab.ipynb`, A100).
 - **[TODO]** Test-phase submissions (2 allowed, 31 Oct – 6 Nov): which two files?
 - **[TODO]** Figures: CodaBench progression chart, resolution curve, framework diagram, loss
   curves, error examples (sibling pairs), zoom example boxes.
