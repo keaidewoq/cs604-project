@@ -62,7 +62,7 @@ for the gap experiments.
 | 14 | Results, and what 5% costs | 1:00 | 14:00 |
 | 15 | What didn't work | 0:30 | 14:30 |
 | 16 | The answer (both tasks) | 0:30 | 15:00 |
-| B1–B12 | Backup slides for Q&A | | |
+| B1–B13 | Backup slides for Q&A | | |
 
 ---
 
@@ -159,6 +159,9 @@ for the gap experiments.
 - **Message:** The limit is fine detail: the errors are near misses between look-alike
   siblings.
 - **Covers:** investigation, motivation.
+- **[PLACEHOLDER: discuss the images]** Show real failing pictures here, from Van's EDA of
+  what kinds of pictures fail and Anastasia's error galleries: look-alike siblings, unseen
+  looks, tiny subjects. **[TODO, Anastasia: pick the images and update this slide]**
 - **On slide:**
   - **79%** of images have a short side of 300–400 px; training at 224 px throws detail
     away (Van)
@@ -419,6 +422,9 @@ for the gap experiments.
 
 - **B12. Pros, cons and scalability.** Report outline Section 5.6 table: every technique's gain, pros, cons and behaviour with more data, plus the kNN scaling numbers (search cost per photo; bank size at 0.45M / 4.5M / 10M photos).
 
+- **B13. [PLACEHOLDER] Image gallery: what kinds of pictures fail.** Extra examples per
+  error type from Van's EDA and Anastasia's galleries, for questions like "show me an
+  error". Matches the report outline's image-discussion placeholder (Section 5.3).
 ---
 
 ## kNN Q&A cheat sheet

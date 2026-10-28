@@ -183,7 +183,20 @@ course allows it, kNN-LM and Jia et al. are the two most important ones.
 - **Budget.** 2 h × 48 GB = 96 GB-hours per training run. Every final ran on one A100 40 GB
   for 2.4 h (= 96 GB-h).
 - **Backbone.** `vit_base_patch16_224.augreg2_in21k_ft_in1k` (timm), the course default,
-  confirmed as a team decision on 2026-10-05. DINOv2 was screened but not used.
+  confirmed as a team decision on 2026-10-05.
+
+  Van's backbone screen (frozen features, class-prototype head, no training; 10,000-class
+  holdout) for context:
+
+  | Backbone | Holdout top-1 |
+  | --- | --- |
+  | ViT-B/16, original ImageNet-21k recipe | 41.8 |
+  | ViT-B/16 augreg2, ImageNet-21k → 1k (ours) | 43.9 |
+  | ViT-B/16 augreg, ImageNet-21k only | 50.0 |
+  | DINOv2 ViT-B/14 | 53.8 |
+
+  A frozen linear probe told a similar story: augreg2 59.0 and DINOv2 58.6 tied, ahead of
+  DeiT III 52.6 and CLIP 41.7. DINOv2 was screened but not used.
   **[TODO]** Reconcile the Prof's rule: Van's notes (2026-10-03) say "comparable-size ViTs
   allowed", while the log entry for the DINOv2 probe says augreg2 is required.
 - **Rules** (confirmed with the Prof, 2026-10-03). The classifier head is always trained
@@ -225,6 +238,17 @@ reason for each is labelled *measured* (our runs show the mechanism) or *hypothe
 fine-tunes: a class-mean (prototype) head start (61.3 → 62.1) and cosine decay in the
 shared trainer (→ 66.3).
 
+**Why the first full fine-tunes failed** (Van's diagnosis of the 61.0–66.3 runs). Each
+symptom points to one change below, so this is the motivation for the recipe:
+
+| Symptom in the early runs | What it meant | Fix |
+| --- | --- | --- |
+| Constant lr: batch loss at the end still swung between ~0.6 and 3.0; going from 120 to 144 minutes added only +0.3 | The model never settled. More time wasn't the answer | Warmup + cosine decay fitted to the clock |
+| The time limit stopped training before the epoch count was reached, cutting the cosine schedule off part-way | The lr never reached zero | Fit the schedule to the time limit (`schedule_fit_time`) |
+| Backbone lr 1e-5 with a 100× head lr | The head moved fast while the backbone barely adapted | A higher backbone lr (4e-4), made safe by layer-wise decay; head 10× |
+| Batch 32 used ~3.4 GB of a 40 GB card at ~570 img/s, limited by data loading | The GPU was mostly idle | Batch 256 and more data-loading workers |
+| No regularisation (label smoothing, stochastic depth, layer decay) with 45 images per class | Easy to overfit, and easy to damage the pretrained features | Label smoothing 0.1, drop_path 0.1, layer-wise decay 0.75 |
+
 - **Layer-wise lr decay 0.75, top lr 4e-4.** Each block's lr is 0.75× the lr of the block
   above it, so the earliest layers move least. Early layers
   hold general features (edges, textures) from ImageNet-21k; with 45 images per class,
@@ -252,9 +276,22 @@ shared trainer (→ 66.3).
 
 ### 3.4 Spending the budget on pixels
 
-We train at 448 px instead of the backbone's native 224 px. 79% of the images have a
-short side of 300–400 px, so 224 px discards detail that is in the file, and the deciding
-cue between siblings is often small (a wing pattern, a leaf edge). At 448 px an epoch
+**Looking at the data first** (Van's data inspection, no training;
+`notebooks/dataset_inspection.ipynb` on the `dataset-inspection` branch). On a sample of
+training and validation images, the notebook compares image size, shape, brightness and
+colour between the two splits. It also shows each candidate setting visually: random
+training crops at several minimum areas, the same field of view at 224 to 512 px, and
+centre zoom levels. Findings:
+
+- **79% of the images have a short side of 300–400 px**, so 224 px discards detail that is
+  already in the file.
+- **[TODO, Van: from `CS604_RUNS/dataset_inspection/<date>/`]** The train-vs-val
+  comparison (size, aspect ratio, brightness, colour): did the splits differ? Also what the
+  224 → 512 views and the crop views showed, e.g. at which size the small deciding details
+  became visible, and how often tight random crops cut the organism out.
+
+We therefore train at 448 px instead of the backbone's native 224 px. The deciding cue
+between siblings is often small (a wing pattern, a leaf edge). At 448 px an epoch
 costs much more, so only 5.5 epochs fit in the budget; Section 4.4 shows this still wins
 at equal compute. We stop at 448 because 512 px was flat in the screen and costs 30% more
 per epoch.
@@ -493,9 +530,10 @@ with its cause:
   (AdaptFormer / LoRA r24) → 80.2 (AF + biases/norms, zoom) → 81.4 (448) → **82.2**
   (+ LoRA r16, zoom) → **83.08** (kNN).
 
-**[TODO, check with Van]** These sequences are the draft's Section 5.1, which lists 384 px
-as 0.824 and 448 px as 0.828. The draft's Section 2.3 gives the plain-view values as 0.817
-and 0.825. Label which view each point uses before drawing the chart.
+**[TODO, check with Van]** Label the view of each point before drawing the chart. 384 px is
+now settled by Van's commit on `van-full-ft-384`: 81.7 plain and 82.4 with zoom, so the 82.4
+in this sequence is a zoom score. 448 px is still open: 82.5 is plain, and 82.8 is
+presumably crop 0.75 + zoom, but that needs confirming.
 
 ### 4.3 Task 1 ablations
 
@@ -747,8 +785,12 @@ high-resolution finish. The first results said otherwise: full FT 61.0% vs a fro
 probe 62.5%. Longer training didn't help either:
 
 - At 224 px, 3 → 6 epochs gave +0.98 and 6 → 12 epochs only +0.53 (holdout).
-- A frozen-head LoRA with 10× the budget gained 1.1 points (51.8% → 52.9%). It couldn't
-  fit its own training images (61.6%), which pointed at the frozen head, not at time.
+- A frozen-head LoRA with 10× the budget gained 1.1 points (51.8% → 52.9%). Van's
+  diagnosis: it couldn't fit its own training images (61.6%), so it was underfitting, not
+  short of time. The frozen head's temperature (20) was too low (the loss was lowest near
+  40), and the features stayed far from the frozen prototypes (mean cosine 0.58).
+  Training the head fixed it: with the head trainable, the temperature rises on its own.
+  This is why every run since trains the head.
 - Doubling epochs at equal time bought nothing for LoRA on a pilot (88.66 vs 88.98).
 
 The recipe (Section 3.3) fixed full FT without adding epochs: 66.3% → 75.7%.
@@ -823,6 +865,18 @@ had not flattened at 448.
     about information: the deciding detail or view isn't in what the model sees.
 
 **[TODO: figure]** Example sibling pairs, and zoom boxes on correctly fixed errors.
+
+**[PLACEHOLDER: image discussion: what kinds of pictures fail]** To be written from
+Van's EDA of failing images and Anastasia's error galleries (`CS604_RUNS/error_analysis/
+gallery_*.png`, `CS604_RUNS/error_causes/causes_<cause>.png`). Suggested structure, one
+short paragraph plus a figure with 2–3 example images per type:
+
+- *Look-alike siblings:* two neighbouring classes side by side, with the small deciding
+  detail marked.
+- *Unseen look:* a different part, life stage or season from the training photos.
+- *Tiny or unclear subject:* the organism is small in a wide scene.
+- *Other types from Van's EDA:* **[TODO, Van]**
+- *For each type, what helped:* resolution, zoom or kNN, and which types nothing fixed.
 
 ### 5.4 Loss design did not separate siblings; more information did
 
