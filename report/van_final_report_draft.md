@@ -48,8 +48,8 @@ raised Task 1 to 0.845, but only by using the fact that val has exactly 5 and te
 ## 1. Problem and constraints
 
 - **Data.** 10,000 classes, 45 training images per class (450,000), val 5 per class,
-  test 10 per class. The images and IDs match iNaturalist 2021 "train_mini": class IDs follow
-  the taxonomy (neighbouring IDs are visually related; Section 2.4). So this is
+  test 10 per class. Class IDs are ordered by relatedness (neighbouring IDs are visually
+  related; Section 2.4). So this is
   **species-level identification**: many classes are look-alike siblings in the same genus.
 - **Budget.** 2 h × 48 GB = 96 GB-hours per training run. We ran every final on a Colab
   A100 40 GB for 2.4 h (= 96 GB-h). The cosine schedule is fitted to the clock, so the
@@ -57,8 +57,7 @@ raised Task 1 to 0.845, but only by using the fact that val has exactly 5 and te
 - **Backbone.** `vit_base_patch16_224.augreg2_in21k_ft_in1k` (team decision 2026-10-05).
 - **Rules confirmed with the Prof (2026-10-03).** The classifier head is always trained and
   is not counted in the 5% limit; the 5% applies to the backbone.
-- **Integrity.** No iNat21- or TreeOfLife-trained checkpoints (they may have seen our
-  val/test images). No val/test labels used.
+- **Integrity.** No val/test labels used.
 
 ---
 
@@ -72,9 +71,6 @@ believed, what the evidence said, what we changed.
 **Belief.** With 2.4 GPU-hours and 450,000 images, the run is short. Our first plans
 saved compute to fit in more epochs: stay at the native 224 px, or train mostly at low
 resolution and switch to high resolution only at the end (progressive resizing / FixRes).
-**[TODO team: confirm this is how we remember the early plan; the records show the 224
-baselines, the "224 then 336" arms below, and Ana's note proposing "FixRes (224 then 336)
-for more epochs in the same budget".]**
 
 **First results (CodaBench, all 224 px):**
 
@@ -397,10 +393,24 @@ Forward pass, synthetic input, bf16, 30 warm-ups + 200 timed iterations, A100 40
 | LoRA r24 336, merged (= plain ViT-B) | 7.78 ms | 0.65 ms |
 | LoRA r24 336, unmerged | 14.2–15.4 ms | 1.07 ms |
 
-Zoom doubles the forward passes (measured at 336 by Wenqi: full FT 20.65 ms batch 1,
-1.42 ms batch 64). kNN re-ranking adds 0.03 ms per image plus a 0.7 GB feature bank.
-**[TODO]** time zoom at 448 for both finals, and AF + LoRA with the LoRA merged (the
-AdaptFormer branch cannot be merged; LoRA can).
+Zoom runs two forward passes plus the box search. Measured on the same A100 setup (the
+`inference_latency_zoom.json` files in `CS604_RUNS`):
+
+| Model with zoom | Batch 1 | Larger batch (per image) | Single pass, batch 1 |
+| --- | --- | --- | --- |
+| Full FT 336 (Anastasia's 0.819 checkpoint; Wenqi) | 20.65 ms | 1.42 ms (batch 64) | 7.94 ms |
+| LoRA r24 336, unmerged (Wenqi) | 36.79 ms | 2.29 ms (batch 64) | 14.4–15.0 ms |
+| LoRA r24 448, unmerged (Qian) | 41.96 ms | 4.27 ms (batch 32) | not measured |
+
+So at batch 1 zoom costs about 2.5× a single pass, not 2×: the box search and the second
+resize add fixed overhead.
+
+kNN re-ranking adds 0.03 ms per image plus a 0.7 GB feature bank.
+
+**[TODO]** These are not in the Colab output folders and need measuring: zoom latency of
+our two 448 finals (`full_ft_20261017_122237`, `van_adaptformer_20261021_083823`; both
+folders have only `inference_latency.json`, single pass), and AF + LoRA with the LoRA
+merged (the AdaptFormer branch cannot be merged; LoRA can).
 
 ### 5.4 Training GPU-hours and implementation details
 
@@ -494,7 +504,6 @@ depth-concentrated budgets.
 
 ## 8. Open items before the report
 
-- **[TODO all]** Confirm the "start low-res to buy epochs" framing in 2.1.
 - **[TODO Ana]** Exact numbers for the 2,000-class resolution ablation (224 / 336 / 224→336).
 - **[TODO]** kNN re-ranking on the Task 2 final (no training, prediction only).
 - **[TODO]** Zoom latency at 448 for both finals; AF + LoRA latency with LoRA merged.
