@@ -121,19 +121,47 @@ brief expects PEFT to beat full FT on small data; at 450,000 images we find the 
 **Classifier heads and margins.** Cosine/prototype heads and weight imprinting (Qi et al.,
 CVPR 2018); CosFace (Wang et al., CVPR 2018).
 
-**Fine-grained recognition and resolution.** iNaturalist (Van Horn et al., CVPR 2018);
-attention-guided zooming for fine-grained recognition (e.g. RA-CNN, Fu et al., CVPR 2017);
+**Fine-grained recognition and resolution.** Attention-guided zooming for fine-grained recognition (e.g. RA-CNN, Fu et al., CVPR 2017);
 the train–test resolution discrepancy (FixRes, Touvron et al., NeurIPS 2019); progressive
 resizing. Point to make: our zoom reuses the classifier's own class-activation map, so it
 needs no extra network.
 
-**Retrieval at prediction time.** kNN / retrieval-augmented classification. **[TODO: find
-the right reference]**
+**Re-ranking and nearest-neighbour memory.** Our kNN step is a re-ranker, so this
+paragraph places it in that line of work. Points to make, with the work to cite:
+
+- *Two-stage retrieve-then-re-rank* is a standard pattern: a fast first stage proposes
+  candidates and a stronger second stage re-scores only them. Examples: passage re-ranking
+  with BERT (Nogueira & Cho, 2019); query expansion for image retrieval ("Total Recall",
+  Chum et al., ICCV 2007); k-reciprocal re-ranking for person re-identification (Zhong et
+  al., CVPR 2017). Ours re-ranks a classifier's top 5 instead of a retrieval list.
+- *Adding a nearest-neighbour memory to a trained model.* kNN-LM (Khandelwal et al., ICLR
+  2020) interpolates a language model's probabilities with a kNN distribution over stored
+  examples, the closest analogue to our `log p + β · knn`. For images: combining kNN with a
+  linear classifier (Jia et al., "Rethinking Nearest Neighbors for Visual
+  Classification", 2021), and kNN classification with large stored banks (Nakata et al.,
+  ECCV 2022).
+- *The variants we compared come from these families* (Appendix A2):
+  - weighted kNN voting (Wu et al., CVPR 2018; used for evaluation in DINO, Caron et al.,
+    ICCV 2021);
+  - nearest class mean and prototypes (Mensink et al., TPAMI 2013; Snell et al., NeurIPS
+    2017);
+  - learning to rank (e.g. LambdaMART, Burges, 2010) for the learned re-rankers.
+- *What is ours:*
+  - the candidate list is restricted to the top 5, a choice motivated by our error
+    analysis;
+  - each candidate is matched only against its own class's photos, by the mean of its
+    3 best matches;
+  - the settings are chosen once by cross-validation on a holdout and transferred
+    unchanged to every model;
+  - no training.
+
+**[TODO]** Check every reference above before citing: authors, venue and year. If the
+course allows it, kNN-LM and Jia et al. are the two most important ones.
 
 **Also cited where our experiments use them:**
 
-- *Making Better Mistakes* (Bertinetto et al., CVPR 2020) predicts what our taxonomy-aware
-  smoothing showed: milder mistakes, not more correct answers.
+- *Making Better Mistakes* (Bertinetto et al., CVPR 2020) predicts what our sibling-aware
+  label smoothing showed: milder mistakes, not more correct answers.
 - Partial fine-tuning by fine-tuned angle (Ye et al., 2023): one of the parameter-selection
   rules we compared.
 - DDT co-localisation (Wei et al., IJCAI 2017): the box finder we tried for aimed crops.
@@ -149,12 +177,9 @@ the right reference]**
 ### 3.1 Problem setup
 
 - **Data.** 10,000 classes; 45 training images per class (450,000); val 5 per class; test
-  10 per class. Neighbouring class IDs are visually close under the pretrained features
-  (Section 5.3). The genus reading assumes iNaturalist's ID order; class names are not in
-  the release, so that part is a hypothesis. The practical fact is **fine-grained
-  identification**: many classes are look-alike siblings. The split sizes match
-  iNaturalist 2021: train + val = 500,000 = its "train_mini" (50 per class), and test
-  100,000 = its validation set (10 per class).
+  10 per class. The dataset is anonymous: no class names are released. Neighbouring class
+  IDs are visually close under the pretrained features (Section 5.3), so the practical
+  fact is **fine-grained identification**: many classes are look-alike siblings.
 - **Budget.** 2 h × 48 GB = 96 GB-hours per training run. Every final ran on one A100 40 GB
   for 2.4 h (= 96 GB-h).
 - **Backbone.** `vit_base_patch16_224.augreg2_in21k_ft_in1k` (timm), the course default,
@@ -163,9 +188,7 @@ the right reference]**
   allowed", while the log entry for the DINOv2 probe says augreg2 is required.
 - **Rules** (confirmed with the Prof, 2026-10-03). The classifier head is always trained
   and not counted in the 5% limit; the 5% applies to the backbone.
-- **Integrity.** No val or test labels are used. Because the data appears to be iNat21,
-  we avoided any model trained on iNat21 (e.g. BioCLIP, iNat21 checkpoints): those would
-  likely have seen our validation and test photos.
+- **Integrity.** No val or test labels are used.
 
 ### 3.2 Overview
 
@@ -311,6 +334,78 @@ controls:
    - *Memory:* the bank stores the 450,000 training features (450,000 × 768, ~0.7 GB in
      fp16), built once per checkpoint outside the training clock. It is a lookup memory,
      not trained parameters.
+
+   **What kind of method this is.** kNN re-ranking is a standard *two-stage* design: a
+   first stage (our classifier) proposes a short list of candidates, and a second stage
+   re-scores only that list with extra evidence. Here the extra evidence is the training
+   photos themselves, a non-parametric memory added on top of a parametric classifier.
+   Section 2 gives the related work; Appendix A2 compares eight ways of doing the second
+   stage, summarised in Section 4.7.
+
+   **How it works, step by step** (`scripts/predict_rerank.py`; the same code for both
+   finals):
+
+   1. *Build the bank, once per checkpoint.* Pass every training photo (all 450,000) through
+      the fine-tuned model with the plain evaluation view (resize + centre crop at the
+      training resolution, no augmentation). Keep each photo's feature: the 768-d CLS
+      feature the head reads (`pre_logits`), L2-normalised, stored in fp16 with its class
+      label. Only training photos and labels go in; nothing from val or test.
+   2. *Predict as usual.* For a new photo, run the model, giving the log-probabilities log p
+      over all 10,000 classes. With zoom, log p is the log of the averaged plain and zoom
+      softmax.
+   3. *Take the short list.* Keep the K = 5 classes with the highest log p.
+   4. *Score each candidate against its own training photos.* Take the photo's plain-view
+      feature (L2-normalised, the same view as the bank). For each candidate class c:
+      - compute the cosine with each of c's ~45 bank features;
+      - keep the m = 3 highest;
+      - average them to get knn(c), a number between −1 and 1.
+   5. *Combine and re-pick.* score(c) = log p(c) + β · knn(c), with β = 20. The prediction is
+      the candidate with the highest score. Classes outside the top 5 can never be picked,
+      so the re-ranker can only reorder the head's own short list.
+
+   **Why β = 20 is the right scale.** Cosines between a photo and its top candidates differ by
+   only a few hundredths, while log p differences are about 0.1–1. Multiplying by 20 puts a
+   cosine difference of 0.05 at 1.0, the same size as a typical log p gap. So kNN can
+   overturn a close call but not a confident prediction.
+
+   **Worked example** (*illustrative numbers, not from a real photo*): the head gives
+   candidate A p = 0.50 and its sibling B p = 0.30.
+
+   | | log p | knn (mean of 3 best cosines) | 20 × knn | Score |
+   | --- | --- | --- | --- | --- |
+   | A | −0.69 | 0.82 | 16.4 | 15.71 |
+   | B | −1.20 | 0.86 | 17.2 | **16.00** |
+
+   B's training photos match this photo more closely (one of them shows the same life
+   stage, say), so B overtakes A. If the head had been confident (p = 0.90 vs 0.03, a gap
+   of 3.4 in log p), the same cosines would not change the answer.
+
+   **How the settings were chosen** (`scripts/rerank_knn.py`), on the 10,000-class holdout
+   only, never on CodaBench:
+   - Grid: K ∈ {2, 3, 5}, m ∈ {1, 3}, β ∈ {0, 1, 2, 5, 10, 20, 40}.
+   - The holdout classes were split into two halves (alternating class IDs). Settings were
+     chosen on one half and scored on the other, then the halves swapped; ties went to the
+     smaller β.
+   - Both halves independently chose K = 5, m = 3, β = 20. These were then frozen and reused
+     for every checkpoint and view.
+
+   **Cost.** Per photo, 5 candidates × ~45 photos = ~225 dot products of 768-d vectors:
+   0.03–0.06 ms, against 8–34 ms for the forward pass(es). Building the bank takes one
+   forward pass over the training set (~15 min at 336, ~25–30 min at 448).
+
+   **Is it really sibling-aware? [PENDING: Anastasia's rerun]** `scripts/rerank_knn.py` now
+   writes `fixes_by_distance.json`, which splits the fixes of the submitted setting by how far
+   the original wrong guess was from the truth. To get it, open
+   `notebooks/colab_launcher_ana_allclass_holdout.ipynb` and Run all. Training is reused;
+   only data download (~15 min) and re-ranking (~15–20 min) run.
+   - The test: compare `sibling_share_of_fixes` with `sibling_share_of_errors` (~34%, the
+     share of errors whose guess is within 5 IDs).
+   - If siblings are clearly a larger share of the fixes, kNN corrects siblings
+     preferentially and "sibling-aware" becomes a measured claim. If the shares are about
+     equal, say kNN fixes near misses in general, and keep "sibling-aware" as the design
+     motivation only.
+   - `fix_rate_sibling_errors` vs `fix_rate_far_errors` gives the same answer per error type.
+     `breaks_onto_sibling_share` says whether its mistakes swap one look-alike for another.
 
 ### 3.7 Parameter count
 
@@ -598,19 +693,16 @@ report claims a speed advantage.
   The gain is smaller on top of zoom (+0.85 to +0.88, vs +1.40 on a plain view), so the
   two overlap partly, but they still add up. They act differently: zoom takes a closer
   view of the photo, while kNN matches it against individual training photos.
-- **Which re-ranker** (holdout, both views, each setting chosen on one half and scored on
-  the other):
-
-  | Re-ranker added to log p | Plain view | Zoom view |
-  | --- | --- | --- |
-  | **Mean of the 3 best matches (used)** | **+1.32** | **+1.23** |
-  | Best single match | +1.18 | +1.02 |
-  | Weighted vote over the whole bank | +1.14 | +1.03 |
-  | Mean over all of the class's photos | +0.13 | +0.13 |
-
-  Class-average matches (class mean, class centres, mean over all photos) add only +0.1 to
-  +0.7. A learned linear re-ranker adds a further +0.2 on the zoom view, which isn't worth
-  its extra complexity or the risk that it won't transfer across checkpoints.
+- **We compared eight re-rankers** (Appendix A2). Six were hand-made formulas: the mean
+  of the 3 best matches (ours), the single best match, a weighted vote over the photo's
+  nearest bank photos, 3 k-means centres per class, the class mean, and the mean over all
+  the class's photos. Two were learned: a linear model and trees over 12 signals. All were
+  tuned on one half of the holdout and scored on the other.
+  - Ours was the best of the hand-made ones: +1.32 plain, +1.23 zoom.
+  - Class summaries added much less, +0.1 to +0.7, because the cosine head already holds
+    roughly the class mean.
+  - The learned linear re-ranker beat ours by only +0.20 on the zoom view, and it would need
+    refitting for every checkpoint. So we kept the fixed formula.
 - **Rank-2 errors are spread evenly across the class-ID range** (6.9–9.6 per 100 photos in
   every block of 1,000 IDs), so a general re-ranker suits them better than fixes aimed at
   particular class pairs.
@@ -737,7 +829,7 @@ had not flattened at 448.
 | Idea | Result |
 | --- | --- |
 | Neighbour label smoothing (mass onto ±5 IDs), full FT | −0.14 (tie) |
-| Taxonomy-aware smoothing, 3 variants (LoRA, sibling-block pilot) | ties; smoothing 0.2 −0.86 |
+| Sibling-aware label smoothing (mass onto neighbouring IDs or most similar classes), 3 variants (LoRA, sibling-block pilot) | ties; smoothing 0.2 −0.86 |
 | Extra CosFace margin against siblings | −1.3 to −7.3 (errors scatter to unrelated classes) |
 | Uniform CosFace margin 0.1 | AdaptFormer +0.60 (kept); LoRA +0.18 (tie) |
 
@@ -773,10 +865,79 @@ This supports the hypothesis in Section 1.
 | Lowest latency under 5% | LoRA r24 merged (78.5% plain / 79.9% zoom at 336; same speed as plain ViT-B) |
 | Fewest parameters | BitFit, 0.12% (76.2% at 448) |
 
-### 5.6 What didn't work
+### 5.6 Pros, cons and scalability of each technique
 
-Progressive low-resolution training, longer training at 224 px, LP-FT, taxonomy-aware
-losses and sibling margins, bigger training crops (25–100% instead of 8–100%: a tie),
+Every technique in the final pipelines, plus the ones we kept out, with what it costs and
+whether it still makes sense with more data. Gains are CodaBench unless marked.
+
+| Technique | Gain | Pros | Cons | With a bigger dataset |
+| --- | --- | --- | --- | --- |
+| Layer-wise lr decay | removing it −6.7 (holdout) | No extra compute; protects the pretrained features | One more hyperparameter; full FT only (it would nearly freeze adapters in early blocks) | Still useful; matters most when data per class is small |
+| Schedule fitted to the clock | 1 epoch beats 11 at a constant lr | No extra compute; guarantees the low-lr phase happens | Needs the budget fixed in advance; the run can't be extended without a new schedule; the same run on a slower GPU gets fewer steps | Unchanged |
+| Prototype cosine head | +1.6 to +2.0 vs LP-FT (holdout) | Sensible start for 10,000 new classes; one frozen pass to build | Must be rebuilt for each resolution; on a 1,000-class pilot a random head caught up | Build cost grows linearly; the benefit grows with the number of classes |
+| Training at 448 px | +6.8 (224 → 448) | The biggest single gain; uses detail already in the files | 785 tokens instead of 197: ~4× per-image inference at batch 64 (1.17 vs ~0.28 ms); fewer epochs fit (5.5 at 448); more memory | Each epoch costs more, so fewer epochs fit; it pays only if images carry fine detail and the model can adapt |
+| Crop 0.9 + zoom | +0.5 to +1.3 | No training; reuses the head's own activation map | 2.2–2.8× latency (two passes plus a box search) | Per-image cost unchanged |
+| kNN re-ranking | +0.85 to +1.40 | No training; settings transfer unchanged; adding new photos or classes needs no retraining | ~0.7 GB bank per checkpoint; must be rebuilt whenever the model changes; the training data must be kept at deployment | Memory and rebuild time grow linearly with data, while per-photo search stays cheap. See below |
+| CosFace margin 0.1 | AdaptFormer +0.60; LoRA tie | No extra compute | Fragile: 0.2 already hurts (−0.54) | Unchanged |
+| Full fine-tuning (Task 1) | best: 84.07 | Highest accuracy | 375 MB per task; 17.8 GB peak memory | The gap to PEFT grows with data (pilots: PEFT ≥ full FT; full scale: full FT +2.2 at 336) |
+| AdaptFormer + LoRA (Task 2) | 83.08, −1.0 vs full FT | 4.94% trained; 17 MB adapters + 31 MB head; 14.7 GB peak | Same training time; +33% latency at batch 1 even after merging LoRA (AdaptFormer can't merge) | Same time cost as full FT, since gradients flow through the whole backbone |
+| LoRA alone | 78.5 at 336 | Merges exactly: zero extra latency | Unmerged it trains ~25% slower per epoch | Unchanged |
+| Serial adapter | 77.6 at 336 | Fastest training and lowest memory of the 336 runs | +46% latency at batch 1 (can't merge) | Unchanged |
+| BitFit | 76.2 at 448 | Tiny: 0.12% | Lowest accuracy of the all-layer methods; barely gains from resolution | Unchanged |
+| Class-count balancing (excluded) | +1.7 | No training | Needs the exact number of test photos per class, which a deployed model doesn't know | Not usable in deployment |
+
+**Does kNN re-ranking make sense for a bigger dataset?** The question is fair. The answer
+depends on which cost you mean: memory and maintenance grow with the data, while the
+search itself barely grows.
+
+- **Search cost stays small, because our search is class-restricted.** Each photo is
+  compared only with the training photos of its 5 candidate classes, not with the whole
+  bank. So the cost grows with *photos per class*, not with dataset size or class count:
+
+  | Photos per class | Dot products per photo | Multiply-adds | vs one ViT-B forward pass (~17.6 GFLOPs at 224) |
+  | --- | --- | --- | --- |
+  | 45 (ours) | 225 | 0.17M | negligible |
+  | 1,000 | 5,000 | 3.8M | ~0.04% |
+
+  No approximate-nearest-neighbour index is needed. That would only be needed for the
+  open vote over the whole bank, which also scored lower (Appendix A2).
+- **Memory grows linearly with the number of training photos**, at 768 × 2 bytes per photo
+  in fp16:
+
+  | Training photos | fp16 | int8 |
+  | --- | --- | --- |
+  | 450,000 (ours) | 0.69 GB | 0.35 GB |
+  | 4.5M (10× ours) | 6.9 GB | 3.5 GB |
+  | 10M | 15.4 GB | 7.7 GB |
+
+  Fine on a server, heavy for a phone or other edge device.
+- **Maintenance is the real cost.** The bank depends on the model's features, so every new
+  checkpoint needs a full pass over the training data. That takes 25–30 min for us at
+  448, and would take ~4–5 h at 10× our data on the same GPU. The training photos
+  (or their features) must also be stored and shipped with the model, which can raise
+  privacy or licensing issues in real deployments.
+- **For Task 2, it undoes part of the storage saving.** PEFT stores 17 MB of adapters
+  instead of a 375 MB model, but the bank adds ~700 MB to either pipeline.
+- **Ways to shrink it** (*untested by us*):
+  - quantise the features (int8 halves the memory; product quantisation, e.g. FAISS, goes
+    further);
+  - keep only some photos per class;
+  - store a few centres per class instead of every photo. Our comparison warns this costs
+    accuracy: 3 centres gave +0.70 vs +1.32 for individual photos, and more centres are
+    untested.
+- **Where it pays off at scale:** new photos, or even new classes, can be added to the bank
+  without retraining the model. That's an advantage a purely parametric classifier
+  doesn't have.
+
+Bottom line for the report: kNN re-ranking is cheap to *run* at any scale, because the
+search is class-restricted. It is expensive to *store and maintain* as data grows. It
+makes sense when a server can hold the bank and the model changes rarely, and less sense
+on edge devices or when the model is retrained often.
+
+### 5.7 What didn't work
+
+Progressive low-resolution training, longer training at 224 px, LP-FT, sibling-aware
+smoothing and sibling margins, bigger training crops (25–100% instead of 8–100%: a tie),
 heavier augmentation, and depth-concentrated budgets.
 
 **Untested, not failed: crops aimed at the organism.** The idea needs a box around the
@@ -793,16 +954,17 @@ For PEFT specifically:
 - VPT on top of LoRA: +0.40 on the pilot but no gain at full scale (79.3 with and without).
 - Longer prefixes: length 5 → 50 added nothing.
 
-### 5.7 Excluded: class-count balancing
+### 5.8 Excluded: class-count balancing
 
 Sinkhorn rebalancing of predictions to exactly 5 per class raised Task 1 to 84.5%
 (from 82.8%). It relies on knowing that val has exactly 5 and test exactly 10 images
 per class, which a deployed model would not know, so no submitted number uses it. We
 report it only as an analysis.
 
-### 5.8 Limitations
+### 5.9 Limitations
 
-- The genus reading of neighbouring IDs is a hypothesis: class names are not released.
+- Class names are not released, so we can measure that neighbouring IDs look alike but
+  not say what the classes are.
 - Some supporting evidence comes from 1,000-class pilots, which can understate sibling
   effects.
 - Most comparisons use one seed (noise ~0.3 points); only the controlled PEFT arms A and C
@@ -850,7 +1012,41 @@ recipe (early rows predate the shared recipe of 2026-10-07) and prediction view.
 
 Pilot only (1,000 classes, not submitted): AdaLoRA −2.7 vs LoRA.
 
-### A2. Team contributions
+### A2. Re-ranker comparison (side note to Section 4.7)
+
+Anastasia, `scripts/rerank_bakeoff.py`. Holdout: all-class LoRA checkpoint, its 50,000 held-out
+photos, bank = its 400,000 training photos. Candidates are the model's top 5. Every
+re-ranker's setting (or learned model) is chosen on one half of the classes and scored on
+the other, then swapped. Gain over the model's own top-1 (78.31 plain, 79.04 zoom):
+
+| Re-ranker (score = log p + β · s) | What s is | Family | Plain | Zoom |
+| --- | --- | --- | --- | --- |
+| **knn_mean3 (used)** | mean of the 3 best cosines to the class's photos | class-conditional kNN | **+1.32** | **+1.23** |
+| knn_max | best single cosine | 1-nearest neighbour | +1.18 | +1.02 |
+| vote | weighted vote of the photo's 50 nearest bank photos (temperature 0.05) | weighted kNN classifier (as in DINO's kNN evaluation) | +1.14 | +1.03 |
+| centres3 | best cosine to 3 k-means centres of the class | multi-prototype | +0.70 | +0.69 |
+| ncm | cosine to the class mean | nearest class mean / prototypes | +0.55 | +0.49 |
+| knn_meanall | mean cosine to all the class's photos | class average | +0.13 | +0.13 |
+| learned linear | linear score over 12 signals (the six above, log p, rank, gap, class spread, sibling flag, other view's log p) | learning to rank | +2.09 | +1.43 |
+| learned trees | gradient-boosted trees, same signals | learning to rank | +1.49 | +0.90 |
+
+What it shows:
+- *Individual photos beat class summaries.* The closer s gets to "average over the
+  class" (centres → mean → all photos), the less it adds. Our cosine head already holds
+  roughly the class mean, so a class average brings little new. The useful signal is
+  "this photo closely resembles *some* training photo of the class".
+- *A few best matches beat one.* Mean of 3 beats the single best, presumably because it
+  is less sensitive to one lucky or near-duplicate match. That is our explanation, not
+  measured.
+- *Restricting to the class's own photos beats an open vote.* Mean of 3 (+1.32) beats a
+  vote over the photo's nearest neighbours in the whole bank (+1.14).
+- *Learning the combination isn't worth it.* The linear re-ranker's big plain-view gain
+  comes mostly from reading the zoom view's log p, which is the zoom step learned.
+  On the zoom view it adds only +0.20 over knn_mean3, and it would have to be refit for
+  each checkpoint. Trees did worse than linear. So we kept the fixed formula: no
+  learned component, and it transfers across checkpoints unchanged.
+
+### A3. Team contributions
 
 **[TODO]** Who did what: Van (Task 1 recipe, AdaptFormer design, zoom, balancing
 analysis), Anastasia (resolution ablation, LoRA/DoRA/adapter/GPS runs, sibling, error and

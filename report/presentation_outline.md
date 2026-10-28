@@ -62,7 +62,7 @@ for the gap experiments.
 | 14 | Results, and what 5% costs | 1:00 | 14:00 |
 | 15 | What didn't work | 0:30 | 14:30 |
 | 16 | The answer (both tasks) | 0:30 | 15:00 |
-| B1–B10 | Backup slides for Q&A | | |
+| B1–B12 | Backup slides for Q&A | | |
 
 ---
 
@@ -228,9 +228,12 @@ for the gap experiments.
 - **Visual:** diagram: photo → top-5 candidates → each compared with that class's 3
   closest training photos → re-ordered list. Small table of the three CodaBench gains.
 - **Say:** this follows directly from slide 6: the error analysis showed the answer was
-  usually nearby, so re-order the candidates instead of re-classifying. Costs no training
-  and < 0.1 ms per image; the cost is a ~0.7 GB feature bank. (Anastasia's analysis and
-  design; Wenqi ran it on Task 2.)
+  usually nearby, so re-order the candidates instead of re-classifying. It's a standard
+  two-stage re-ranking idea, as in search: the classifier proposes a short list, and a
+  second look at the training photos re-scores it. We compared eight ways of doing the second
+  step; matching the closest individual photos won. Costs no training and < 0.1 ms per
+  image; the cost is a ~0.7 GB feature bank. (Anastasia's analysis and design; Wenqi ran it
+  on Task 2.) If asked how it works, go to B11.
 
 ---
 
@@ -338,7 +341,8 @@ for the gap experiments.
 - **Say:** both used exactly the 96 GB-h budget, with the schedule ending at the time limit.
   PEFT saves memory, not time: gradients still flow through the frozen backbone. The kNN
   bank adds ~0.7 GB to either pipeline, so the storage saving is for the model, not the
-  full pipeline. The brief expected PEFT to beat full fine-tuning on small data; at 450,000
+  full pipeline. If asked whether kNN scales: cheap to run (class-restricted search),
+  costly to store and rebuild as data grows (B12). The brief expected PEFT to beat full fine-tuning on small data; at 450,000
   images it didn't.
 
 ---
@@ -385,8 +389,6 @@ for the gap experiments.
   - the holdout tracks CodaBench (73.7 vs 74.2);
   - pilots rank PEFT variants the same way as full scale (DoRA, GPS, no extras);
   - but pilots can't compare PEFT with full FT (pilot −0.4 vs full scale +2.2).
-
-  Integrity: the data matches iNat21's sizes, so we avoided iNat21-trained models.
 - **B2. Task 1 ablation table.** Report outline Table 2.
 - **B3. First-round PEFT survey.** Report outline Table A1, labelled as uncontrolled.
 - **B4. kNN details.** Re-ranker comparison; settings chosen on one half of the holdout and
@@ -405,6 +407,41 @@ for the gap experiments.
   10%. No evident label noise.
 - **B10. Which parameters to train at 4.6%.** Report outline Section 4.5 parameter-selection
   table: spread beats concentrated, depth doesn't matter.
+- **B11. How kNN re-ranking works, step by step.** Report outline Section 3.6:
+  1. Bank: every training photo's normalised feature from the fine-tuned model, built once.
+  2. The model predicts; keep its top 5 classes.
+  3. For each candidate, average the 3 highest cosines between the photo and that class's
+     ~45 training photos.
+  4. Score = log p + 20 × that average; pick the highest.
+
+  Show the worked example (A at p = 0.50 vs sibling B at p = 0.30: B wins on closer
+  matches) and the eight-variant comparison table from Appendix A2.
+
+- **B12. Pros, cons and scalability.** Report outline Section 5.6 table: every technique's gain, pros, cons and behaviour with more data, plus the kNN scaling numbers (search cost per photo; bank size at 0.45M / 4.5M / 10M photos).
+
+---
+
+## kNN Q&A cheat sheet
+
+Likely questions, with short answers. Details are in report outline Section 3.6 and Appendix A2.
+
+| Question | Answer |
+| --- | --- |
+| What is in the bank? | The features of all 450,000 training photos, from the same fine-tuned model, plain view, L2-normalised, fp16 (~0.7 GB). Training photos and their labels only. |
+| Does it use val or test labels? | No. Only training photos. The settings were chosen on our own holdout, made from training photos. |
+| Was it tuned on CodaBench? | No. K = 5, m = 3, β = 20 were fixed on the holdout before any submission and reused unchanged for three different models (+1.40, +0.85, +0.88). |
+| How is it different from the cosine head? | The head has one weight per class, roughly the class mean. kNN compares the photo with each training photo of the class individually, so it can match a photo that looks like *some* of the class's photos but not like its average. |
+| Why not just use a kNN classifier? | We kept the head and only reorder its top 5, so kNN can't pull in a far-away class. An open vote over the whole bank was weaker (+1.14 vs +1.32). |
+| Why the top 5? | 64% of errors have the truth in the top 5, 27% at ranks 3–5. Top 5 was also chosen by the grid search, over 2 and 3. |
+| Why the mean of 3, not 1 or all? | The ablation: best single match +1.18, mean of 3 +1.32, mean of all +0.13. Averaging over all photos turns it back into a class mean. |
+| Why β = 20? | Chosen on the holdout by both halves independently. It also puts a cosine gap of 0.05 on the same scale as a typical log p gap, so kNN overturns close calls, not confident ones. |
+| Does it count toward Task 2's 5%? | It holds no trained parameters, only stored features. **[TODO: confirm with the Prof before the talk]** |
+| What does it cost? | 0.03–0.06 ms per photo (~225 dot products), plus building the bank once per checkpoint (15–30 min, outside the training clock) and storing 0.7 GB. |
+| Why is the gain smaller on top of zoom? | Zoom and kNN overlap partly: some errors either one fixes. They still add up (+0.85 / +0.88 after zoom, vs +1.40 on a plain view). |
+| Why not the learned re-ranker? | It added only +0.20 on the zoom view, and it would need refitting for every checkpoint. The fixed formula transfers unchanged. |
+| Is it really sibling-aware? | The motivation is: the near misses are often siblings, and kNN is restricted to the top candidates. Whether its fixes fall mainly on siblings: **[PENDING: Anastasia's rerun]**. Compare siblings' share of the fixes with their ~34% share of errors (`fixes_by_distance.json`). |
+| Does it make sense for a bigger dataset? | Running it, yes; storing it, it depends. The search only looks at the 5 candidate classes' photos, so its cost grows with photos per class, not dataset size (1,000 per class is still ~0.04% of a forward pass). But the bank grows linearly (10× our data, 4.5M photos ≈ 6.9 GB fp16) and must be rebuilt for every new checkpoint (~4–5 h at that size). So it suits a server with a stable model, not edge devices or frequent retraining. Upside: new photos or classes can be added without retraining. |
+| Is it new? | The pattern isn't: two-stage re-ranking and adding a nearest-neighbour memory to a model are known (kNN-LM, Jia et al.). Ours is the specific design (top 5, class-own photos, mean of 3 best), the comparison of six variants, and the settings transferring unchanged across models. |
 
 ---
 

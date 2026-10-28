@@ -17,8 +17,14 @@ halves swap; the reported gain is the average of the two held-out halves. Fixes 
 right) and breaks (right -> wrong) are counted separately. Also reports top-1/2/3/5 and where
 the true class sits when wrong (rank 2 vs 3-5 vs later).
 
+Are the fixes siblings? For the submitted setting (K = 5, m = 3, beta = 20) the fixes and
+breaks are split by class-ID distance between the guess and the truth: a sibling error's
+original guess is within 5 IDs of the truth. If siblings are a larger share of the fixes than
+of the errors, the re-ranking corrects siblings more than other errors.
+
     python scripts/rerank_knn.py --run_dir <pilot run> --pilot_root <pilot data root> --out_dir <folder>
-writes rerank.json and rerank_grid.csv.
+writes rerank.json, rerank_grid.csv, fixes_by_distance.json and rerank_changes.csv (one row per
+holdout photo that was wrong before or changed by re-ranking).
 """
 
 from __future__ import annotations
@@ -47,6 +53,9 @@ from src.utils import apply_overrides, get_device, load_config, set_seed
 KS = (2, 3, 5)
 MS = (1, 3)
 BETAS = (0.0, 1.0, 2.0, 5.0, 10.0, 20.0, 40.0)
+SUBMITTED = (5, 3, 20.0)      # K, m, beta of every CodaBench re-ranking file
+SIBLING_IDS = 5               # an error is a sibling error if the guess is within this many IDs
+DISTANCES = (1, 5, 10, 50)    # also reported, to show the trend
 
 
 @torch.no_grad()
@@ -85,6 +94,53 @@ def rerank(cand, lp, knn, beta):
     return cand.gather(1, score.argmax(1, keepdim=True)).squeeze(1)
 
 
+def share(part, whole):
+    return round(float(part.sum()) / max(int(whole.sum()), 1), 4)
+
+
+def fixes_by_distance(before, after, labels, rank):
+    """Split errors, fixes and breaks of one re-ranking by class-ID distance from the truth.
+
+    before / after: top-1 class per photo without / with re-ranking; rank: where the truth sat
+    in the model's list before re-ranking (1 = correct, 99 = beyond the top 10)."""
+    wrong0, right1 = before != labels, after == labels
+    fixed, broken = wrong0 & right1, ~wrong0 & ~right1
+    d0, d1 = (before - labels).abs(), (after - labels).abs()
+    sib0 = wrong0 & (d0 <= SIBLING_IDS)
+    far0 = wrong0 & (d0 > SIBLING_IDS)
+    return {
+        "sibling_ids": SIBLING_IDS,
+        "errors_before": int(wrong0.sum()),
+        "fixes": int(fixed.sum()),
+        "breaks": int(broken.sum()),
+        # the comparison: siblings' share of the errors vs their share of the fixes
+        "sibling_share_of_errors": share(sib0, wrong0),
+        "sibling_share_of_fixes": share(fixed & sib0, fixed),
+        # how often each kind of error gets fixed
+        "fix_rate_sibling_errors": share(fixed & sib0, sib0),
+        "fix_rate_far_errors": share(fixed & far0, far0),
+        # a break that lands on a sibling swaps one look-alike for another
+        "breaks_onto_sibling_share": share(broken & (d1 <= SIBLING_IDS), broken),
+        "fixes_by_truth_rank": {"2": int((fixed & (rank == 2)).sum()),
+                                "3-5": int((fixed & (rank >= 3) & (rank <= 5)).sum())},
+        "within_ids": {str(d): {"share_of_errors": share(wrong0 & (d0 <= d), wrong0),
+                                "share_of_fixes": share(fixed & (d0 <= d), fixed)} for d in DISTANCES},
+    }
+
+
+def write_changes(path, paths, labels, before, after, rank):
+    """One row per photo that was wrong before re-ranking or whose prediction changed."""
+    keep = ((before != labels) | (before != after)).nonzero().squeeze(1).tolist()
+    with path.open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["path", "label", "before", "after", "truth_rank_before", "ids_before", "ids_after",
+                    "fixed", "broken"])
+        for i in keep:
+            y, b, a = int(labels[i]), int(before[i]), int(after[i])
+            w.writerow([paths[i], y, b, a, int(rank[i]), abs(b - y), abs(a - y),
+                        int(b != y and a == y), int(b == y and a != y)])
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--run_dir", required=True)
@@ -107,7 +163,7 @@ def main():
 
     bank, _, bank_y, _ = embed(model, ImageListDataset(args.pilot_root, "train", eval_tf), bs, nw, device, use_bf16)
     hold_ds = ImageListDataset(args.pilot_root, "val", eval_tf)
-    hold_f, _, hold_y, _ = embed(model, hold_ds, bs, nw, device, use_bf16)
+    hold_f, _, hold_y, hold_paths = embed(model, hold_ds, bs, nw, device, use_bf16)
     cand_all, lp_all = holdout_logits(model, hold_ds, bs, nw, device, use_bf16)
     bank_idx = defaultdict(list)
     for i, c in enumerate(bank_y.tolist()):
@@ -173,6 +229,14 @@ def main():
         w.writeheader()
         w.writerows(grid)
     print(json.dumps(summary, indent=2))
+
+    # the submitted setting on the whole holdout: are its fixes siblings?
+    k, m, beta = SUBMITTED
+    after = rerank(cand_all[:, :k], lp_all[:, :k], knn[(k, m)], beta)
+    by_dist = {"K": k, "m": m, "beta": beta, **fixes_by_distance(cand_all[:, 0], after, hold_y, rank)}
+    (out / "fixes_by_distance.json").write_text(json.dumps(by_dist, indent=2))
+    write_changes(out / "rerank_changes.csv", hold_paths, hold_y, cand_all[:, 0], after, rank)
+    print(json.dumps(by_dist, indent=2))
 
 
 if __name__ == "__main__":
