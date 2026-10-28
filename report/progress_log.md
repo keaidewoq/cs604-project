@@ -69,11 +69,29 @@ Frozen features + linear probe, internal holdout accuracy:
 - augreg2 and DINOv2 tied within noise (~1 point); DeiT III and CLIP dropped.
 - Caveat: the best probe LR was 3e-3 for every model, the top of the sweep, so all probe numbers may be slightly low. Add 1e-2 and 3e-2 next time.
 
-#### Resolution ablation (full FT, 2,000-class subset, equal time budget) — date TBC
+#### Resolution ablation (full FT, 2,000-class subset, equal time budget) — ~2026-10-02 (notebook last edited then; exact run date not recorded)
  
-- Arms: A = 224, B = 336, C = 224 then 336. Time budget scaled to the subset so each arm gets roughly the epoch count of a full run (augreg2 at 336 completed 9 epochs).
-- **336 beat 224 for both backbones** despite fewer epochs; augreg2 gained **+3.7 points** at 336.
-- DINOv2 beat augreg2 at every resolution once fine-tuned.
+- Notebook: `cs604_model_resolution_ablation.ipynb` (Drive), results `cs604/ablation/results_subset.csv`. One A100 40GB, 29 min per arm, holdout 5/class.
+- Arms: A = 224, B = 336, C = 224 then 336 for the last 15% of the budget. Time budget scaled to the subset so each arm gets roughly the epoch count of a full run (augreg2 at 336 completed 9 epochs).
+- Class count: the saved notebook says 1,000 for subset mode, but the timings only fit ~2,000 classes (augreg2 A: 19 epochs at 976 img/s in 29 min ≈ 89k images per epoch ≈ 2,000 classes × 45 photos), so the setting was changed in Colab before the run.
+
+| Backbone | A: 224 (epochs) | B: 336 (epochs) | C: 224→336 (epochs) | B − A | C − B |
+| --- | --- | --- | --- | --- | --- |
+| augreg2 top-1 | 0.8103 (19) | **0.8472** (9) | 0.8287 (18) | **+3.69** | −1.85 |
+| augreg2 top-5 | 0.9271 | **0.9488** | 0.9429 | +2.17 | −0.59 |
+| DINOv2 top-1 | 0.8329 (14) | **0.8609** (7) | 0.8524 (13) | +2.80 | −0.85 |
+| DINOv2 top-5 | 0.9426 | **0.9585** | 0.9551 | +1.59 | −0.34 |
+
+- **336 beat 224 for both backbones** despite half the epochs, and also beat 224→336 (FixRes-style finish), which gets twice the epochs at 224 throughput (976 vs 432 img/s for augreg2).
+- DINOv2 beat augreg2 at every resolution once fine-tuned (not allowed for submission).
+- Values are best-epoch top-1 on the holdout (augreg2 best epochs 17 / 7 / 17 of 19 / 9 / 18).
+- Learning curves (`history_subset_<backbone>_<arm>.csv`, holdout eval after every epoch):
+  - **336 leads 224 at equal minutes from ~6 min on, by a steady 3.5–3.9 points** (augreg2: 0.7449 vs 0.7078 at ~6.5 min, 0.7977 vs 0.7630 at ~13.5 min, 0.8378 vs 0.7985 at ~20 min). Only the first epoch is a tie.
+  - **Both arms plateau before the budget ends**, so 336 has a higher ceiling, not just a faster start: augreg2 224 gains only +0.2 over its last 5 epochs (0.8076 → 0.8096), 336 is flat over its last 2 (0.8472, 0.8472). Same for DINOv2.
+  - **The 336 switch in arm C adds +2.0 in one epoch** (augreg2 0.8084 → 0.8285), but it starts from the 224 plateau and ends 1.85 below plain 336.
+  - C's 224 phase tracks A almost exactly (augreg2 epoch 15: 0.8073 vs 0.8084), so run-to-run noise here is ~0.1 point and the 3.7 / 1.85 gaps are far beyond it.
+  - Cost per epoch: 1.53 min at 224 vs 3.35 min at 336 for augreg2 (2.2×, not the ~3× assumed in the plan); DINOv2 2.08 vs 4.55 min.
+  - DINOv2 C has no row for epoch 11 (the log jumps from epoch 10 at 23.2 min to epoch 12 at 29.2 min); the final value is unaffected.
 
 ### 2026-10-03 — Anastasia — frozen DINOv2 linear probe @ 336
  
