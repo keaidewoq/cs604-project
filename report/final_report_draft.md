@@ -128,6 +128,12 @@ CodaBench: **0.663 → 0.757** with the same 224 px and budget.
 | LoRA 224 → 336, equal epochs / equal time (pilot) | Anastasia | −1.20 / −0.88 |
 | Full FT 224 then 336 (last 15%), equal time (2,000-class subset, 29 min/arm) | Anastasia | **−1.85** vs plain 336 (82.87 vs 84.72), despite 2× the epochs; plain 224 81.03 |
 
+Anastasia's subset ran each arm for the same 29 minutes (224: 19 epochs; 336: 9;
+progressive: 18). 336 led 224 at equal elapsed time from about minute 6 onwards, by
+3.5–3.9 points, and both curves had flattened by the end, so 336 has the higher ceiling, not
+just a faster start. A DINOv2 control (not allowed for submission) gave the same order:
+83.29 / 86.09 / 85.24. The class count of this subset is inferred from the timings.
+
 **Going up in resolution won at equal compute, even though each epoch costs more:**
 
 | Training size | Full FT holdout (equal 0.48 × 48 GB-h, crop 0.9) | Epochs that fit | AdaptFormer holdout (equal compute) |
@@ -141,7 +147,10 @@ CodaBench: **0.663 → 0.757** with the same 224 px and budget.
 
 On CodaBench, full FT: **224 0.757 → 336 0.807 (Anastasia) → 384 0.817 → 448 0.825**.
 The screen predicted each step (+0.86 → +1.0 actual; +0.73 → +0.8 actual). We stopped at
-448 because 512 was flat on the screen and costs 30% more per epoch.
+448 because 512 was flat on the screen and costs 30% more per epoch. Caveat: the 384 and
+448 runs used Van's `_fast` configs (torch.compile, 12 loader workers, batch 64 × 4
+accumulation at 448), so they are not perfectly matched to the 336 run; the equal-compute
+screen above is the controlled comparison.
 
 A key observation: **resolution helps only when the backbone adapts.** Frozen features
 get worse at higher resolution (prototype accuracy 43.9% at 224, 42.5% at 336, 37.2% at
@@ -195,7 +204,8 @@ prediction time.
    (+1.29; both halves chose the same values). CodaBench, same pass: LoRA plain
    **0.7842 → 0.7982** (+1.40); Task 1 crop 0.9 + zoom **0.8322 → 0.8407** (+0.85);
    Task 2 crop 0.9 + zoom **0.822 → 0.8308** (+0.88, 2,580 of 50,000 predictions
-   changed). Same K, m and beta on all three; not retuned. No training. The bank is
+   changed; the 0.822 is Van's earlier zoom submission, not the zoom-only file of the
+   same run, so this pair is two passes of the same checkpoint and settings). Same K, m and beta on all three; not retuned. No training. The bank is
    the 450,000 training features (~0.7 GB fp16), built once (~15 min at 336, ~25–30 min
    at 448), outside the 144-minute training clock. Re-ranking is 0.03 ms per image on
    the 336 LoRA run and 0.062 ms per image at batch 64 on the Task 2 run.
@@ -286,6 +296,14 @@ Each kept change was confirmed on CodaBench:
 | same at 448 | 0.804 | 0.814 (crop 0.9 + zoom) |
 | **+ LoRA r16, 448** | **0.812** | **0.822** (crop 0.9 + zoom) |
 
+Caveats:
+
+- AdaptFormer on its own does not beat LoRA: at 336 plain they tie (0.779 vs 0.784–0.785).
+  The Task 2 gains came from the biases/norms, LoRA and 448 px, not from the adapter type.
+- AF + LoRA (4.94%) vs AF + biases/norms (4.27%) may partly be the extra 0.7% of
+  parameters. Equal-parameter controls at 4.94% (AdaptFormer width 224 + biases/norms;
+  LoRA r28 + biases/norms) are pending **[TODO Van]**.
+
 ---
 
 ## 3. Design (framework figure)
@@ -323,8 +341,9 @@ flowchart TB
 ```
 
 `*` = trainable. All Linear/LayerNorm biases also train. Task 2 loss: cross-entropy with
-label smoothing 0.1 and a CosFace margin 0.1 on the cosine head. The kNN box above is
-Task 1 only; Task 2 stops at the averaged softmax.
+label smoothing 0.1 and a CosFace margin 0.1 on the cosine head. Both tasks use the whole
+prediction pipeline above, kNN step included, with the same settings (K = 5, m = 3,
+beta = 20): Task 1 0.8407, Task 2 0.8308.
 
 Task 1 uses the same views with every weight trainable and no CosFace margin: layer-wise
 lr decay 0.75 (top block 4e-4), head lr 4e-3, wd 0.05 (none on norms/biases), drop_path
