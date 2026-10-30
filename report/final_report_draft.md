@@ -126,7 +126,7 @@ CodaBench: **0.663 → 0.757** with the same 224 px and budget.
 | --- | --- | --- |
 | Progressive 224 → 384, equal compute (full FT, 10 img/class) | Van | **−4.3** vs plain 384, despite 2.5× the epochs |
 | LoRA 224 → 336, equal epochs / equal time (pilot) | Anastasia | −1.20 / −0.88 |
-| Full FT progressive 224 → 336 vs plain 336, equal 29 min (~2,000-class subset) | Anastasia | 82.87 vs **84.72** (**−1.85**); plain 224: 81.03 |
+| Full FT 224 then 336 (last 15%), equal time (2,000-class subset, 29 min/arm) | Anastasia | **−1.85** vs plain 336 (82.87 vs 84.72), despite 2× the epochs; plain 224 81.03 |
 
 Anastasia's subset ran each arm for the same 29 minutes (224: 19 epochs; 336: 9;
 progressive: 18). 336 led 224 at equal elapsed time from about minute 6 onwards, by
