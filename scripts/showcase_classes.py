@@ -5,7 +5,7 @@ pair the model confuses most.
 Uses a checkpoint's features (the model's own view of the photos), on a shortlist of classes:
   - variation candidates: the --weak weakest classes in class_accuracy.csv;
   - similarity candidates: the --top_pairs top mutual pairs in confused_pairs.csv;
-  - the most confused pair: the first row of confused_pairs.csv.
+  - the most confused pair: the first pair in confused_pairs.csv confused in both directions.
 (class_accuracy.csv and confused_pairs.csv come from scripts/confusion_pairs.py.)
 
 For every shortlisted class, all its training photos are embedded (normalised pre-logit
@@ -75,8 +75,10 @@ def shortlist(args):
     """-> (variation candidates, similarity candidate pairs, most confused pair)."""
     weak = [int(r["class"]) for r in read_rows(args.class_accuracy)[:args.weak]]
     rows = read_rows(args.pairs_csv)
-    mutual = [(int(r["class_a"]), int(r["class_b"])) for r in rows if r["mutual"] == "1"][:args.top_pairs]
-    top = rows[0]
+    mutual_rows = [r for r in rows if r["mutual"] == "1"]
+    mutual = [(int(r["class_a"]), int(r["class_b"])) for r in mutual_rows][:args.top_pairs]
+    # Confused both ways, so both classes are in the holdout (a pilot model can guess any class)
+    top = mutual_rows[0] if mutual_rows else rows[0]
     return weak, mutual, top
 
 

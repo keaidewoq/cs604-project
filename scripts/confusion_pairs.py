@@ -31,7 +31,7 @@ def main():
     p.add_argument("--errors", required=True, help="errors_<name>.csv from scripts/error_analysis.py")
     p.add_argument("--out_dir", required=True)
     p.add_argument("--per_class", type=int, default=5, help="holdout photos per class")
-    p.add_argument("--num_classes", type=int, default=10000)
+    p.add_argument("--num_classes", type=int, default=10000, help="classes in the holdout (1000 for a pilot)")
     p.add_argument("--near", type=int, default=10, help="ID gap that counts as a close relative")
     args = p.parse_args()
 
@@ -74,7 +74,8 @@ def main():
 
     errors = sum(wrong.values())
     near = sum(n for t, gs in called.items() for g, n in gs.items() if abs(g - t) <= args.near)
-    hist = Counter(wrong[c] for c in range(args.num_classes))
+    hist = Counter(wrong.values())
+    hist[0] = args.num_classes - len(wrong)  # holdout classes with no errors (their IDs need not be 0..N-1)
     summary = {
         "photos": args.per_class * args.num_classes,
         "errors": errors,
