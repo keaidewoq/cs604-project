@@ -1,0 +1,74 @@
+# Controlled PEFT comparison on all 10,000 classes (report draft Section 8.1, experiments 1 + 3).
+# Run: python scripts/ablation.py --spec configs/ablation_peft_controlled.yaml --data_root /content/data \
+#        --output_dir /content/drive/MyDrive/CS604_RUNS [--only <arms>]
+# Launcher: notebooks/colab_launcher_ana_peft_controlled.ipynb
+#
+# Same holdout as configs/allclass_holdout_lora_no_extras.yaml (all classes, 5 per class held
+# out, subset seed 0; 40 fit images per class). Same recipe for every arm
+# (configs/peft_controlled_336.yaml): 336 px, prototype cosine head from the fit images,
+# 20 training minutes, plain crop 0.9 at evaluation. Only the method, its size and its lr change.
+#
+# Questions:
+#   A vs C vs D      LoRA vs AdaptFormer vs serial adapter at ~4.1-4.2%, same everything else
+#   A vs B           spread vs concentrated at about equal parameters (all 12 blocks vs 4-11 only)
+#   A, B, C, D vs E, F, G   all-layer methods vs BitFit / last block / prefix
+#   A, C seeds 42/1/2       is the LoRA vs AdaptFormer difference real or a tie (noise ~0.3)?
+#
+# Backbone %, head excluded: A 4.12, B 4.57, C 4.13, D 4.14, E 0.12, F 2.75, G 1.07.
+# Cost on an A100: ~25 min per arm (20 training + holdout eval + start-up), 11 arms ~4.6 h.
+# Split across two Colab sessions with --only; start the second after the first has written
+# prototypes_pilot_fit.pt, or copy it in from ablation_allclass_holdout_lora_no_extras/.
+base: peft_controlled_336.yaml          # relative to this file
+base_prototypes: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+pilot:
+  num_classes_subset: 10000             # all classes
+  holdout_per_class: 5
+  subset_seed: 0
+arms:
+  A_lora_r24: {}
+  B_lora_r40_blocks4_11:                # concentrated: no LoRA below block 4
+    first_trainable_block: 4
+    lora_rank: 40
+    lora_alpha: 40
+  C_adaptformer_w192:
+    method: adaptformer
+    adapter_dim: 192
+    adaptformer_scale: 0.1
+    adapter_dropout: 0.0
+    lr: 1.0e-3
+  D_adapter_w96:
+    method: adapter
+    adapter_dim: 96
+    adapter_dropout: 0.0
+    lr: 3.0e-4
+  E_bitfit:
+    method: bitfit
+    lr: 1.0e-3
+  F_lastblock_attention:
+    method: last_blocks
+    last_n_blocks: 1
+    train_scope: attention
+    lr: 1.0e-4
+  G_prefix_p50:
+    method: prefix
+    prefix_length: 50
+    prefix_placement: all
+    prefix_init_std: 0.02
+    lr: 1.0e-3
+  # Seeds (experiment 3): same arms, different init and data order, same holdout.
+  A_seed1: {seed: 1}
+  A_seed2: {seed: 2}
+  C_seed1:
+    method: adaptformer
+    adapter_dim: 192
+    adaptformer_scale: 0.1
+    adapter_dropout: 0.0
+    lr: 1.0e-3
+    seed: 1
+  C_seed2:
+    method: adaptformer
+    adapter_dim: 192
+    adaptformer_scale: 0.1
+    adapter_dropout: 0.0
+    lr: 1.0e-3
+    seed: 2

@@ -756,3 +756,20 @@ Frozen features + linear probe, internal holdout accuracy:
 - trainable % / peak VRAM / GPU-hours: no new training. Same checkpoint as the 0.822 run (4.94% of the backbone, head excluded; peak 14.66 GB; 144 training minutes). Extra at prediction: the bank (~0.7 GB fp16, 450,000 × 768, built once) and the re-ranking step, **0.0621 ms per photo** at batch 64 (`rerank_stats.json`; excludes the two zoom forward passes). Zoom latency of this 448 checkpoint is still not measured.
 - comparison: the gain matches the full fine-tune's (+0.85, 0.8322 → 0.8407) more closely than the plain LoRA gain at 336 (+1.40). Full fine-tune remains ahead by 1.0 point (0.8407 vs 0.8308). This is the best under-5% score without class-count balancing. Beta 10 would have changed 1,672 zoom predictions and beta 40 would have changed 3,781; neither was submitted.
 
+### 2026-11-01 — Anastasia — layer decay + high lr vs one flat low lr, everything else identical (`configs/ablation_layer_decay.yaml`)
+
+- run_dir: `CS604_RUNS/ablation_ablation_layer_decay/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_layer_decay.ipynb`, `ana-branch`); A100 (a first attempt on a T4 ran out of memory on the first batch)
+- question: is Van's layer-wise lr decay better than fine-tuning every block at one low lr, when each uses a good lr? Van removed layer decay only at 4e-4 (−6.7 on her holdout); the 3-epoch parameter-selection pilot then had `F_llrd` and `F_flat` tie (0.8960 vs 0.8956), but those arms also differed in head lr and drop_path.
+- setup: full FT at 336 (`full_ft_336_llrd.yaml`), same 1,000-class pilot (40 fit / 5 holdout per class, subset seed 0), **9 epochs** (about the full 336 run's epoch count), 5% warmup + cosine over the epochs (no time budget), two seeds per arm. **Only `lr` and `layer_decay` differ** (checked by merging the arm configs): A = layer decay 0.75, top lr 4e-4 (bottom 9.5e-6); B = no layer decay, lr 3e-5 everywhere (best of the 1e-5 / 3e-5 / 1e-4 no-decay sweep, 2026-10-06). Shared: prototype cosine head from the pilot's fit images, head lr 4e-3, drop_path 0.1, label smoothing 0.1, clip 1.0, batch 128 × 2.
+
+| Arm | Layer decay | lr | Seed | Holdout top-1 | Final loss | Wall min |
+|---|---|---|---:|---:|---:|---:|
+| A_llrd | 0.75 | 4e-4 top | 42 | **0.9022** | 1.7185 | 15.9 |
+| A_llrd_seed1 | 0.75 | 4e-4 top | 1 | 0.9014 | 1.7234 | 15.6 |
+| B_flat | none | 3e-5 | 42 | 0.9008 | 1.7418 | 15.5 |
+| B_flat_seed1 | none | 3e-5 | 1 | 0.9008 | 1.7425 | 15.9 |
+
+- results: **a tie.** Means 0.9018 (layer decay) vs 0.9008 (flat): +0.10 points, about 5 of 5,000 photos, inside the 0.14–0.33 run-to-run noise measured on these pilots. Seed gaps 0.08 / 0.00. Both layer-decay runs beat both flat runs and have slightly lower loss, but with two runs per arm that ordering happens by chance about one time in six. Matches the 3-epoch result, so tripling the length and removing the head-lr / drop_path mismatch did not change it.
+- reading: layer decay does not add accuracy on its own; it makes a high lr safe (with it, 4e-4 works; without it, 4e-4 costs 6.7 on Van's holdout). Both settings keep the early layers' updates small, which is what matters. Slide line: "Layer decay at 4e-4 and one flat lr of 3e-5 tie (90.2 vs 90.1, two seeds each); without layer decay, 4e-4 costs 6.7 points."
+- caveats: pilot scale only (40,000 images, 1,000 classes); full scale could differ and would need two 144-minute runs. 3e-5 came from a coarse sweep, so a better flat lr between 3e-5 and 1e-4 may exist (that would favour flat).
+- next: none planned; keep layer decay in the recipe because it is the version validated end to end at full scale, not because it beats a flat lr.

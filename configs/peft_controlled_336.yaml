@@ -1,0 +1,39 @@
+# Shared recipe for the controlled PEFT comparison (configs/ablation_peft_controlled.yaml).
+# Every arm uses this file and changes only the method, its own size knobs and its own lr,
+# so the method is the one difference. Fixes the survey's gaps (report draft Section 8.1):
+# one resolution, one recipe, one view (plain centre crop 0.9), one 10,000-class holdout.
+#
+# Same for every arm: 336 px, prototype cosine head rebuilt from the fit images, head lr
+# 3e-3, weight decay 0.05 (not on norms/biases), label smoothing 0.1, clip 1.0, effective
+# batch 256, 20 training minutes with 5% warmup + cosine to zero at the limit (~1 epoch),
+# no extras (norms/biases/pos_embed/cls_token stay frozen unless the method is BitFit).
+# Equal minutes are only comparable on one GPU type: run every arm on an A100 40GB.
+#
+# As written this is arm A (LoRA r24 on qkv/proj/fc1/fc2, 4.12%). Method lrs are each
+# method's earlier pick: LoRA 3e-4, serial adapter 3e-4 (pilot tie rule), AdaptFormer 1e-3
+# (Van's screen), BitFit 1e-3 and last-block 1e-4 and prefix 1e-3 (Qian's runs).
+inherits: base.yaml
+method: lora
+img_size: 336
+lora_targets: [qkv, proj, fc1, fc2]
+lora_rank: 24
+lora_alpha: 24
+lora_dropout: 0.0
+unfreeze_extra: []
+head_type: cosine
+head_init: prototype
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+evaluate_before_training: false
+lr: 3.0e-4
+head_lr: 3.0e-3
+weight_decay: 0.05
+label_smoothing: 0.1
+clip_grad_norm: 1.0
+batch_size: 128
+grad_accum_steps: 2   # effective batch 256
+num_workers: 8
+seed: 42
+epochs: null          # time-only: every arm gets the same 20 minutes
+max_train_minutes: 20
+time_warmup_fraction: 0.05
+warmup: 0.0
