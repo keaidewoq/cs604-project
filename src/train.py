@@ -307,7 +307,15 @@ def train(cfg, resume_dir=None):
         layer_decay=cfg.get("layer_decay"), unfreeze_lr=cfg.get("unfreeze_lr"),
         prompt_lr=cfg.get("prompt_lr"),
     )
-    optimizer = AdamW(groups, lr=float(cfg.lr))
+    # Opt-in (Van): fused CUDA AdamW kernel, same update rule; off keeps the default kernel.
+    adamw_kwargs = {"fused": True} if bool(cfg.get("fused_adamw", False)) else {}
+    optimizer = AdamW(groups, lr=float(cfg.lr), **adamw_kwargs)
+    # Opt-in (Van): torch.compile for the training forward/backward only. `model` stays
+    # the plain module, so checkpoints, evaluation and PCA init are unchanged. Compiling
+    # happens in the first training steps, so its time counts against the time limit.
+    train_model = torch.compile(model) if bool(cfg.get("torch_compile", False)) else model
+    if adamw_kwargs or train_model is not model:
+        print(f"[train] fused_adamw={bool(adamw_kwargs)} torch_compile={train_model is not model}")
 
     accum = max(int(cfg.grad_accum_steps), 1)
     steps_per_epoch = math.ceil(len(loaders["train"]) / accum)
@@ -480,7 +488,7 @@ def train(cfg, resume_dir=None):
                 images = images.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
                 with amp_context(device, use_bf16):
-                    logits = model(images)
+                    logits = train_model(images)
                     loss = loss_fn(logits, labels)
                 (loss / accum).backward()
 

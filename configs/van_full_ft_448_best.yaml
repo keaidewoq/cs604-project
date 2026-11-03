@@ -1,0 +1,27 @@
+# Van's Task 1 final recipe (full_ft_20261017_122237: CodaBench 0.825 plain, 0.832 crop 0.9
+# + zoom), copied key for key from that run's config.yaml so a holdout run trains the same model.
+# Differs from configs/full_ft_448_llrd.yaml: no full_image_probability (plain random crop),
+# 12 workers, and the fused AdamW + torch.compile speed-ups (about 21% more steps in the
+# 144 minutes: 1,571 s vs 1,901 s per epoch on the A100).
+inherits: base.yaml
+method: full_ft
+img_size: 448
+head_type: cosine
+head_init: prototype
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_448.pt
+lr: 4.0e-4
+layer_decay: 0.75
+head_lr: 4.0e-3
+weight_decay: 0.05
+label_smoothing: 0.1
+drop_path_rate: 0.1
+clip_grad_norm: 1.0
+batch_size: 64
+grad_accum_steps: 4
+num_workers: 12
+epochs: 30
+warmup: 1.5
+max_train_minutes: 144
+schedule_fit_time: true
+fused_adamw: true
+torch_compile: true
