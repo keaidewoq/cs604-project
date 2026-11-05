@@ -1,0 +1,1713 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ViT Adaptation Deck</title>
+<style>
+@font-face{font-family:"Figtree";src:url("fonts/Figtree-wght.ttf") format("truetype");font-weight:300 900;font-display:swap}
+@font-face{font-family:"Literata";src:url("fonts/Literata-opsz-wght.ttf") format("truetype");font-weight:200 900;font-display:swap}
+@font-face{font-family:"Archivo Narrow";src:url("fonts/ArchivoNarrow-wght.ttf") format("truetype");font-weight:400 700;font-display:swap}
+:root{--bg:#182a3b;--paper:#fff;--card:#fff;--ink:#1f2937;--muted:#566573;--quiet:#d5e1ea;--line:#c8d1d8;--controlLine:#80909d;--chrome:#214d73;--surface:#f1f4f6;--surfaceCool:#e9f0f5;--grid:#e1e7eb;--flow:#758795;--frozen:#708392;--frozenFill:#e9eef2;--plotNeutral:#7e91a2;--train:#9f3131;--trainStrong:#7d2024;--trainFill:#f5dfdd;--trainWash:#f8ecea;--good:#176b5d;--goodFill:#dceee9;--bad:#a12f38;--badFill:#f4dfe1;--info:#214d73;--infoFill:#e0ebf3;--cA:#2e62a0;--cB:#674a9e;--cC:#176b5d;--cD:#a33d72;--photoFill:#edf2eb;--photoLine:#bdc8bd;--illustration:#586d7d;--earth:#79624c;--beak:#a97724;--darkRaised:#2c5b80;--darkText:#f4f8fb;--darkMuted:#c7d7e3;
+--sans:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--serif:"Literata",Georgia,"Times New Roman",serif;--narrow:"Archivo Narrow","Arial Narrow",var(--sans)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;width:100%;min-width:0;background:var(--bg);color:var(--ink);font:17px/1.48 var(--sans);overflow:hidden;font-synthesis:none}
+#deck{position:fixed;left:50%;top:50%;width:1600px;height:900px;background:var(--paper);transform-origin:center center;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+::selection{background:var(--trainFill);color:var(--ink)}
+button:focus-visible{outline:3px solid var(--train);outline-offset:3px}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+/* ---------- chrome ---------- */
+.top{position:absolute;left:0;right:0;top:0;height:66px;display:flex;align-items:center;gap:28px;padding:0 64px;border-bottom:0;background:var(--chrome)}
+.brand{font:700 15px var(--narrow);letter-spacing:.09em;text-transform:uppercase;color:#fff;white-space:nowrap}
+.track{flex:1;display:flex;gap:10px}
+.seg{flex:1;min-width:0}
+.seg span{display:block;font:600 14px var(--narrow);letter-spacing:.05em;text-transform:uppercase;color:#bad0df;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .4s}
+.seg i{display:block;height:3px;border-radius:0;background:#527594;margin-top:6px;overflow:hidden}
+.seg i b{display:block;height:100%;width:0;background:var(--muted);transition:width .6s cubic-bezier(.2,.8,.2,1),background .4s}
+.seg.done span{color:#e4edf3}
+.seg.cur span{color:#fff}
+.seg.cur i b{background:var(--train)}
+.count{font:600 16px var(--narrow);color:#fff;letter-spacing:.05em;white-space:nowrap;min-width:70px;text-align:right;font-variant-numeric:tabular-nums lining-nums}
+.foot{position:absolute;left:0;right:0;bottom:0;height:50px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 64px;border-top:1px solid var(--line);background:#fff;font-size:15px;color:var(--muted)}
+.foot .src{font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:4px}
+.foot .src b{font-style:normal;font-weight:600;color:var(--ink)}
+.foot .r{white-space:nowrap;font:600 14px var(--narrow);letter-spacing:.08em;text-transform:uppercase}
+#deck.is-title .top,#deck.is-title .foot{display:none}
+#slide{position:absolute;left:0;right:0;top:66px;bottom:50px;padding:26px 64px 20px;display:flex;flex-direction:column}
+#deck.is-title #slide{top:0;bottom:0;padding:0}
+#slide.enter{animation:slideIn .55s cubic-bezier(.2,.8,.2,1) both}
+@keyframes slideIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+/* ---------- content slide ---------- */
+.slideMeta{font:700 15px var(--narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--train);border-top:1px solid var(--line);padding-top:8px;margin:-8px 0 14px}
+h1,h2,.secT{font-optical-sizing:auto;text-wrap:balance;overflow-wrap:anywhere}
+h2{font:600 42px/1.12 var(--serif);margin:6px 0 20px;letter-spacing:-.015em;max-width:34ch}
+.body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:36px}
+.vizcard{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-height:0}
+.vizcard>svg{flex:1;min-height:0;width:100%;display:block}
+.vizcard>img.fig{flex:1;min-height:0;width:100%;object-fit:contain}
+.side{display:flex;flex-direction:column;gap:16px;min-height:0}
+.tcard{background:var(--surfaceCool);border:1px solid #c8d6df;border-radius:5px;padding:12px 14px 10px}
+.tcard h3{margin:0 0 4px;font:700 14px var(--narrow);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.tcard svg{width:100%;height:auto;display:block}
+.tlabel{font-size:17px;line-height:1.38;margin-top:4px}
+.tlabel b{color:var(--train)}
+.tlabel.pred b{color:var(--good)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;border:2px solid}
+.sw.t{background:var(--trainFill);border-color:var(--train)}
+.sw.f{background:var(--frozenFill);border-color:var(--frozen)}
+.sw.g{background:var(--goodFill);border-color:var(--good)}
+.sw.k{background:transparent;border:2px dashed var(--train)}
+ul.pts{margin:0;padding:0;list-style:none;font-size:20px;line-height:1.38}
+ul.pts li{position:relative;padding-left:20px;margin-bottom:12px}
+ul.pts li::before{content:"";position:absolute;left:2px;top:.62em;width:7px;height:7px;border-radius:2px;background:var(--train)}
+.take{margin-top:auto;background:var(--chrome);color:var(--darkText);border-radius:4px;padding:14px 18px;font-size:18.5px;line-height:1.38}
+.take b{color:#ffd0cf}
+.rq{margin:0;padding:0;list-style:none;font-size:18px;line-height:1.4}
+.rq li{display:grid;grid-template-columns:44px 1fr;gap:8px;margin-bottom:10px}
+.rq li em{font:700 16px var(--narrow);font-style:normal;color:var(--train);padding-top:2px}
+/* photos */
+.photos{display:flex;gap:16px;height:196px;flex:none}
+.photos.tall{height:330px}
+.photos.grid2 .pgroup>div{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.ph.contain{background:transparent}
+.ph.contain img{object-fit:contain}
+.ph.contain figcaption{display:none}
+.photos.fill{flex:1;height:auto;min-height:0}
+.pgroup{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+.pgroup>div{display:flex;gap:8px;flex:1;min-height:0}
+.pgroup h5{margin:0;font:700 14px var(--narrow);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ph{position:relative;margin:0;flex:1;border-radius:10px;overflow:hidden;background:var(--frozenFill);min-width:0}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph figcaption{position:absolute;left:8px;bottom:8px;background:rgba(23,37,51,.9);color:var(--darkText);font-size:14px;padding:3px 8px;border-radius:6px;max-width:calc(100% - 16px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph .miss{display:none}
+.ph.missing img{display:none}
+.ph.missing .miss{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px dashed var(--frozen);border-radius:10px;color:var(--muted);font-size:14px;text-align:center;padding:8px 8px 38px}
+.ph.missing .miss code{font-size:12.5px;word-break:break-all;color:var(--quiet)}
+/* raw-photo case layouts */
+.ecases{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:18px 26px}
+.ecase{display:grid;grid-template-columns:1.3fr 1fr 1fr;grid-template-rows:auto auto minmax(0,1fr);gap:4px 10px;min-height:0;min-width:0}
+.ecase h5{grid-column:1/-1;margin:0 0 2px;font:700 18px var(--sans);color:var(--ink)}
+.ecase .hd{font-size:13.5px;font-weight:700;line-height:1.2;align-self:end}
+.ecase .hd.n{font-weight:500;color:var(--muted)}
+.ecase .hd.ok,.zcase p.ok{color:var(--good)}
+.ecase .hd.no,.zcase p.no{color:var(--bad)}
+.ecase .col{display:flex;flex-direction:column;gap:5px;min-height:0}
+.ecase img,.zcase img{flex:1;min-height:0;width:100%;object-fit:contain;object-position:left center;display:block}
+.ecase img.gone,.zcase img.gone{visibility:hidden}
+.zcases{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+.zcase{display:flex;flex-direction:column;gap:6px;min-height:0;min-width:0;justify-content:center}
+.zpair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.zpair figure{margin:0;display:flex;flex-direction:column-reverse;gap:4px}
+.zpair img{aspect-ratio:1;height:auto;object-fit:cover}
+.zpair figcaption{font-size:12.5px;color:var(--muted);line-height:1.2}
+.zcase p{margin:0;font-size:15.5px;line-height:1.3}
+.zcase p:first-of-type{margin-top:8px}
+/* gallery (image-led slides) */
+.gallery{flex:1;min-height:0;display:grid;gap:14px 20px;grid-auto-rows:minmax(0,1fr)}
+.gcell{display:flex;flex-direction:column;gap:5px;min-height:0;min-width:0}
+.gcell h5{margin:0;font:700 14px var(--narrow);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.gcell .grow{flex:1;min-height:0;display:flex;gap:6px}
+.gcell p{margin:0;font-size:14.5px;line-height:1.3;font-weight:600;color:var(--ink)}
+.gcell p.ok{color:var(--good)}
+.gcell p.no{color:var(--bad)}
+/* html visualisations */
+.htmlviz{flex:1;min-height:0;display:flex;flex-direction:column;gap:18px;font-size:17px}
+table.kt{width:100%;border-collapse:collapse;font-size:17px;font-variant-numeric:tabular-nums lining-nums}
+.kt th{font:700 14px var(--narrow);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:8px 12px;border-bottom:2px solid var(--ink);vertical-align:bottom}
+.kt th small{font:400 13px var(--sans);letter-spacing:0;text-transform:none}
+.kt td{padding:11px 12px;text-align:right;border-bottom:1px solid var(--line)}
+.kt th:first-child,.kt td:first-child,.kt.left td{text-align:left}
+.kt .hl{background:var(--goodFill);font-weight:700}
+.kt tr.g td{font-weight:700;color:var(--good)}
+.kgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.kbox{border:1px solid var(--line);border-radius:5px;padding:12px 16px;background:var(--surface)}
+.kbox.good{background:var(--goodFill);border-color:var(--good)}
+.kbox h5{margin:0 0 6px;font:700 14px var(--narrow);letter-spacing:.08em;text-transform:uppercase}
+.kbox ul{margin:0;padding-left:18px;font-size:16px;line-height:1.45}
+ul.dw{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
+.dw li{display:grid;grid-template-columns:22px minmax(0,1fr) minmax(0,1.1fr);gap:14px;align-items:baseline;padding:18px 4px;border-bottom:1px solid var(--line);font-size:20px}
+.dw li i{width:14px;height:14px;border-radius:3px;background:var(--train);display:inline-block}
+.dw li span{color:var(--muted);font-size:17px}
+.qcards{flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.qc{border:1px solid var(--line);border-top:4px solid var(--chrome);border-radius:5px;padding:18px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
+.qc em{font:700 16px var(--narrow);font-style:normal;color:var(--train);letter-spacing:.08em}
+.qc h4{margin:0;font:600 22px var(--serif)}
+.qc .v{font:600 30px/1.1 var(--serif);margin:6px 0 8px;font-variant-numeric:tabular-nums lining-nums}
+.qc ul{margin:0;padding-left:18px;font-size:16.5px;line-height:1.45}
+.figure-fallback{flex:1;min-height:220px;display:grid;place-content:center;gap:8px;padding:24px;border:2px dashed var(--frozen);border-radius:10px;color:var(--muted);text-align:center;background:var(--surfaceCool)}
+.figure-fallback b{color:var(--ink)}
+.figure-fallback code{overflow-wrap:anywhere}
+noscript .figure-fallback{position:fixed;inset:24px;z-index:30;background:var(--paper);color:var(--muted)}
+/* interactive controls */
+.ctrl{display:flex;gap:7px;flex-wrap:wrap;flex:none}
+.ctrl button{font:inherit;font-size:15px;cursor:pointer;border:1px solid var(--controlLine);background:var(--card);color:var(--ink);border-radius:4px;padding:6px 12px;min-height:36px}
+.ctrl button:hover{border-color:var(--train);background:var(--trainFill)}
+.ctrl button.on{background:var(--chrome);color:var(--darkText);border-color:var(--chrome)}
+.info{flex:none;font-size:17px;line-height:1.38;min-height:50px;padding:10px 14px;background:var(--surface);border-radius:4px}
+/* ---------- section divider ---------- */
+.sec{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 720px;gap:56px;align-items:center}
+.secN{font:600 120px/1 var(--serif);color:var(--infoFill);-webkit-text-stroke:2px var(--chrome);margin-bottom:6px}
+.secT{font:600 54px/1.08 var(--serif);margin:4px 0 18px}
+.secQ{font-size:22px;line-height:1.42;margin:0 0 14px;max-width:62ch}
+.secQ b{color:var(--train)}
+.secD{font-size:20px;line-height:1.46;color:var(--muted);margin:0 0 22px;max-width:62ch}
+ol.agenda{margin:0;padding:0;list-style:none;counter-reset:ag}
+ol.agenda li{counter-increment:ag;display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line);font-size:18.5px}
+ol.agenda li::before{content:counter(ag,decimal-leading-zero);font:700 15px var(--narrow);color:var(--muted);font-variant-numeric:tabular-nums}
+ol.agenda li em{font-style:normal;font:600 15px var(--narrow);letter-spacing:.035em;color:var(--train);text-transform:uppercase}
+ol.agenda li em.g{color:var(--good)}
+.secR{background:var(--surfaceCool);border:1px solid #c8d6df;border-radius:5px;padding:24px 26px}
+.secR svg{width:100%;height:auto;display:block}
+.secR .tlabel{font-size:19px;margin-top:8px}
+.secR .legend{font-size:14px}
+/* ---------- title + end ---------- */
+.title{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) 600px;gap:48px;align-items:center;padding:72px 80px 0 90px;isolation:isolate}
+.title::before{content:"";position:absolute;z-index:-1;top:0;left:0;right:0;height:92px;background:var(--chrome)}
+.title .k{position:absolute;left:90px;top:34px;font:700 19px var(--narrow);letter-spacing:.1em;text-transform:uppercase;color:#fff}
+.title h1{font:600 76px/1.04 var(--serif);margin:16px 0 18px;letter-spacing:-.025em;max-width:14ch}
+.title .sub{font-size:28px;line-height:1.32;color:var(--muted);margin:0 0 44px;max-width:52ch}
+.title .names{display:grid;grid-template-columns:repeat(2,auto);justify-content:start;gap:6px 40px;font:600 17px var(--narrow);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.title .date{margin-top:30px;font:600 17px var(--narrow);letter-spacing:.1em;color:var(--ink);font-variant-numeric:tabular-nums}
+.title .bar{position:absolute;left:0;top:92px;width:22%;height:8px;background:var(--train)}
+.title .secR{background:#fff;border-color:#aebbc5}
+.endq{flex:1;display:flex;flex-direction:column;justify-content:center}
+.endq h1{font:600 96px/1 var(--serif);margin:0 0 40px}
+.endq .slideMeta{max-width:1200px;margin:-24px 0 18px}
+.tiles{display:block;max-width:1200px;border-top:2px solid var(--ink)}
+.tile{display:grid;grid-template-columns:260px 1fr;align-items:baseline;gap:28px;background:transparent!important;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:18px 8px}
+.tile:nth-child(1){border-color:var(--line)}
+.tile:nth-child(1) .v{color:var(--trainStrong)}
+.tile:nth-child(2){border-color:var(--line)}
+.tile:nth-child(2) .v{color:var(--good)}
+.tile:nth-child(3){border-color:var(--line)}
+.tile:nth-child(3) .v{color:var(--info)}
+.tile .v{font:600 52px/1.08 var(--serif);font-variant-numeric:tabular-nums lining-nums}
+.tile .l{font-size:18px;line-height:1.38;color:var(--muted);margin-top:0}
+/* ---------- svg ---------- */
+svg text{font-family:var(--sans)}
+.lbl{font-size:15px;fill:var(--ink)}
+.sm{font-size:13.5px;fill:var(--muted)}
+.xs{font-size:12.5px;fill:var(--muted)}
+.mx{font-size:14px;font-weight:600;fill:var(--ink)}
+.mxs{font-size:12.5px;fill:var(--muted)}
+.bold{font-weight:700}
+.ttl{font-size:16px;font-weight:700;fill:var(--ink)}
+.num{font-size:15px;font-weight:700;fill:var(--ink);font-variant-numeric:tabular-nums lining-nums}
+.big{font-size:24px;font-weight:800;fill:var(--ink);font-variant-numeric:tabular-nums lining-nums}
+.fz{fill:var(--frozenFill);stroke:var(--frozen);stroke-width:1.5}
+.tr{fill:var(--trainFill);stroke:var(--train);stroke-width:2}
+.nb{fill:var(--frozenFill);stroke:var(--frozen);stroke-width:1.2}
+.card{fill:var(--card);stroke:var(--line);stroke-width:1.2}
+.part{transition:fill .5s,stroke .5s;fill:var(--frozenFill);stroke:var(--frozen);stroke-width:1.5}
+.part.on{fill:var(--trainFill);stroke:var(--train);stroke-width:2}
+.addon{transition:opacity .5s;opacity:0}
+.addon.on{opacity:1}
+.ax{stroke:var(--grid);stroke-width:1}
+.flow{stroke:var(--flow);stroke-width:1.5;fill:none}
+.lbar{transform-box:fill-box;transform-origin:center bottom;transition:transform .8s cubic-bezier(.2,.8,.2,1)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes growX{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes growY{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes pop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes ringIn{from{opacity:0;transform:scale(1.15)}to{opacity:1;transform:scale(1)}}
+@keyframes glow{0%,100%{stroke-opacity:1}50%{stroke-opacity:.3}}
+@keyframes aim{0%,25%{transform:translate(0px,0px)}100%{transform:translate(31px,25px)}}
+@keyframes swapUp{0%,40%{transform:translateY(0px)}100%{transform:translateY(-44px)}}
+@keyframes swapDown{0%,40%{transform:translateY(0px)}100%{transform:translateY(44px)}}
+.a{animation:fadeUp .6s ease both;animation-delay:var(--d,0s)}
+.fi{animation:fadeIn .7s ease both;animation-delay:var(--d,0s)}
+.gx{transform-box:fill-box;transform-origin:left center;animation:growX .9s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0s)}
+.gy{transform-box:fill-box;transform-origin:center bottom;animation:growY .9s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0s)}
+.pop{transform-box:fill-box;transform-origin:center;animation:pop .5s ease both;animation-delay:var(--d,0s)}
+.draw{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.1s ease forwards;animation-delay:var(--d,0s)}
+.pulse{animation:pulse 1.6s ease-in-out infinite;animation-delay:var(--d,0s)}
+.ring{transform-box:fill-box;transform-origin:center;animation:ringIn .5s ease both,glow 2.4s ease-in-out infinite;animation-delay:var(--d,0s),calc(var(--d,0s) + .6s)}
+.aim{animation:aim 2.2s ease-in-out both;animation-delay:var(--d,0s)}
+.swapUp{animation:swapUp 1.8s ease-in-out both;animation-delay:var(--d,0s)}
+.swapDown{animation:swapDown 1.8s ease-in-out both;animation-delay:var(--d,0s)}
+.li-in{animation:fadeUp .5s ease both;animation-delay:var(--d,0s)}
+/* click-driven builds: hidden until their step, and their animations start on reveal */
+#slide [data-s]:not(.on),#slide [data-only]:not(.on){opacity:0;visibility:hidden}
+#slide [data-s]:not(.on),#slide [data-s]:not(.on) *,#slide [data-only]:not(.on),#slide [data-only]:not(.on) *{animation:none!important}
+.count small{font-size:13px;opacity:.75;margin-left:8px;letter-spacing:.04em}
+/* ---------- presenter controls ---------- */
+#ctl{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:6px;max-width:calc(100vw - 24px);padding:6px;background:rgba(33,77,115,.97);border-radius:6px;opacity:0;transition:opacity .3s;z-index:20}
+#ctl.show,#ctl:hover,#ctl:focus-within{opacity:1}
+#ctl:focus-within{transition:none}
+#ctl button{font:600 13px var(--sans);color:var(--darkText);background:transparent;border:1px solid rgba(237,242,244,.48);border-radius:8px;padding:6px 11px;min-height:36px;cursor:pointer}
+#ctl button:hover{background:rgba(255,255,255,.12)}
+#ctl button[aria-pressed="true"],#ctl button[aria-expanded="true"]{background:var(--card);color:var(--ink);border-color:var(--card)}
+#ctl button:disabled{cursor:not-allowed;opacity:.42}
+#notes{position:fixed;left:0;right:0;bottom:0;max-height:42vh;overflow:auto;background:var(--chrome);color:var(--darkText);padding:18px 28px max(70px,calc(54px + env(safe-area-inset-bottom)));font-size:17px;line-height:1.52;transform:translateY(100%);transition:transform .35s;z-index:15;border-top:3px solid var(--train)}
+#notes.open{transform:none}
+#notes h3{font:700 14px var(--narrow);letter-spacing:.09em;text-transform:uppercase;color:#ffb98a;margin:14px 0 5px}
+#notes h3:first-child{margin-top:0}
+#notes p,#notes ul,#notes ol{margin:0 0 8px}
+#notes>*{max-width:72ch}
+#notes .take{background:var(--darkRaised);font-size:16px;margin-top:10px}
+#notes .nt{font:700 14px var(--narrow);letter-spacing:.09em;text-transform:uppercase;color:var(--darkMuted);margin-bottom:8px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition:none!important}}
+@media (max-width:700px),(pointer:coarse){
+  #ctl{width:calc(100vw - 16px);max-width:none;bottom:max(8px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:5px;opacity:1}
+  #ctl button{min-width:0;min-height:44px;padding:6px 3px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #notes{max-height:calc(100dvh - 72px);padding:18px 18px max(76px,calc(62px + env(safe-area-inset-bottom)))}
+}
+@media (max-width:900px){
+  #deck{left:0!important;top:0!important;width:100vw;height:calc(100dvh - 68px - env(safe-area-inset-bottom));transform:none!important;box-shadow:none}
+  .top{height:50px;gap:10px;padding:0 14px}
+  .brand{display:none}
+  .track{gap:5px}
+  .seg span{display:none}
+  .seg i{height:3px;margin:0}
+  .count{min-width:58px;font-size:14px}
+  .foot{display:none}
+  #slide{top:50px;bottom:0;padding:18px 14px 28px;overflow-y:auto;overscroll-behavior:contain}
+  #deck.is-title #slide{overflow-y:auto}
+  .slideMeta{font-size:13px;margin:-6px 0 12px}
+  h2{font-size:clamp(31px,8vw,40px);line-height:1.1;margin:4px 0 16px}
+  .body{display:flex;flex-direction:column;gap:14px}
+  .vizcard{min-height:340px;padding:12px;overflow-x:auto;scrollbar-color:var(--muted) var(--line)}
+  .vizcard:has(>svg)::after{content:"Scroll diagram horizontally";position:sticky;left:0;bottom:0;align-self:flex-start;background:var(--chrome);color:#fff;padding:5px 9px;font:600 12px var(--narrow);letter-spacing:.04em}
+  .vizcard>.ctrl{position:sticky;left:0;z-index:2;width:calc(100vw - 54px);background:var(--paper)}
+  .vizcard>svg{flex:none;min-width:680px;min-height:320px}
+  .side{flex:none;gap:12px}
+  .tcard{padding:12px}
+  ul.pts{font-size:18px}
+  .take{margin-top:0;font-size:17px}
+  .ctrl{flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:thin}
+  .ctrl button{flex:0 0 auto;min-height:44px;padding:9px 12px}
+  .photos{height:auto;min-height:300px;flex-direction:column}
+  .pgroup{min-height:145px}
+  .title{position:relative;inset:auto;display:flex;flex-direction:column;gap:28px;align-items:stretch;padding:100px 22px 40px}
+  .title::before{display:block;height:64px}
+  .title .k{left:22px;top:22px;font-size:15px}
+  .title h1{font-size:clamp(44px,13vw,64px);line-height:1.02;margin:12px 0 16px;overflow-wrap:anywhere}
+  .title .sub{font-size:22px;margin-bottom:28px}
+  .title .names{grid-template-columns:1fr;gap:8px}
+  .title .date{margin-top:24px}
+  .title .bar{top:64px;width:30%;height:5px}
+  .sec{display:flex;flex-direction:column;gap:24px;align-items:stretch}
+  .secN{font-size:80px}
+  .secT{font-size:42px}
+  .secQ{font-size:19px}
+  .secR{padding:18px}
+  .endq{justify-content:flex-start;padding-top:24px}
+  .endq h1{font-size:64px;margin-bottom:28px}
+  .endq .slideMeta{margin:-14px 0 14px}
+  .tile{grid-template-columns:1fr;gap:4px;padding:16px 2px}
+}
+@media (hover:none){#ctl{opacity:1}}
+@media (forced-colors:active){
+  button:focus-visible{outline:3px solid Highlight}
+  .ctrl button.on,#ctl button[aria-pressed="true"],#ctl button[aria-expanded="true"]{background:Highlight;color:HighlightText}
+}
+</style>
+</head>
+<body>
+<main id="deck" aria-label="CS604 Vision Transformer adaptation presentation">
+  <div class="top">
+    <div class="brand">CS604 · Team 08 · ViT adaptation</div>
+    <div class="track" id="track"></div>
+    <div class="count" id="count"></div>
+  </div>
+  <div id="slide"></div>
+  <div class="foot"><div class="src" id="src"></div><div class="r">ViT adaptation · 7 Nov 2026</div></div>
+</main>
+<p id="slideStatus" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+<div id="ctl" role="toolbar" aria-label="Presentation controls">
+  <button id="bPrev" type="button" title="Previous (Left arrow)">Previous</button>
+  <button id="bNext" type="button" title="Next (Right arrow or Space)">Next</button>
+  <button id="bReplay" type="button" title="Replay animation (R)">Replay</button>
+  <button id="bNotes" type="button" title="Speaker notes (N)" aria-controls="notes" aria-expanded="false">Notes</button>
+  <button id="bFull" type="button" title="Full screen (F)" aria-pressed="false">Full</button>
+</div>
+<aside id="notes" role="region" aria-label="Speaker notes" aria-hidden="true"></aside>
+<noscript><div class="figure-fallback"><b>JavaScript is required to run this slide deck.</b><span>Enable JavaScript, then reload the file. The source remains available in report/presentation_storyboard.md.</span></div></noscript>
+
+<script>
+/* =====================================================================
+   IMAGE SLOTS. Put your files in report/slide-images/ with these names,
+   or edit the paths/captions here. Missing files show a labelled slot.
+   ===================================================================== */
+const IMG = {
+  // Challenge slide (Canva slide 2). Pair panels were split from 2100 (1).png, 3076.png and 3763.png into panels/
+  lookA:  { src: 'slide-images/4745 (1).png',            cap: 'Class 4745' },
+  lookB:  { src: 'slide-images/4746 (1).png',            cap: 'Class 4746' },
+  lookC:  { src: 'slide-images/panels/class-2100.jpg',   cap: 'Class 2100' },
+  lookD:  { src: 'slide-images/panels/class-2099.jpg',   cap: 'Class 2099' },
+  varA:   { src: 'slide-images/panels/class-3076-a.jpg', cap: 'Class 3076' },
+  varB:   { src: 'slide-images/panels/class-3076-b.jpg', cap: 'Class 3076' },
+  varC:   { src: 'slide-images/panels/class-1533-a.jpg', cap: 'Class 1533' },
+  varD:   { src: 'slide-images/panels/class-1533-b.jpg', cap: 'Class 1533' },
+  // Resolution slide (Canva slide 7)
+  resStrip: { src: 'slide-images/366.png',               cap: 'One image at 224, 280, 336, 384 and 448 px', fit: 'contain' },
+  resSmall: { src: 'slide-images/unlabelled.png',        cap: 'Small subject', fit: 'contain' },
+  resClut:  { src: 'slide-images/unlabelled (1).png',    cap: 'Subject hidden in vegetation', fit: 'contain' },
+  sibA:   { src: 'slide-images/error-5393-holdout.jpg',  cap: 'Holdout · true 5393' },
+  sibB:   { src: 'slide-images/error-5395-training.jpg', cap: 'Training · predicted 5395' },
+  unA:    { src: 'slide-images/error-9839-holdout.jpg',  cap: 'Holdout · true 9839' },
+  unB:    { src: 'slide-images/error-9828-training.jpg', cap: 'Training · predicted 9828' },
+  // "What the model still gets wrong" gallery: holdout photo, true-class and predicted-class training photos
+  lookH:  { src: 'slide-images/err-lookalike-holdout.jpg',  cap: 'Holdout photo' },
+  lookT:  { src: 'slide-images/err-lookalike-true.jpg',     cap: 'True class' },
+  lookP:  { src: 'slide-images/err-lookalike-pred.jpg',     cap: 'Predicted (34%)' },
+  tinyH:  { src: 'slide-images/err-tiny-holdout.jpg',       cap: 'Holdout photo' },
+  tinyT:  { src: 'slide-images/err-tiny-true.jpg',          cap: 'True class' },
+  tinyP:  { src: 'slide-images/err-tiny-pred.jpg',          cap: 'Predicted (89%)' },
+  outH:   { src: 'slide-images/err-outside-holdout.jpg',    cap: 'Holdout photo' },
+  outT:   { src: 'slide-images/err-outside-true.jpg',       cap: 'True class' },
+  outP:   { src: 'slide-images/err-outside-pred.jpg',       cap: 'Predicted (19%)' },
+  unfH:   { src: 'slide-images/err-unfamiliar-holdout.jpg', cap: 'Holdout photo' },
+  unfT:   { src: 'slide-images/err-unfamiliar-true.jpg',    cap: 'True class' },
+  unfP:   { src: 'slide-images/err-unfamiliar-pred.jpg',    cap: 'Predicted (14%)' },
+  // "Some photos need a closer look": first pass (red box) and second, zoomed pass
+  z1a:    { src: 'slide-images/zoom-1-first.jpg',  cap: 'First pass' },
+  z1b:    { src: 'slide-images/zoom-1-second.jpg', cap: 'Second pass' },
+  z2a:    { src: 'slide-images/zoom-2-first.jpg',  cap: 'First pass' },
+  z2b:    { src: 'slide-images/zoom-2-second.jpg', cap: 'Second pass' },
+  z3a:    { src: 'slide-images/zoom-3-first.jpg',  cap: 'First pass' },
+  z3b:    { src: 'slide-images/zoom-3-second.jpg', cap: 'Second pass' },
+  kQ:     { src: 'slide-images/knn-query.jpg',           cap: 'Query' },
+  k1:     { src: 'slide-images/knn-neighbour-1.jpg',     cap: 'Neighbour 1' },
+  k2:     { src: 'slide-images/knn-neighbour-2.jpg',     cap: 'Neighbour 2' },
+  k3:     { src: 'slide-images/knn-neighbour-3.jpg',     cap: 'Neighbour 3' }
+};
+
+/* ---------- svg helpers ---------- */
+const DEFS = `<defs>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--flow)"/></marker>
+<marker id="arO" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--train)"/></marker>
+<marker id="arG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--good)"/></marker>
+<marker id="arR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--bad)"/></marker>
+</defs>`;
+const svg = (w, h, inner, label) => `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${label}">${DEFS}${inner}</svg>`;
+const st = o => { let s = `--d:${o.d || 0}s;`; if (o.fill) s += `fill:${o.fill};`; if (o.stroke) s += `stroke:${o.stroke};`; if (o.sw) s += `stroke-width:${o.sw};`; if (o.op != null) s += `opacity:${o.op};`; if (o.fo != null) s += `fill-opacity:${o.fo};`; if (o.dash) s += `stroke-dasharray:${o.dash};`; return `style="${s}"`; };
+const T = (x, y, s, o = {}) => `<text ${o.id ? `id="${o.id}"` : ''} x="${x}" y="${y}" class="${o.c || 'lbl'} ${o.an || ''}" ${o.a ? `text-anchor="${o.a}"` : ''} ${st(o)}>${s}</text>`;
+const R = (x, y, w, h, o = {}) => `<rect ${o.id ? `id="${o.id}"` : ''} x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.rx ?? 8}" class="${o.c || ''} ${o.an || ''}" ${st(o)}/>`;
+const P = (d, o = {}) => `<path d="${d}" ${o.anim !== false ? 'pathLength="1"' : ''} class="${o.c || 'flow'} ${o.an || ''}" ${o.m ? `marker-end="url(#${o.m})"` : ''} ${st(o)}/>`;
+const C = (x, y, r, o = {}) => `<circle ${o.id ? `id="${o.id}"` : ''} cx="${x}" cy="${y}" r="${r}" class="${o.c || ''} ${o.an || ''}" ${st(o)}/>`;
+const G = (inner, o = {}) => `<g ${o.id ? `id="${o.id}"` : ''} class="${o.c || ''} ${o.an || ''}" ${st(o)}>${inner}</g>`;
+// build steps: stp(n, …) appears on click n and stays; stp(n, …, true) is shown only while on step n
+const stp = (n, inner, only) => `<g ${only ? 'data-only' : 'data-s'}="${n}">${inner}</g>`;
+
+function rng(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function cl(cx, cy, n, sx, sy, seed) { const r = rng(seed), p = []; for (let i = 0; i < n; i++) { const u = Math.max(r(), 1e-6), v = r(), m = Math.min(Math.sqrt(-2 * Math.log(u)), 2.2); p.push([cx + sx * m * Math.cos(6.2832 * v), cy + sy * m * Math.sin(6.2832 * v)]); } return p; }
+const mean = p => [p.reduce((s, q) => s + q[0], 0) / p.length, p.reduce((s, q) => s + q[1], 0) / p.length];
+const dots = (p, col, d0 = 0, r = 3.4, step = .012) => p.map((q, i) => `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${r}" class="pop" style="fill:${col};--d:${(d0 + i * step).toFixed(3)}s"/>`).join('');
+const star = (x, y, col, d = 0, s = 1) => { const pts = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = (i % 2 ? 5 : 11) * s; pts.push((x + rr * Math.cos(a)).toFixed(1) + ',' + (y + rr * Math.sin(a)).toFixed(1)); } return `<polygon points="${pts.join(' ')}" class="pop" style="fill:${col};stroke:var(--card);stroke-width:1.5;--d:${d}s"/>`; };
+const ring = (x, y, col, d = 0) => `<circle cx="${x}" cy="${y}" r="8" class="pop" style="fill:var(--card);stroke:${col};stroke-width:3;--d:${d}s"/>`;
+const bird = (cx, cy, s = 1, col = 'var(--illustration)', flip = false) => `<g transform="translate(${cx} ${cy}) scale(${flip ? -s : s} ${s})"><ellipse cx="0" cy="0" rx="16" ry="10" fill="${col}"/><circle cx="13" cy="-8" r="6.5" fill="${col}"/><polygon points="19,-9 26,-7 19,-5" fill="var(--beak)"/><circle cx="15" cy="-9.5" r="1.4" fill="var(--card)"/><polygon points="-14,-2 -27,-8 -25,4" fill="${col}"/><line x1="-2" y1="9" x2="-3" y2="15" stroke="${col}" stroke-width="1.6"/><line x1="4" y1="9" x2="5" y2="15" stroke="${col}" stroke-width="1.6"/></g>`;
+const strip = (x, y, trainedBlocks, head, d = 0) => { let s = ''; for (let i = 0; i < 12; i++) s += R(x + i * 13, y, 10, 22, { rx: 2, c: trainedBlocks ? 'tr' : 'fz', an: 'pop', d: d + i * .02 }); s += R(x + 160, y, 16, 22, { rx: 3, c: head ? 'tr' : 'fz', an: 'pop', d: d + .26 }); return s; };
+
+let timer = null;
+const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+const reducedMotion = () => motionQuery.matches;
+const later = (fn, ms) => {
+  if (reducedMotion()) { fn(); return null; }
+  const id = setTimeout(fn, ms); (window._timeouts = window._timeouts || []).push(id); return id;
+};
+const every = (fn, ms) => {
+  if (reducedMotion()) return null;
+  const id = setInterval(fn, ms); (window._intervals = window._intervals || []).push(id); return id;
+};
+
+/* =====================================================================
+   "WHERE WE TUNE" — mini ViT schematic
+   spec: blocks frozen|train|decay|addon|last · head frozen|train|proto
+         predict false|analyse|extend · res text · focus [input,blocks,head,predict]
+   ===================================================================== */
+function vit(sp) {
+  const on = f => (sp.focus || []).includes(f);
+  let s = '';
+  // input image with patch grid
+  let g = R(8, 26, 64, 64, { rx: 4, fill: 'var(--photoFill)', stroke: 'var(--photoLine)' }) + `<line x1="12" y1="80" x2="68" y2="75" stroke="var(--earth)" stroke-width="2"/>` + bird(44, 68, .5);
+  for (let i = 1; i < 4; i++) g += `<line x1="${8 + i * 16}" y1="26" x2="${8 + i * 16}" y2="90" stroke="var(--card)" stroke-width="1"/><line x1="8" y1="${26 + i * 16}" x2="72" y2="${26 + i * 16}" stroke="var(--card)" stroke-width="1"/>`;
+  if (sp.predict === 'extend' && on('input')) g += R(30, 46, 32, 32, { rx: 2, fill: 'none', stroke: 'var(--good)', sw: 2, dash: '4 3', an: 'pop', d: .9 });
+  s += G(g, { an: 'pop', d: 0 });
+  s += T(40, 108, 'Input', { a: 'middle', c: 'mx' });
+  if (sp.res) s += T(40, 123, sp.res, { a: 'middle', c: 'mxs', fill: on('input') ? 'var(--train)' : '' });
+  s += P('M76 58 H90', { m: 'ar', anim: false });
+  // 12 blocks
+  for (let i = 0; i < 12; i++) {
+    const x = 96 + i * 14, d = .15 + i * .035, m = sp.blocks;
+    if (m === 'train') s += R(x, 26, 11, 64, { rx: 2, c: 'tr', an: 'pop', d });
+    else if (m === 'decay') s += R(x, 26, 11, 64, { rx: 2, c: 'tr', an: 'pop', d, fo: (.18 + .82 * Math.pow(.75, 11 - i)).toFixed(2) });
+    else if (m === 'last') s += R(x, 26, 11, 64, { rx: 2, c: i === 11 ? 'tr' : 'fz', an: 'pop', d });
+    else {
+      s += R(x, 26, 11, 64, { rx: 2, c: 'fz', an: 'pop', d });
+      if (m === 'addon') s += R(x + 2.5, 64, 6, 22, { rx: 1.5, fill: 'var(--train)', an: 'pop', d: .65 + i * .04 });
+    }
+  }
+  s += T(178, 108, 'Transformer blocks ×12', { a: 'middle', c: 'mx' });
+  const bsub = { train: 'all weights trainable', decay: 'LR ×0.75 per block downward', addon: 'frozen + small trained modules', last: 'last block only', frozen: sp.predict ? 'frozen (trained model)' : 'frozen' }[sp.blocks || 'frozen'];
+  s += T(178, 123, bsub, { a: 'middle', c: 'mxs', fill: on('blocks') ? 'var(--train)' : '' });
+  s += P('M265 58 H279', { m: 'ar', anim: false });
+  // head
+  s += R(283, 26, 30, 64, { rx: 3, c: sp.head && sp.head !== 'frozen' ? 'tr' : 'fz', an: 'pop', d: .6 });
+  if (sp.head === 'proto') s += star(298, 58, 'var(--trainStrong)', .9, .62);
+  s += T(298, 108, 'Head', { a: 'middle', c: 'mx' });
+  if (sp.head === 'proto') s += T(298, 123, 'prototype init', { a: 'middle', c: 'mxs', fill: on('head') ? 'var(--train)' : '' });
+  s += P('M317 58 H331', { m: 'ar', anim: false });
+  // output
+  const pe = sp.predict === 'extend', pa = sp.predict === 'analyse';
+  s += R(335, 34, 78, 48, { rx: 8, fill: pe ? 'var(--goodFill)' : 'var(--card)', stroke: pe || pa ? 'var(--good)' : 'var(--line)', sw: pe || pa ? 2 : 1.2, dash: pa ? '4 3' : null, an: 'pop', d: .75 });
+  s += T(374, 62, pe ? 'Prediction+' : 'Prediction', { a: 'middle', c: 'mx', an: 'a', d: .8 });
+  s += T(374, 108, 'Output', { a: 'middle', c: 'mx' });
+  if (pe) s += T(374, 123, sp.predLabel || 'zoom · kNN', { a: 'middle', c: 'mxs', fill: 'var(--good)' });
+  if (pa) s += T(374, 123, 'error analysis', { a: 'middle', c: 'mxs', fill: 'var(--good)' });
+  // focus rings = the knob changed on this slide
+  const box = { input: [3, 21, 74, 74], blocks: [91, 21, 175, 74], head: [278, 21, 40, 74], predict: [330, 29, 88, 58] };
+  (sp.focus || []).forEach((f, i) => { const b = box[f]; s += R(b[0], b[1], b[2], b[3], { rx: 9, fill: 'none', stroke: f === 'predict' ? 'var(--good)' : 'var(--train)', sw: 2.2, dash: '6 4', an: 'ring', d: 1 + i * .15 }); });
+  return svg(420, 132, s, 'Vision Transformer schematic highlighting what is tuned');
+}
+const LEGEND = `<div class="legend"><span><i class="sw t"></i>trained</span><span><i class="sw f"></i>frozen</span><span><i class="sw g"></i>prediction-time</span><span><i class="sw k"></i>changed here</span></div>`;
+
+const SPEC = {
+  t1: { blocks: 'train', head: 'train', res: '224–448 px', focus: ['blocks', 'head'] },
+  t2: { blocks: 'addon', head: 'train', res: '336–448 px', focus: ['blocks'] },
+  t3: { blocks: 'frozen', head: 'frozen', predict: 'extend', res: '448 px', focus: ['predict'] },
+  none: { blocks: 'frozen', head: 'frozen' }
+};
+const CYCLE3 = [
+  { spec: SPEC.t1, label: 'Task 1 · <b>every weight</b> trains' },
+  { spec: SPEC.t2, label: 'Task 2 · <b>small modules</b> train; backbone frozen' },
+  { spec: SPEC.t3, label: 'Task 3 · <b>nothing</b> trains; prediction changes', pred: true }
+];
+
+/* ---------- photo row helper ---------- */
+const fig = k => {
+  const m = IMG[k];
+  return `<figure class="ph${m.fit === 'contain' ? ' contain' : ''}"><img src="${m.src}" alt="${m.cap}" onerror="handlePhotoError(this)"><div class="miss" role="img" aria-label="Project image unavailable: ${m.cap}. Add report/${m.src}."><span>Project image unavailable</span><code>report/${m.src}</code></div><figcaption>${m.cap}</figcaption></figure>`;
+};
+const gallery = g => `<div class="gallery" style="grid-template-columns:repeat(${g.cols},minmax(0,1fr))">${g.groups.map((x, i) => `<div class="gcell li-in" style="--d:${.2 + i * .25}s"><h5>${x.label}</h5><div class="grow">${x.keys.map(fig).join('')}</div>${(x.lines || []).map(l => `<p class="${l[0]}">${l[1]}</p>`).join('')}</div>`).join('')}</div>`;
+const photos = (groups, cls, at) => `<div class="photos${cls ? ' ' + cls : ''}"${at ? ` data-s="${at}"` : ''}>${groups.map(g => `<div class="pgroup"${g.w ? ` style="flex:${g.w}"` : ''}>${g.label ? `<h5>${g.label}</h5>` : ''}<div>${g.keys.map(fig).join('')}</div></div>`).join('')}</div>`;
+
+/* ---------- raw-photo layouts (report/slide-images/…) ---------- */
+const PH = (src, alt) => `<img src="${src}" alt="${alt}" loading="eager" onerror="this.classList.add('gone')">`;
+const ERR = [
+  { dir: '1_look_alike_relatives', label: 'Look-alike relatives', t: 'long_billed_dowitcher', tn: 'Long-billed Dowitcher', m: 'short_billed_dowitcher', mn: 'Short-billed Dowitcher', pc: 34 },
+  { dir: '2_tiny_subject', label: 'Tiny subject', t: 'thick_legged_hoverfly', tn: 'Thick-legged Hoverfly', m: 'white_meadowsweet', mn: 'White meadowsweet', pc: 89 },
+  { dir: '3_subject_outside_the_crop', label: 'Subject outside the crop', t: 'silver_garden_spider', tn: 'Silver Garden Spider', m: 'reed_meadowgrass', mn: 'Reed meadowgrass', pc: 18 },
+  { dir: '4_unfamiliar_look', label: 'Unfamiliar look', t: 'purple_coneflower', tn: 'Purple coneflower', m: 'meadow_spittlebug', mn: 'Meadow spittlebug', pc: 14 }];
+function errorCases() {
+  return `<div class="ecases">${ERR.map((c, i) => {
+    const b = `slide-images/error_examples/${c.dir}/`;
+    return `<div class="ecase li-in" style="--d:${.15 + i * .3}s"><h5>${c.label}</h5>
+      <div class="hd n">Holdout photo</div><div class="hd ok">True: ${c.tn}</div><div class="hd no">Model: ${c.mn} (${c.pc}%)</div>
+      <div class="col">${PH(b + 'holdout_photo.jpg', c.label + ': holdout photo, red box marks the crop the model saw')}</div>
+      <div class="col">${PH(b + `true_${c.t}_1.jpg`, 'Training photo of ' + c.tn)}${PH(b + `true_${c.t}_2.jpg`, 'Training photo of ' + c.tn)}</div>
+      <div class="col">${PH(b + `model_${c.m}_1.jpg`, 'Training photo of ' + c.mn)}${PH(b + `model_${c.m}_2.jpg`, 'Training photo of ' + c.mn)}</div></div>`;
+  }).join('')}</div>`;
+}
+const ZOOM = [
+  { dir: '1_small_honey_ant', tn: 'Small Honey Ant', first: ['no', 'Blacklegged Tick (15%)'], zoom: ['ok', 'Small Honey Ant (13%)'] },
+  { dir: '2_neurothemis_taiwanensis', tn: 'Neurothemis taiwanensis', first: ['no', 'Common Parasol (50%)'], zoom: ['ok', 'Neurothemis taiwanensis (46%)'] },
+  { dir: '3_black_crested_titmouse', tn: 'Black-crested Titmouse', first: ['ok', 'Black-crested Titmouse (77%)'], zoom: ['no', 'Tufted Titmouse (46%)'] }];
+function zoomCases() {
+  return `<div class="zcases">${ZOOM.map((c, i) => {
+    const b = `slide-images/zoom_boxes/${c.dir}/`;
+    return `<div class="zcase li-in" style="--d:${.15 + i * .4}s">
+      <div class="zpair"><figure>${PH(b + 'first_pass_with_box.png', 'First pass with the chosen box in red: ' + c.tn)}<figcaption>First pass (red = chosen box)</figcaption></figure>
+      <figure>${PH(b + 'second_pass.jpg', 'Second pass, zoomed crop: ' + c.tn)}<figcaption>Second pass</figcaption></figure></div>
+      <p>True: ${c.tn}</p><p class="${c.first[0]}"><b>First pass:</b> ${c.first[1]}</p><p class="${c.zoom[0]}"><b>With zoom:</b> ${c.zoom[1]}</p></div>`;
+  }).join('')}</div>`;
+}
+
+function handlePhotoError(img) {
+  img.setAttribute('aria-hidden', 'true');
+  img.parentNode.classList.add('missing');
+  const row = img.closest('.photos');
+  if (row && !row.querySelector('.ph:not(.missing)')) row.style.display = 'none';
+}
+
+function handleFigureError(img) {
+  const fallback = document.createElement('div');
+  fallback.className = 'figure-fallback';
+  fallback.setAttribute('role', 'img');
+  fallback.setAttribute('aria-label', `Figure unavailable: ${img.dataset.label}. Add ${img.dataset.path}.`);
+  fallback.innerHTML = `<b>Figure unavailable</b><span>${img.dataset.label}</span><code>${img.dataset.path}</code>`;
+  img.replaceWith(fallback);
+}
+
+/* =====================================================================
+   SLIDES
+   ===================================================================== */
+const SECTIONS = [
+  { id: 'intro', label: 'Introduction' },
+  { id: 't1', label: 'Task 1 · Full fine-tuning' },
+  { id: 't2', label: 'Task 2 · PEFT' },
+  { id: 't3', label: 'Task 3 · Errors & prediction' },
+  { id: 'end', label: 'Verdict' }
+];
+const S = [];
+
+/* ---- Title ---- */
+S.push({
+  type: 'title', sec: 'intro', cycle: CYCLE3,
+  notes: `<p>Open with the question: how close can a cheap way of adapting a pretrained Vision Transformer get to retraining the whole model, on a 10,000-class fine-grained task?</p><p>The schematic on the right reappears on every slide: orange shows what is trained, grey what is frozen, green what happens only at prediction time.</p>`
+});
+
+/* ---- Overview ---- */
+S.push({
+  sec: 'intro', kick: 'Overview', short: 'Overview', title: 'One pretrained ViT, three levers for adaptation',
+  src: 'Schematic overview of the pipeline and the three tasks',
+  cycle: CYCLE3,
+  rq: [['Q1', 'Full FT vs PEFT: which offers the better balance between accuracy and inference efficiency?'], ['Q2', 'PEFT strategies: how do method and placement choices affect performance?'], ['Q3', 'Errors: what limits predictions, and can we improve them without retraining?']],
+  take: 'Central question: <b>how close can parameter-efficient adaptation get to full fine-tuning</b>, and at what cost?',
+  viz() {
+    let s = '';
+    s += R(16, 70, 110, 110, { c: 'card', an: 'a', fill: 'var(--photoFill)' });
+    s += G(`<line x1="24" y1="160" x2="118" y2="146" stroke="var(--earth)" stroke-width="3"/>` + bird(76, 132, 1.05), { an: 'a', d: .1 });
+    s += T(71, 200, 'Image', { a: 'middle', c: 'sm', an: 'a', d: .1 });
+    s += P('M132 125 H148', { m: 'ar', an: 'draw', d: .3 });
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) s += R(154 + c * 19, 88 + r * 19, 16, 16, { rx: 2, c: 'nb', an: 'pop', d: .4 + (r * 4 + c) * .02 });
+    s += T(190, 200, '16×16 patches', { a: 'middle', c: 'sm', an: 'a', d: .5 });
+    s += P('M236 125 H254', { m: 'ar', an: 'draw', d: .7 });
+    for (let i = 0; i < 12; i++) s += R(260 + i * 18, 65, 13, 120, { rx: 3, c: 'nb', an: 'pop', d: .8 + i * .05 });
+    s += T(367, 200, '12 transformer blocks · 86M parameters', { a: 'middle', c: 'sm', an: 'a', d: 1.2 });
+    s += P('M478 125 H496', { m: 'ar', an: 'draw', d: 1.4 });
+    s += R(500, 65, 52, 120, { c: 'nb', an: 'pop', d: 1.5 });
+    s += T(526, 129, 'Head', { a: 'middle', an: 'a', d: 1.5 });
+    s += T(526, 200, '10,000 classes', { a: 'middle', c: 'sm', an: 'a', d: 1.5 });
+    s += P('M558 125 H578', { m: 'ar', an: 'draw', d: 1.7 });
+    s += R(582, 90, 162, 70, { c: 'card', an: 'pop', d: 1.8 });
+    s += T(663, 118, 'Prediction', { a: 'middle', c: 'sm', an: 'a', d: 1.9 });
+    s += T(663, 141, 'class 4745', { a: 'middle', c: 'num', an: 'a', d: 1.9 });
+    s += R(260, 230, 292, 30, { c: 'tr', an: 'gx', d: 2.3 });
+    s += T(406, 250, 'Task 1 · Full fine-tuning: all 86M trainable', { a: 'middle', an: 'a', d: 2.5 });
+    s += R(260, 268, 292, 30, { c: 'fz', an: 'gx', d: 2.9 });
+    for (let i = 0; i < 12; i++) s += R(264 + i * 23.5, 291, 14, 4, { rx: 1, fill: 'var(--train)', an: 'pop', d: 3.2 + i * .03 });
+    s += T(406, 287, 'Task 2 · PEFT: frozen backbone + small modules', { a: 'middle', an: 'a', d: 3.1 });
+    s += R(470, 306, 274, 30, { fill: 'var(--goodFill)', stroke: 'var(--good)', sw: 2, an: 'gx', d: 3.6 });
+    s += T(607, 326, 'Task 3 · Prediction-time extensions', { a: 'middle', an: 'a', d: 3.8 });
+    return svg(760, 350, s, 'Pipeline from image to prediction, with the three tasks marked');
+  },
+  notes: `<h3>What the project is</h3><p>We take one pretrained Vision Transformer and adapt it to tell apart <b>10,000 look-alike species</b>.</p>
+  <p>The model reads an image as 16×16-pixel patches, passes them through 12 identical blocks, and a final head picks one of the 10,000 classes.</p>
+  <h3>The three tasks</h3><ul><li><b>Task 1:</b> retrain every weight (most accurate, most expensive).</li><li><b>Task 2:</b> keep the 86M weights frozen and train small add-on modules instead.</li><li><b>Task 3:</b> train nothing; get better answers out of a trained model.</li></ul>
+  <p>Point at the schematic: it cycles through the three tasks and shows what each one trains.</p>`
+});
+
+/* ---- Challenge ---- */
+S.push({
+  sec: 'intro', kick: 'The task', short: 'Why it is hard', title: 'Fine-grained recognition: near-identical classes, highly variable individuals',
+  src: 'Training images from the challenge dataset, one class per caption',
+  spec: SPEC.none, tune: 'Nothing yet — problem setup',
+  photosClass: 'fill grid2',
+  photos: [{ label: 'Different classes, similar appearance', keys: ['lookA', 'lookB', 'lookC', 'lookD'] }, { label: 'Same class, different appearances', keys: ['varA', 'varB', 'varC', 'varD'] }],
+  pts: ['<b>Inter-class similarity:</b> related species share shape, colour and texture; the decisive cue may span only a few pixels.', '<b>Intra-class variation:</b> pose, age, lighting, occlusion and background separate images of the same species.'],
+  take: 'Both effects reappear in the error analysis (Task 3) as the main causes of the remaining mistakes.',
+  sketch() {
+    let s = '';
+    s += R(16, 16, 350, 300, { c: 'card', an: 'a' });
+    s += T(32, 44, 'Different classes, similar appearance', { c: 'ttl', an: 'a' });
+    const A = cl(150, 175, 40, 30, 28, 11), B = cl(222, 190, 40, 30, 28, 23);
+    s += dots(A, 'var(--cA)', .3) + dots(B, 'var(--cB)', .5);
+    s += T(110, 268, '● class 4745', { c: 'sm', fill: 'var(--cA)', an: 'a', d: 1.2 }) + T(205, 268, '● class 4746', { c: 'sm', fill: 'var(--cB)', an: 'a', d: 1.2 });
+    s += T(191, 298, 'Overlapping clusters → easily confused', { a: 'middle', c: 'sm', an: 'a', d: 1.4 });
+    s += R(394, 16, 350, 300, { c: 'card', an: 'a', d: .1 });
+    s += T(410, 44, 'Same class, different appearances', { c: 'ttl', an: 'a', d: .1 });
+    const C1 = cl(480, 130, 28, 20, 18, 5), C2 = cl(660, 228, 14, 16, 14, 9);
+    s += dots(C1, 'var(--cC)', 1.4) + dots(C2, 'var(--cC)', 1.8);
+    const m1 = mean(C1), m2 = mean(C2);
+    s += P(`M${m1[0] + 28} ${m1[1] + 18} L${m2[0] - 26} ${m2[1] - 16}`, { an: 'draw', d: 2.2, dash: '4 4' });
+    s += T(585, 168, 'still class 3076', { a: 'middle', c: 'sm', an: 'a', d: 2.4 });
+    s += T(569, 298, 'One class, distant clusters (pose, lighting…)', { a: 'middle', c: 'sm', an: 'a', d: 2.6 });
+    return svg(760, 330, s, 'Two feature-space panels showing overlapping classes and one class with two clusters');
+  },
+  notes: `  <h3>The two problems</h3><ul><li><b>Left:</b> two species look almost the same, so their clusters overlap. The difference may be a few pixels.</li><li><b>Right:</b> one species looks very different across images, so its points split into separate groups.</li></ul>
+  <p>Remember these two pictures: in Task 3 the model's mistakes turn out to be exactly these two problems.</p>`
+});
+
+/* ---- Design ---- */
+S.push({
+  sec: 'intro', kick: 'Method', short: 'Experimental design', title: 'Screen cheaply, confirm at scale, submit sparingly',
+  src: 'Experimental protocol · pilot, labelled holdout and CodaBench',
+  spec: SPEC.none, tune: 'Nothing yet — evaluation protocol',
+  pts: ['<b>Pilot:</b> 1,000 classes, 3–5 epochs — fast ablations to find promising directions.', '<b>Labelled holdout:</b> 10,000 classes with known labels — hyperparameter tuning and controlled comparisons.', '<b>CodaBench:</b> hidden test set — selected systems only.'],
+  take: 'Controlled ablations answer causal questions; full-scale runs answer leaderboard questions.',
+  viz() {
+    let s = '';
+    const box = (x, d, t1, t2, t3, col) => R(x, 30, 228, 112, { c: 'card', an: 'pop', d, stroke: col, sw: 2 }) + T(x + 114, 60, t1, { a: 'middle', c: 'ttl', an: 'a', d: d + .1 }) + T(x + 114, 88, t2, { a: 'middle', c: 'big', an: 'a', d: d + .2 }) + T(x + 114, 118, t3, { a: 'middle', c: 'sm', an: 'a', d: d + .3 });
+    s += box(16, .1, '01 · Pilot screening', '1,000 classes', '3–5 epoch ablations', 'var(--frozen)');
+    s += P('M248 86 H262', { m: 'ar', an: 'draw', d: .6 });
+    s += box(266, .7, '02 · Labelled holdout', '10,000 classes', '50,000 images, known labels', 'var(--cA)');
+    s += P('M498 86 H512', { m: 'ar', an: 'draw', d: 1.2 });
+    s += box(516, 1.3, '03 · CodaBench', 'hidden test', 'official benchmark', 'var(--good)');
+    s += T(16, 186, 'Configurations reaching each stage', { c: 'sm', an: 'a', d: 1.8 });
+    s += R(16, 198, 228, 30, { c: 'tr', an: 'gx', d: 2.0, rx: 6 });
+    s += T(130, 218, 'many configurations', { a: 'middle', an: 'a', d: 2.2 });
+    s += R(296, 198, 168, 30, { c: 'tr', an: 'gx', d: 2.4, rx: 6 });
+    s += T(380, 218, 'shortlisted', { a: 'middle', an: 'a', d: 2.6 });
+    s += R(586, 198, 88, 30, { c: 'tr', an: 'gx', d: 2.8, rx: 6 });
+    s += T(630, 218, 'final systems', { a: 'middle', an: 'a', d: 3.0 });
+    s += T(380, 272, 'Pilot accuracies (~90%) are inflated: ten times fewer classes to confuse.', { a: 'middle', c: 'sm', an: 'a', d: 3.3 });
+    s += T(380, 292, 'Pilot results are therefore compared only with other pilot results.', { a: 'middle', c: 'sm', an: 'a', d: 3.4 });
+    return svg(760, 310, s, 'Three-stage experimental design');
+  },
+  notes: `<h3>How experiments were run</h3><p>Ideas are first tested on a small, fast version of the problem. Only the promising ones move to the full 10,000 classes. Only the best get submitted to the official leaderboard (CodaBench).</p>
+  <p>"Holdout" = images we kept aside with known answers, so we can grade ideas ourselves without using up leaderboard submissions.</p>
+  <p>Every comparison in the deck carries its evaluation label in the footer: subset or full scale, holdout or CodaBench, resolution.</p>`
+});
+
+/* ---- Task 1 divider ---- */
+S.push({
+  type: 'section', sec: 't1', n: '1', title: 'Full fine-tuning', spec: { blocks: 'train', head: 'train', res: '224 → 448 px', focus: ['input', 'blocks', 'head'] },
+  tune: 'all 86M backbone weights + head',
+  q: '<b>Q1 ·</b> Which approach offers the better balance between accuracy and inference efficiency?',
+  desc: 'Every parameter is trainable, so the question is not <i>what</i> to train but <i>how</i>: the head’s starting point, the learning rate of each block, and the input resolution.',
+  notes: `<p>Task 1 trains everything. The first attempt did not work, so this section is about the recipe: three settings, each shown on the schematic with a dashed ring.</p>`
+});
+
+/* ---- Baseline ---- */
+S.push({
+  sec: 't1', kick: 'Task 1 · Baseline', short: 'Baseline diagnosis', title: 'The first full fine-tune did not beat a frozen linear probe',
+  src: 'CodaBench top-1 · 224 px · 144-minute training budget',
+  spec: { blocks: 'train', head: 'train', res: '224 px', focus: ['blocks', 'head'] }, tune: 'All backbone weights + head',
+  pts: ['Initial full fine-tuning: <b>61.3%</b>, below a linear probe on frozen features (<b>62.5%</b>).', 'An improved schedule recovers to 66.3%, still short of the 70.8% course reference.'],
+  take: 'When every weight is trainable but the gain is marginal, the <b>recipe</b> — not training length — is the bottleneck.',
+  viz() {
+    let s = '';
+    const x0 = 230, W = 470, px = v => x0 + (v - 40) / 35 * W;
+    s += T(16, 28, 'Trainable (12 blocks + head)', { c: 'sm', an: 'a' });
+    s += T(x0, 28, 'CodaBench top-1 at 224 px (axis starts at 40%)', { c: 'sm', an: 'a' });
+    const rows = [
+      ['Linear probe (backbone frozen)', false, true, 62.5, 'var(--info)'],
+      ['Full FT — initial recipe', true, true, 61.3, 'var(--bad)'],
+      ['Full FT — improved LR schedule', true, true, 66.3, 'var(--cA)'],
+      ['Course reference: full FT', true, true, 70.8, 'var(--frozen)']];
+    rows.forEach((r, i) => {
+      const y = 62 + i * 64, d = .3 + i * .5;
+      s += strip(16, y, r[1], r[2], d);
+      s += T(x0, y - 7, r[0], { c: 'sm', an: 'a', d });
+      s += R(x0, y, px(r[3]) - x0, 24, { rx: 4, fill: r[4], an: 'gx', d: d + .2 });
+      s += T(px(r[3]) + 8, y + 17, r[3].toFixed(1) + '%', { c: 'num', an: 'a', d: d + .7 });
+    });
+    s += `<line x1="${x0}" y1="44" x2="${x0}" y2="312" class="ax"/>`;
+    s += P(`M${px(62.5)} 74 C ${px(62.5) + 70} 92, ${px(61.3) + 80} 118, ${px(61.3) + 50} 128`, { c: 'flow', m: 'arR', an: 'draw', d: 2.4, stroke: 'var(--bad)' });
+    s += T(px(62.5) + 64, 108, 'more trainable parameters, lower accuracy', { c: 'sm', fill: 'var(--bad)', an: 'a', d: 2.6 });
+    return svg(760, 320, s, 'Bar chart of the first baseline');
+  },
+  notes: `<h3>What happened</h3><p>Training all 86 million weights for 144 minutes scored <b>61.3%</b>. Freezing them and training only the head scored <b>62.5%</b>.</p>
+  <p>If total freedom does not help, the problem is not "too little training" — it is <b>how</b> the weights are being changed.</p>
+  <h3>Plain-language reason</h3><p>The pretrained model already encodes edges, textures and shapes. Updating every layer hard at the start, with a random head sending noisy gradients backwards, scrambles that knowledge.</p>
+  <p>The next two slides are the two fixes.</p>`
+});
+
+/* ---- Prototype head ---- */
+/* Script, Canva slide 6 (first half): 75.7% at 224 px → two optimisations → LP-FT vs prototype → prototype wins */
+S.push({
+  sec: 't1', kick: 'Task 1 · Optimisation 1 of 2', short: 'Head initialisation', title: 'Prototype initialisation outperformed linear-probe-then-fine-tune',
+  src: 'Ablation · 224 px · 3 epochs · feature panels are schematic',
+  spec: { blocks: 'train', head: 'proto', res: '224 px', focus: ['head'] }, tune: 'Head initialisation',
+  scripted: true,
+  pts: ['<b>LP-FT:</b> freeze the backbone, train the cosine head alone, then fine-tune everything.', '<b>Prototype:</b> each class weight starts at the average pretrained ViT feature of that class (★).'],
+  ptsAt: [2, 3],
+  take: 'Prototype initialisation outperformed LP-FT (<b>+1.61 pp</b>) and became our head initialisation.', takeAt: 4,
+  viz() {
+    let s = '';
+    s += stp(1, R(16, 8, 728, 40, { rx: 6, fill: 'var(--surfaceCool)', stroke: 'none', an: 'fi' }) +
+      T(30, 34, 'Full fine-tuning at 224 px reached <tspan style="font-weight:800;fill:var(--train)">75.7%</tspan> · two key optimisations ↓', { c: 'lbl', an: 'a' }));
+    const panel = (x0, title, sub, proto) => {
+      let p = R(x0, 60, 350, 300, { c: 'card', an: 'a' });
+      p += T(x0 + 16, 88, title, { c: 'ttl', an: 'a' }) + T(x0 + 16, 106, sub, { c: 'xs', an: 'a' });
+      const o = [x0 + 175, 220];
+      const groups = [[x0 + 92, 150, 'var(--cA)', 3], [x0 + 284, 176, 'var(--cB)', 7], [x0 + 196, 298, 'var(--cC)', 13]];
+      groups.forEach((g, i) => { const pts = cl(g[0], g[1], 18, 16, 13, g[3]); p += dots(pts, g[2], .15 + i * .12, 3, .008); g.push(mean(pts)); });
+      p += C(o[0], o[1], 4, { fill: 'var(--ink)', an: 'pop', d: .5 });
+      if (!proto) {
+        const off = [[30, -34], [-40, 30], [34, 18]];
+        groups.forEach((g, i) => { p += P(`M${o[0]} ${o[1]} L${(g[4][0] + off[i][0]).toFixed(1)} ${(g[4][1] + off[i][1]).toFixed(1)}`, { c: 'flow', m: 'ar', an: 'draw', d: .7 + i * .15, stroke: g[2], dash: '5 4', sw: 2 }); });
+        p += T(x0 + 175, 348, 'Ablation top-1: 71.37%', { a: 'middle', c: 'num', an: 'a', d: 1.2 });
+      } else {
+        groups.forEach((g, i) => { p += P(`M${o[0]} ${o[1]} L${g[4][0].toFixed(1)} ${g[4][1].toFixed(1)}`, { c: 'flow', m: 'ar', an: 'draw', d: .7 + i * .15, stroke: g[2], sw: 2 }); p += star(g[4][0], g[4][1], g[2], 1 + i * .12); });
+        p += T(x0 + 175, 348, 'Ablation top-1: 72.98%  (+1.61 pp)', { a: 'middle', c: 'num', an: 'a', d: 1.3, fill: 'var(--good)' });
+      }
+      return p;
+    };
+    s += stp(2, panel(16, '1 · LP-FT', 'Head trained alone on frozen features, then fine-tune', false));
+    s += stp(3, panel(394, '2 · Prototype initialisation', 'Class weight = mean pretrained feature of the class', true));
+    s += stp(4, R(652, 70, 82, 26, { rx: 13, fill: 'var(--goodFill)', stroke: 'var(--good)', sw: 1.5, an: 'pop' }) + T(693, 88, 'selected', { a: 'middle', c: 'sm', fill: 'var(--good)', an: 'a' }));
+    return svg(760, 372, s, 'LP-FT versus prototype initialisation of the cosine head');
+  },
+  notes: `<h3>Script (Qian, Canva slide 6)</h3><p><b>[on entry]</b> We started with full fine-tuning to maximise validation accuracy, experimenting with learning rates, schedules and regularisation to achieve <b>75.7% at 224 pixels</b>.</p>
+  <p><b>[click 1 — banner]</b> I'll highlight two key optimisations. First, we evaluated two ways to prepare the cosine classifier before fine-tuning:</p>
+  <p><b>[click 2 — LP-FT]</b> Linear probe then fine-tuning: freezing the backbone and training the classifier head alone.</p>
+  <p><b>[click 3 — prototype]</b> Prototype initialisation: directly initialising each class weight with the average feature extracted by the pretrained ViT.</p>
+  <p><b>[click 4 — selected]</b> Prototype initialisation outperformed LP-FT, making it our selected strategy for head initialisation.</p>`
+});
+
+/* ---- LLRD ---- */
+/* Script, Canva slide 6 (second half): uniform LR → ×0.75 per earlier layer → deeper adapt, early preserved */
+S.push({
+  sec: 't1', kick: 'Task 1 · Optimisation 2 of 2', short: 'Layer-wise LR decay', title: 'Layer-wise learning-rate decay protects pretrained features',
+  src: 'Ablation · 224 px · 3 epochs · learning rate selected by a five-point sweep (Appendix A)',
+  spec: { blocks: 'decay', head: 'proto', res: '224 px', focus: ['blocks'] }, tune: 'Per-block learning rate',
+  scripted: true,
+  pts: ['Each earlier layer gets <b>0.75×</b> the rate of the layer above: top 4e-4, block 0 ≈ 1.3e-5.', 'Removing the decay costs <b>−6.71 pp</b> (69.83% → 63.12%).'],
+  ptsAt: [2, 3],
+  take: 'With both optimisations, full fine-tuning reaches <b>75.7%</b> at 224 px.', takeAt: 3,
+  viz() {
+    const ctrl = `<div class="ctrl" id="llrdBtns" data-s="2" role="group" aria-label="Learning-rate comparison"><button type="button" data-k="on" class="on" aria-pressed="true">With layer decay (selected)</button><button type="button" data-k="off" aria-pressed="false">Uniform learning rate</button></div>`;
+    let s = '', bars = '';
+    const n = 13, x0 = 52, gap = 52, base = 276, H = 200;
+    bars += `<line x1="40" y1="${base}" x2="740" y2="${base}" class="ax"/>`;
+    for (let i = 0; i < n; i++) {
+      const x = x0 + i * gap;
+      bars += R(x, base - H, 34, H, { id: 'lb' + i, c: 'tr lbar', rx: 4 });
+      bars += T(x + 17, base + 18, i < 12 ? 'B' + i : 'Norm', { a: 'middle', c: 'sm' });
+      bars += T(x + 17, base + 34, '', { a: 'middle', c: 'xs', id: 'lv' + i });
+    }
+    bars += T(390, 64, 'bar height = learning rate (step size) for that layer', { a: 'middle', c: 'sm' });
+    s += stp(1, bars);
+    s += stp(3, T(x0, 30, '← earlier layers: general features preserved', { c: 'sm', an: 'a', fill: 'var(--info)' }) + T(728, 30, 'deeper layers adapt more aggressively →', { c: 'sm', a: 'end', an: 'a', d: .3, fill: 'var(--train)' }));
+    return ctrl + svg(760, 320, s, 'Learning rate per block') + `<div class="info" id="llrdInfo" data-s="1"></div>`;
+  },
+  mount() {
+    const n = 13, vals = on => Array.from({ length: n }, (_, i) => on ? 4e-4 * Math.pow(0.75, 12 - i) : 4e-4);
+    const set = on => {
+      vals(on).forEach((v, i) => { document.getElementById('lb' + i).style.transform = `scaleY(${Math.max(v / 4e-4, .02)})`; document.getElementById('lv' + i).textContent = v.toExponential(1); });
+      document.getElementById('llrdInfo').innerHTML = on ? '<b>Layer-wise decay:</b> each earlier layer is multiplied by 0.75 — block 0 moves ~30× more gently than the top. 69.83% in the ablation.' : '<b>Uniform learning rate:</b> every layer takes the same step (4e-4). Without decay: 63.12% (−6.71 pp).';
+      document.querySelectorAll('#llrdBtns button').forEach(b => { const sel = (b.dataset.k === 'on') === on; b.classList.toggle('on', sel); b.setAttribute('aria-pressed', String(sel)); });
+    };
+    document.querySelectorAll('#llrdBtns button').forEach(b => b.onclick = () => set(b.dataset.k === 'on'));
+    for (let i = 0; i < n; i++) document.getElementById('lb' + i).style.transform = 'scaleY(0.02)';
+    window._llrdSet = set;
+  },
+  onStep(k) {
+    if (!window._llrdSet) return;
+    if (k === 0) { for (let i = 0; i < 13; i++) document.getElementById('lb' + i).style.transform = 'scaleY(0.02)'; return; }
+    window._llrdSet(k >= 2);
+  },
+  notes: `<h3>Script (Qian, Canva slide 6)</h3><p><b>[click 1 — flat bars]</b> Second, we introduced <b>layer-wise learning-rate decay</b>. Instead of a uniform learning rate…</p>
+  <p><b>[click 2 — bars decay]</b> …we assigned progressively smaller rates to earlier layers, each preceding layer multiplied by 0.75.</p>
+  <p><b>[click 3 — labels]</b> This lets deeper layers adapt more aggressively while preserving general features learned earlier.</p>
+  <p>The two buttons toggle uniform vs decay if asked. 4e-4 came from a five-point sweep (Appendix A).</p>`
+});
+
+/* ---- Resolution ---- */
+/* Script, Canva slide 7: small/hidden subjects → 224→448 quadruples patches → fewer epochs → 63.2→65.0, chose 448 */
+S.push({
+  sec: 't1', kick: 'Task 1 · Resolution', short: 'Input resolution', title: 'Higher resolution outperforms additional epochs at equal compute',
+  src: 'Internal holdout · 10,000 classes · 10 training images/class · 23.04 GB-hours per run',
+  spec: { blocks: 'train', head: 'proto', res: '224 → 448 px', focus: ['input'] }, tune: 'Input resolution',
+  scripted: true,
+  photos: [{ label: 'The same image at five training resolutions', keys: ['resStrip'], w: 2.2 }, { label: 'Small or hidden subjects (unlabelled validation images)', keys: ['resSmall', 'resClut'], w: 1 }],
+  photosAt: 1,
+  pts: ['Doubling 224 → 448 px <b>quadruples</b> the patch count: a small subject covers ~3× more patches.', 'Each step costs more, so fewer epochs fit the budget: 7.7 at 224 px, 4.1 at 448 px.'],
+  ptsAt: [2, 3],
+  take: 'Accuracy still rose; 448 → 512 added only 0.19 pp, so <b>448 px</b> is our practical trade-off.', takeAt: 4,
+  viz() {
+    let s = '';
+    const F = 210, bx = [.52, .74], by = [.56, .68];
+    const frame = (x0, n, d0, label) => {
+      let f = R(x0, 46, F, F, { rx: 4, fill: 'var(--photoFill)', stroke: 'var(--photoLine)', an: 'a', d: d0 });
+      f += `<line x1="${x0 + 6}" y1="${46 + F * .78}" x2="${x0 + F - 6}" y2="${46 + F * .7}" stroke="var(--earth)" stroke-width="3"/>`;
+      f += bird(x0 + F * .63, 46 + F * .62, .9);
+      let hits = 0;
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+        const cx0 = c / n, cy0 = r / n, cx1 = (c + 1) / n, cy1 = (r + 1) / n;
+        if (cx1 > bx[0] && cx0 < bx[1] && cy1 > by[0] && cy0 < by[1]) { hits++; f += R(x0 + cx0 * F, 46 + cy0 * F, F / n, F / n, { rx: 0, fill: 'var(--cC)', op: .38, an: 'pop', d: d0 + .5 + hits * .03 }); }
+      }
+      let g = '';
+      for (let i = 1; i < n; i++) { g += `<line x1="${x0 + i * F / n}" y1="46" x2="${x0 + i * F / n}" y2="${46 + F}" stroke="var(--card)" stroke-width="${n > 20 ? .8 : 1.2}" opacity=".9"/>`; g += `<line x1="${x0}" y1="${46 + i * F / n}" x2="${x0 + F}" y2="${46 + i * F / n}" stroke="var(--card)" stroke-width="${n > 20 ? .8 : 1.2}" opacity=".9"/>`; }
+      f += G(g, { an: 'fi', d: d0 + .2 });
+      f += T(x0, 36, label, { c: 'ttl', an: 'a', d: d0 });
+      f += T(x0 + F / 2, 46 + F + 20, `subject covers ${hits} patches`, { a: 'middle', c: 'lbl', an: 'a', d: d0 + 1.1 });
+      return f;
+    };
+    s += stp(2, frame(20, 14, 0, '224 px → 14×14 = 196 patches') + frame(270, 28, .7, '448 px → 28×28 = 784 patches'));
+    const ex = 520;
+    let ep = T(ex, 36, 'Equal compute per run', { c: 'ttl', an: 'a' }) + T(ex, 56, 'epochs completed within budget:', { c: 'sm', an: 'a' });
+    [['224', 7.7], ['336', 5.5], ['448', 4.1], ['512', 2.9]].forEach((r, i) => {
+      const y = 72 + i * 34, d = .2 + i * .15;
+      ep += T(ex, y + 15, r[0] + ' px', { c: 'sm', an: 'a', d }) + R(ex + 50, y, r[1] / 7.7 * 150, 20, { rx: 4, fill: r[0] === '448' ? 'var(--train)' : 'var(--plotNeutral)', an: 'gx', d }) + T(ex + 56 + r[1] / 7.7 * 150, y + 15, r[1], { c: 'num', an: 'a', d: d + .4 });
+    });
+    s += stp(3, ep);
+    const xs = { 336: 545, 384: 610, 448: 675, 512: 740 }, py = v => 330 - (v - 63) / 2.4 * 80;
+    const acc = [[336, 63.2], [384, 64.1], [448, 64.8], [512, 65.0]];
+    let ac = T(ex, 218, 'Holdout top-1 at equal compute', { c: 'ttl', an: 'a' });
+    let d = ''; acc.forEach((a, i) => d += (i ? ' L' : 'M') + xs[a[0]] + ' ' + py(a[1]).toFixed(1));
+    ac += P(d, { c: 'flow', an: 'draw', d: .2, stroke: 'var(--good)', sw: 3 });
+    acc.forEach((a, i) => ac += C(xs[a[0]], py(a[1]), 4.5, { fill: 'var(--good)', an: 'pop', d: .3 + i * .2 }) + T(xs[a[0]], py(a[1]) - 9, a[1].toFixed(1), { a: 'middle', c: 'num', an: 'a', d: .4 + i * .2 }) + T(xs[a[0]], 350, a[0] + ' px', { a: 'middle', c: 'xs' }));
+    ac += C(xs[448], py(64.8), 10, { fill: 'none', stroke: 'var(--train)', sw: 2.2, an: 'pop', d: 1.4 }) + T(700, py(64.8) + 30, '+0.19 pp to 512', { a: 'middle', c: 'xs', fill: 'var(--train)', an: 'a', d: 1.6 });
+    s += stp(4, ac);
+    return svg(760, 356, s, 'Patch grids, epochs within budget and holdout accuracy by resolution');
+  },
+  notes: `<h3>Script (Qian, Canva slide 7)</h3><p><b>[click 1 — photos]</b> As you can see, target species can occupy only a small part of the image, be partly hidden, or sit against busy backgrounds. At 224 pixels, fine details can be lost, so we tested higher resolutions.</p>
+  <p><b>[click 2 — patch grids]</b> However, increasing resolution creates a computational trade-off: doubling from 224 to 448 quadruples the patch count…</p>
+  <p><b>[click 3 — epoch bars]</b> …making each training step more expensive and reducing the epochs that fit under the same budget.</p>
+  <p><b>[click 4 — accuracy line]</b> Despite this, internal holdout accuracy rose from 63.2% at 336 pixels to 65.0% at 512. Because the gain from 448 to 512 was only 0.19 points, we chose <b>448 as our practical trade-off</b>.</p>`
+});
+
+/* ---- Task 2 divider ---- */
+S.push({
+  type: 'section', sec: 't2', n: '2', title: 'Parameter-efficient fine-tuning', spec: { blocks: 'addon', head: 'train', res: '336–448 px', focus: ['blocks'] },
+  tune: 'small modules (&lt; 5% of backbone) + head',
+  q: '<b>Q2 ·</b> How do different PEFT methods and design choices affect performance and efficiency?',
+  desc: 'The pretrained backbone stays frozen. Small modules inside each block — under 5% of backbone parameters — are trained together with the classifier head. We vary the <i>method</i>, its <i>placement</i>, and the <i>kind</i> of capacity.',
+  notes: `<p>Task 2 freezes the 86M weights. Everything highlighted on the schematic is a small add-on. We compare six method families, then ask where the budget should go and what kind of module to spend it on.</p>`
+});
+
+/* ---- PEFT menu ---- */
+/* Script, Canva slide 8: one click per method, in script order */
+S.push({
+  sec: 't2', kick: 'Task 2 · Methods', short: 'PEFT methods', title: 'Six PEFT families, each training under 5% of the backbone',
+  src: 'Configurations selected per method · backbone % excludes the classifier head',
+  spec: { blocks: 'addon', head: 'train', res: '336 px', focus: ['blocks'] }, tune: 'PEFT method (&lt; 5% trainable)',
+  scripted: true, nSteps: 6,
+  pts: ['Each method was tuned on its own design choices before the comparison.', 'The classifier head always trains and is not counted in the budget.'],
+  ptsAt: [6, 6],
+  take: 'LoRA can be <b>merged</b> into the frozen weights after training; adapter-style modules cannot.', takeAt: 6,
+  viz() {
+    const order = [['last', 'Selected layer'], ['bitfit', 'BitFit'], ['prefix', 'Prefix'], ['lora', 'LoRA'], ['serial', 'Serial adapter'], ['af', 'AdaptFormer'], ['full', 'Full FT'], ['final', 'Final design']];
+    const ctrl = `<div class="ctrl" id="peftBtns" role="group" aria-label="Adaptation method">${order.map(o => `<button type="button" data-k="${o[0]}" aria-pressed="false">${o[1]}</button>`).join('')}</div>`;
+    let s = '';
+    s += P('M340 6 V306', { c: 'flow', anim: false });
+    s += R(200, 20, 280, 272, { fill: 'var(--surfaceCool)', stroke: 'var(--line)', sw: 1.2 });
+    s += T(214, 38, 'One transformer block (×12)', { c: 'sm' });
+    s += R(250, 52, 180, 26, { id: 'p-ln1', c: 'part' }) + T(340, 70, 'LayerNorm', { a: 'middle', c: 'sm' });
+    s += R(250, 90, 180, 52, { id: 'p-attn', c: 'part' }) + T(340, 113, 'Attention', { a: 'middle', c: 'lbl bold' }) + T(340, 131, 'qkv + projection weights', { a: 'middle', c: 'sm' });
+    s += G(R(270, 148, 140, 16, { c: 'tr', rx: 4 }) + T(340, 160, 'adapter', { a: 'middle', c: 'xs' }), { id: 'a-ser1', c: 'addon' });
+    s += R(250, 170, 180, 26, { id: 'p-ln2', c: 'part' }) + T(340, 188, 'LayerNorm', { a: 'middle', c: 'sm' });
+    s += R(250, 206, 180, 52, { id: 'p-mlp', c: 'part' }) + T(340, 229, 'MLP', { a: 'middle', c: 'lbl bold' }) + T(340, 247, 'two dense layers', { a: 'middle', c: 'sm' });
+    s += G(R(270, 264, 140, 16, { c: 'tr', rx: 4 }) + T(340, 276, 'adapter', { a: 'middle', c: 'xs' }), { id: 'a-ser2', c: 'addon' });
+    [[65, 'b1'], [101, 'b2'], [183, 'b3'], [217, 'b4']].forEach(b => s += C(420, b[0], 5, { id: b[1], c: 'part' }));
+    s += G([0, 1, 2, 3].map(i => R(116 + i * 18, 104, 14, 14, { c: 'tr', rx: 3 })).join('') + T(150, 96, 'learned K/V prefix', { a: 'middle', c: 'xs' }) + `<path d="M190 111 H246" class="flow" marker-end="url(#arO)" style="stroke:var(--train)"/>`, { id: 'a-prefix', c: 'addon' });
+    s += G(R(520, 90, 160, 52, { c: 'tr' }) + T(600, 113, 'LoRA', { a: 'middle', c: 'lbl bold' }) + T(600, 131, 'low-rank update', { a: 'middle', c: 'sm' }) + `<path d="M518 116 H436" class="flow" marker-end="url(#arO)" style="stroke:var(--train)"/>`, { id: 'a-lora', c: 'addon' });
+    s += G(R(520, 206, 160, 52, { c: 'tr' }) + T(600, 229, 'AdaptFormer', { a: 'middle', c: 'lbl bold' }) + T(600, 247, 'parallel bottleneck', { a: 'middle', c: 'sm' }) + `<path d="M518 232 H436" class="flow" marker-end="url(#arO)" style="stroke:var(--train)"/>`, { id: 'a-af', c: 'addon' });
+    s += T(200, 330, 'Applied in:', { c: 'sm', id: 'stripLbl' });
+    for (let i = 0; i < 12; i++) s += R(290 + i * 24, 316, 18, 22, { id: 's' + i, c: 'part', rx: 3 });
+    s += T(290, 356, 'block 1', { c: 'xs' }) + T(572, 356, 'block 12', { c: 'xs', a: 'end' });
+    return ctrl + svg(760, 366, s, 'Transformer block showing which parts each method trains') + `<div class="info" id="peftInfo"></div>`;
+  },
+  mount() {
+    const M = {
+      none: { parts: [], add: [], blocks: 'none', txt: '<b>The budget:</b> trainable backbone parameters stay <b>below 5%</b>; the classifier head always trains and is excluded.' },
+      last: { parts: ['p-attn'], add: [], blocks: 'last', txt: '<b>Selected-layer fine-tuning:</b> training the <b>full attention module in the last block</b> worked best. Tried: QKV vs full attention, last 1 vs 2 blocks. <b>2.75%</b>.' },
+      bitfit: { parts: ['b1', 'b2', 'b3', 'b4'], add: [], blocks: 'all', txt: '<b>BitFit:</b> training <b>all backbone biases</b> performed best. Tried: attention / MLP / LayerNorm / all biases. <b>0.12%</b>.' },
+      prefix: { parts: [], add: ['a-prefix'], blocks: 'all', txt: '<b>Prefix tuning:</b> learnable key and value vectors in <b>all blocks</b>, length <b>50</b>, was optimal. Tried: last 1 / last 4 / all blocks; length 5 / 20 / 50. <b>1.07%</b>.' },
+      lora: { parts: [], add: ['a-lora'], blocks: 'all', txt: '<b>LoRA:</b> <b>rank 24 across all blocks</b>. DoRA gave similar accuracy at higher training cost; AdaLoRA performed worse. <b>4.12%</b>.' },
+      serial: { parts: [], add: ['a-ser1', 'a-ser2'], blocks: 'all', txt: '<b>Serial adapter:</b> width fixed at <b>96</b>; learning rate <b>3×10⁻⁴</b> selected (vs 1e-3, 3e-3). <b>4.68%</b>.' },
+      af: { parts: [], add: ['a-af'], blocks: 'all', txt: '<b>AdaptFormer:</b> width <b>192</b>, learned scaling, CosFace margin <b>0.1</b>. Tried: width 64 / 192; fixed vs learned scale; margin 0 / 0.1 / 0.2. <b>4.13%</b>.' },
+      full: { parts: ['p-ln1', 'p-attn', 'p-ln2', 'p-mlp', 'b1', 'b2', 'b3', 'b4'], add: [], blocks: 'all', txt: '<b>Full fine-tuning (Task 1):</b> every weight trains — <b>100%</b> of the backbone.' },
+      final: { parts: ['p-ln1', 'p-ln2', 'b1', 'b2', 'b3', 'b4'], add: ['a-lora', 'a-af'], blocks: 'all', txt: '<b>Final design:</b> LoRA on attention + AdaptFormer beside the MLP + all LayerNorms and biases. <b>4.94%</b> of the backbone (448 px).' }
+    };
+    const all = ['p-ln1', 'p-attn', 'p-ln2', 'p-mlp', 'b1', 'b2', 'b3', 'b4'], adds = ['a-prefix', 'a-lora', 'a-af', 'a-ser1', 'a-ser2'];
+    const show = k => {
+      const m = M[k];
+      all.forEach(id => document.getElementById(id).classList.toggle('on', m.parts.includes(id)));
+      adds.forEach(id => document.getElementById(id).classList.toggle('on', m.add.includes(id)));
+      for (let i = 0; i < 12; i++) document.getElementById('s' + i).classList.toggle('on', m.blocks === 'all' || (m.blocks === 'last' && i === 11));
+      document.getElementById('stripLbl').textContent = m.blocks === 'last' ? 'Applied in: only' : 'Applied in:';
+      document.getElementById('peftInfo').innerHTML = m.txt;
+      document.querySelectorAll('#peftBtns button').forEach(b => { const sel = b.dataset.k === k; b.classList.toggle('on', sel); b.setAttribute('aria-pressed', String(sel)); });
+    };
+    document.querySelectorAll('#peftBtns button').forEach(b => b.onclick = () => show(b.dataset.k));
+    window._peftShow = show;
+  },
+  onStep(k) { if (window._peftShow) window._peftShow(['none', 'last', 'bitfit', 'prefix', 'lora', 'serial', 'af'][Math.min(k, 6)]); },
+  notes: `<h3>Script (Qian, Canva slide 8)</h3><p><b>[on entry]</b> We explored several PEFT methods, keeping trainable backbone parameters below 5%, excluding the classifier head.</p><ul>
+  <li><b>[click 1]</b> Selected-layer fine-tuning: training the full attention module in the last block worked best.</li>
+  <li><b>[click 2]</b> BitFit: training all backbone biases performed best.</li>
+  <li><b>[click 3]</b> Prefix tuning: inserting learnable key and value vectors into all blocks, length 50, was optimal.</li>
+  <li><b>[click 4]</b> LoRA: we selected rank 24 across all blocks. DoRA offered similar accuracy at higher training cost, while AdaLoRA performed worse.</li>
+  <li><b>[click 5]</b> Serial adapter: we fixed the width at 96 and selected a learning rate of 3×10⁻⁴.</li>
+  <li><b>[click 6]</b> AdaptFormer: we selected width 192, learned scaling and a CosFace margin of 0.1.</li></ul>
+  <p>The Full FT and Final design buttons are there for questions.</p>`
+});
+
+/* ---- Scorecard ---- */
+/* Script, Canva slide 9: compare at 336 px → BitFit → DoRA → LoRA r24 + extras 78.5 */
+S.push({
+  sec: 't2', kick: 'Task 2 · Comparison', short: 'Method scorecard', title: 'At 336 px and equal budget, six methods tie at 77.6–78.5%; BitFit is the efficiency outlier',
+  src: 'CodaBench top-1 · 336 px · plain crop 0.9 · 144-minute budget · recipes and batch sizes differ, so close scores are ties',
+  spec: { blocks: 'addon', head: 'train', res: '336 px', focus: ['blocks'] }, tune: 'PEFT method comparison',
+  scripted: true,
+  pts: ['<b>BitFit:</b> fewest trainable parameters (0.12%) yet 73.4% — updating biases alone adapts usefully.', '<b>DoRA:</b> highest peak memory and slowest unmerged inference.', '<b>LoRA r24 + extras:</b> highest accuracy, <b>78.5%</b>.'],
+  ptsAt: [2, 3, 4],
+  take: '<b>Which</b> parameters are trained matters more than <b>how many</b>.', takeAt: 4,
+  viz() {
+    let s = '', base = '';
+    const x0 = 70, W = 400, y0 = 40, H = 270, px = v => x0 + (Math.log10(v) + 1) / 2 * W, py = v => y0 + H - (v - 66) / 14 * H;
+    const pts = [['A', 'Last-block attention', 2.75, 67.93], ['B', 'Prefix, length 50', 1.07, 72.1], ['C', 'BitFit, all biases', .12, 73.4], ['D', 'Serial adapter', 4.68, 77.6], ['E', 'GPS', 4.63, 77.9], ['F', 'AdaptFormer', 4.13, 77.9], ['G', 'DoRA r24 + extras', 4.75, 78.3], ['H', 'LoRA r24', 4.12, 78.4], ['I', 'LoRA r24 + extras', 4.65, 78.5]];
+    const lx = 500, ry = i => 64 + i * 26;
+    // row highlights sit under the list text
+    s += stp(2, R(lx - 8, ry(2) - 17, 256, 24, { rx: 4, fill: 'var(--goodFill)', stroke: 'none', an: 'gx' }));
+    s += stp(3, R(lx - 8, ry(6) - 17, 256, 24, { rx: 4, fill: 'var(--trainFill)', stroke: 'none', an: 'gx' }));
+    s += stp(4, R(lx - 8, ry(8) - 17, 256, 24, { rx: 4, fill: 'var(--goodFill)', stroke: 'var(--good)', sw: 1.5, an: 'gx' }));
+    base += `<line x1="${x0}" y1="${y0 + H}" x2="${x0 + W}" y2="${y0 + H}" class="ax"/><line x1="${x0}" y1="${y0}" x2="${x0}" y2="${y0 + H}" class="ax"/>`;
+    [0.1, 1, 10].forEach(v => base += T(px(v), y0 + H + 18, v + '%', { a: 'middle', c: 'sm' }));
+    [66, 70, 74, 78].forEach(v => base += T(x0 - 8, py(v) + 4, v + '%', { a: 'end', c: 'sm' }) + `<line x1="${x0}" y1="${py(v)}" x2="${x0 + W}" y2="${py(v)}" stroke="var(--grid)"/>`);
+    base += T(x0 + W / 2, y0 + H + 38, 'trainable share of backbone (log scale) →', { a: 'middle', c: 'sm' }) + T(16, 24, 'CodaBench top-1 ↑', { c: 'sm' });
+    pts.forEach((p, i) => { const lead = i >= 3; base += C(px(p[2]), py(p[3]), 6, { fill: lead ? 'var(--train)' : 'var(--plotNeutral)', an: 'pop', d: .1 + i * .08 }); if (!lead) base += T(px(p[2]) + 10, py(p[3]) + 4, p[0], { c: 'num', an: 'a', d: .2 + i * .08 }); });
+    base += `<ellipse cx="${px(4.4)}" cy="${py(78.05)}" rx="30" ry="22" fill="none" stroke="var(--train)" stroke-dasharray="4 3" class="pop" style="--d:.9s"/>` + T(px(4.4) - 36, py(78.05) - 26, 'D–I', { c: 'num', an: 'a', d: 1 });
+    base += T(lx, 40, 'Methods', { c: 'ttl' });
+    pts.forEach((p, i) => base += T(lx, ry(i), `${p[0]}  ${p[1]}`, { c: 'lbl', an: 'a', d: .1 + i * .08 }) + T(744, ry(i), p[3] + '%', { c: 'num', a: 'end', an: 'a', d: .1 + i * .08 }));
+    s += stp(1, base);
+    s += stp(2, C(px(.12), py(73.4), 11, { fill: 'none', stroke: 'var(--good)', sw: 2.5, an: 'pop' }) + P(`M${px(.12) + 12} ${py(73.4) - 14} C ${px(.12) + 40} ${py(76)}, ${px(.12) + 90} ${py(77)}, ${px(.12) + 110} ${py(77.3)}`, { c: 'flow', m: 'arG', an: 'draw', d: .1, stroke: 'var(--good)' }) + T(px(.12) + 116, py(77.3) + 4, 'BitFit: 73.4% from 0.12%', { c: 'sm', fill: 'var(--good)', an: 'a', d: .5 }));
+    s += stp(3, T(16, 384, 'DoRA r24 + extras: peak training VRAM 28.06 GiB (highest) · unmerged inference 23–24 ms (slowest)', { c: 'lbl', fill: 'var(--train)', an: 'a' }) + T(16, 404, 'It computes weight magnitudes as well as low-rank direction updates.', { c: 'sm', an: 'a', d: .2 }), true);
+    s += stp(4, C(px(4.65), py(78.5), 11, { fill: 'none', stroke: 'var(--good)', sw: 2.5, an: 'pop' }) + T(16, 384, 'LoRA r24 + extras: 78.5%, the highest accuracy', { c: 'lbl', fill: 'var(--good)', an: 'a' }) + T(16, 404, 'Extras = biases, LayerNorms, positional embeddings and the CLS token, trained alongside LoRA.', { c: 'sm', an: 'a', d: .2 }), true);
+    return svg(760, 414, s, 'Scatter of PEFT methods by trainable share and accuracy');
+  },
+  notes: `<h3>Script (Qian, Canva slide 9)</h3><p><b>[click 1 — scatter]</b> Here, we compare the PEFT pipelines at 336 pixels under the same training budget.</p>
+  <p><b>[click 2 — BitFit]</b> BitFit uses the fewest trainable parameters at just 0.12%, yet still achieves 73.4% accuracy, showing that updating biases alone provides useful adaptation.</p>
+  <p><b>[click 3 — DoRA]</b> DoRA incurs the highest peak training memory and slowest unmerged inference because it computes weight magnitudes alongside low-rank direction updates.</p>
+  <p><b>[click 4 — LoRA + extras]</b> The highest accuracy — 78.5% — was achieved by LoRA rank 24 with extras: biases, LayerNorm, positional embeddings and the CLS token.</p>
+  <p>The next slide has the full memory and latency table if asked.</p>`
+});
+
+/* ---- PEFT cost (backup detail for Canva slide 9) ---- */
+S.push({
+  sec: 't2', kick: 'Task 2 · Cost', short: 'Memory and latency', title: 'Trainable share predicts neither training memory nor inference latency',
+  src: 'CodaBench · 336 px · plain crop 0.9 · 144-min budget · recipes and batch sizes differ · latency: forward pass, batch 1, ~1 ms session variation',
+  spec: { blocks: 'addon', head: 'train', res: '336 px', focus: ['blocks'] }, tune: 'PEFT method: cost',
+  pts: ['BitFit trains 0.12% yet peaks at 7.0 GiB: gradients must still flow through every block.', 'Unmerged, LoRA and DoRA are slow (14–24 ms); <b>merged</b>, they match the plain ViT (~7.7 ms).'],
+  take: 'Adapters and prefixes stay in the forward pass; only LoRA-family updates <b>merge away</b> their latency.',
+  viz() {
+    let s = '';
+    const rows = [['Last-block attention', 2.75, 1.43, 7.76, null], ['Prefix, length 50', 1.07, 7.97, 9.64, null], ['BitFit, all biases', .12, 7.01, 7.40, null], ['Serial adapter w96 + extras', 4.68, 15.54, 11.60, null], ['AdaptFormer w192', 4.13, 14.53, 10.28, null], ['DoRA r24 + extras', 4.75, 28.06, 23.5, 7.71, '23–24'], ['LoRA r24, no extras', 4.12, 19.30, 15.37, 7.78], ['LoRA r24 + extras', 4.65, 19.40, 14.6, 8.0, '14.2–15.0', '7.68–8.35']];
+    const vx = 280, vw = 150, lx = 500, lw = 200;
+    s += T(16, 24, 'Method · trainable %', { c: 'sm' }) + T(vx, 24, 'Peak training VRAM (GiB)', { c: 'sm' }) + T(lx, 24, 'Latency, batch 1 (ms)', { c: 'sm' });
+    rows.forEach((r, i) => {
+      const y = 42 + i * 38, d = .2 + i * .18;
+      s += T(16, y + 17, r[0], { c: 'lbl bold', an: 'a', d }) + T(250, y + 17, r[1].toFixed(2) + '%', { c: 'sm', a: 'end', an: 'a', d });
+      s += R(vx, y + 4, r[2] / 30 * vw, 18, { rx: 3, fill: 'var(--plotNeutral)', an: 'gx', d: d + .1 }) + T(vx + r[2] / 30 * vw + 6, y + 18, r[2].toFixed(2), { c: 'num', an: 'a', d: d + .4 });
+      s += R(lx, y + 4, r[3] / 25 * lw, 18, { rx: 3, fill: r[4] ? 'var(--quiet)' : 'var(--train)', an: 'gx', d: d + .1 });
+      if (r[4]) s += R(lx, y + 4, r[4] / 25 * lw, 18, { rx: 3, fill: 'var(--good)', an: 'gx', d: d + 1.2 });
+      s += T(lx + r[3] / 25 * lw + 6, y + 18, r[5] || r[3].toFixed(2), { c: 'num', an: 'a', d: d + .4 }) + (r[4] ? T(lx + r[3] / 25 * lw + 6, y + 31, 'merged ' + (r[6] || r[4].toFixed(2)), { c: 'xs', fill: 'var(--good)', an: 'a', d: d + 1.4 }) : '');
+    });
+    const ly = 42 + rows.length * 38 + 12;
+    s += R(lx, ly, 12, 12, { rx: 2, fill: 'var(--train)' }) + T(lx + 18, ly + 11, 'not mergeable', { c: 'xs' }) + R(lx + 110, ly, 12, 12, { rx: 2, fill: 'var(--quiet)' }) + T(lx + 128, ly + 11, 'unmerged', { c: 'xs' }) + R(lx + 196, ly, 12, 12, { rx: 2, fill: 'var(--good)' }) + T(lx + 214, ly + 11, 'merged', { c: 'xs' });
+    return svg(760, ly + 22, s, 'Peak VRAM and latency per PEFT method');
+  },
+  notes: `<p>Backup detail for Canva slide 9 (not in the script). Two lessons:</p><ul><li><b>Memory:</b> trainable % does not set peak VRAM. BitFit trains 0.12% but still back-propagates through all 12 blocks; last-block attention stops the gradient at block 12 and needs only 1.43 GiB. Batch sizes and recipes also differ.</li><li><b>Latency:</b> LoRA and DoRA are slow before merging but identical to the plain ViT after merging. Adapters, AdaptFormer and prefixes cannot be merged.</li></ul><p>*The 7.78 ms LoRA merged figure uses the merged with-extras checkpoint.</p>`
+});
+
+/* ---- Where ---- */
+/* Script, Canva slide 10: two decisions → biases/norms +0.5 for 0.14% → placement ties → placement barely matters */
+S.push({
+  sec: 't2', kick: 'Task 2 · Where should the budget go?', short: 'Where the budget goes', title: 'Cheap adaptation in every block helps; once every block can adapt, placement barely matters',
+  src: '10,000-class holdout · 336 px · 3 epochs · 2 seeds (biases/norms: 1 seed, repeated on CodaBench +0.5) · differences < 0.4 pp are ties',
+  spec: { blocks: 'addon', head: 'train', res: '336 px', focus: ['blocks'] }, tune: 'Placement of PEFT parameters',
+  scripted: true,
+  pts: ['LayerNorms + biases in every block: <b>+0.50 pp</b> for only 0.14% of the backbone — kept.', 'Same budget, all 12 blocks vs last 8: LoRA and AdaptFormer both <b>tie</b> over two seeds.'],
+  ptsAt: [2, 3],
+  take: 'Once every block can adapt, <b>placement barely matters</b>.', takeAt: 4,
+  viz() {
+    let s = '';
+    s += stp(1, R(16, 8, 728, 40, { rx: 6, fill: 'var(--surfaceCool)', stroke: 'none', an: 'fi' }) + T(30, 34, 'A 5% budget means two decisions:  ① <tspan style="font-weight:700">where</tspan> to put the parameters (this slide)  ·  ② <tspan style="font-weight:700">what kind</tspan> (next slide)', { c: 'lbl', an: 'a' }));
+    // left: biases + norms ablation
+    const b0 = 330, pl = v => b0 - (v - 75.5) / 1.6 * 190;
+    let L = T(16, 78, 'LayerNorms + biases, off vs on', { c: 'ttl', an: 'a' }) + T(16, 96, 'AdaptFormer w192 · axis from 75.5', { c: 'xs', an: 'a' });
+    L += `<line x1="30" y1="${b0}" x2="300" y2="${b0}" class="ax"/>`;
+    L += R(50, pl(76.26), 90, b0 - pl(76.26), { rx: 4, fill: 'var(--plotNeutral)', an: 'gy', d: .1 }) + T(95, pl(76.26) - 8, '76.26', { a: 'middle', c: 'num', an: 'a', d: .5 });
+    L += R(180, pl(76.76), 90, b0 - pl(76.76), { rx: 4, fill: 'var(--train)', an: 'gy', d: .5 }) + T(225, pl(76.76) - 8, '76.76', { a: 'middle', c: 'num', an: 'a', d: .9 });
+    L += T(95, b0 + 18, 'frozen · 4.13%', { a: 'middle', c: 'sm' }) + T(225, b0 + 18, 'trained everywhere · 4.27%', { a: 'middle', c: 'sm' });
+    L += T(160, 128, '+0.50 pp for +0.14%', { a: 'middle', c: 'lbl bold', fill: 'var(--good)', an: 'a', d: 1.2 });
+    s += stp(2, L);
+    // right: placement at equal budget
+    const pr = v => b0 - (v - 76) / 1.6 * 190;
+    let Rt = `<line x1="330" y1="70" x2="330" y2="350" stroke="var(--grid)"/>` + T(350, 78, 'Placement at equal budget: all 12 blocks vs last 8', { c: 'ttl', an: 'a' }) + T(350, 96, 'biases + LayerNorms trainable in every block · 2 seeds · axis from 76', { c: 'xs', an: 'a' });
+    Rt += `<line x1="350" y1="${b0}" x2="744" y2="${b0}" class="ax"/>`;
+    const pair = (x, name, a, b, d0) => {
+      let o = R(x, pr(a), 70, b0 - pr(a), { rx: 4, fill: 'var(--plotNeutral)', an: 'gy', d: d0 }) + T(x + 35, pr(a) - 8, a.toFixed(2), { a: 'middle', c: 'num', an: 'a', d: d0 + .4 });
+      o += R(x + 80, pr(b), 70, b0 - pr(b), { rx: 4, fill: 'var(--plotNeutral)', fo: .6, an: 'gy', d: d0 + .2 }) + T(x + 115, pr(b) - 8, b.toFixed(2), { a: 'middle', c: 'num', an: 'a', d: d0 + .6 });
+      for (let i = 0; i < 12; i++) { o += R(x + 4 + i * 5.2, b0 + 8, 4, 10, { rx: 1, fill: 'var(--train)' }); o += R(x + 84 + i * 5.2, b0 + 8, 4, 10, { rx: 1, fill: i < 4 ? 'var(--quiet)' : 'var(--train)' }); }
+      o += T(x + 35, b0 + 34, 'all 12', { a: 'middle', c: 'xs' }) + T(x + 115, b0 + 34, 'last 8', { a: 'middle', c: 'xs' }) + T(x + 75, b0 + 52, name, { a: 'middle', c: 'sm bold' });
+      o += R(x + 47, pr(Math.max(a, b)) - 50, 56, 24, { rx: 12, fill: 'var(--goodFill)', stroke: 'var(--good)', sw: 1.5, an: 'pop', d: d0 + .9 }) + T(x + 75, pr(Math.max(a, b)) - 33, 'TIE', { a: 'middle', c: 'sm bold', fill: 'var(--good)', an: 'a', d: d0 + .9 });
+      return o;
+    };
+    Rt += pair(370, 'LoRA · 4.94%', 77.26, 77.33, .1) + pair(570, 'AdaptFormer · 4.27%', 76.77, 76.90, .4);
+    s += stp(3, Rt);
+    return svg(760, 392, s, 'Biases and LayerNorms ablation and placement ties');
+  },
+  notes: `<h3>Script (Van, Canva slide 10, ~30 s)</h3><p><b>[click 1 — banner]</b> A 5% budget means two decisions: where to put the parameters, and what kind. We ran an ablation for each.</p>
+  <p><b>[click 2 — left bars]</b> First, LayerNorms and biases in every block only take up a tiny 0.14% of the backbone, but give us a gain of half a point. We kept them.</p>
+  <p><b>[click 3 — right bars]</b> Then the second ablation, placement: same budget, all 12 blocks vs only the last 8. LoRA and AdaptFormer over two seeds both give a tie.</p>
+  <p><b>[click 4 — takeaway]</b> So once every block can adapt, placement barely matters.</p>`
+});
+
+/* ---- What kind ---- */
+/* Script, Canva slide 11: AF w192 4.27% → wider: no gain → add LoRA +0.6 → LoRA alone tie → trade-off */
+S.push({
+  sec: 't2', kick: 'Task 2 · What kind of capacity?', short: 'What kind of module', title: 'At an equal budget, LoRA beats wider adapters; AF + LoRA and LoRA alone tie',
+  src: '10,000-class holdout · 336 px · 3 epochs · 2-seed means · differences < 0.4 pp are ties',
+  spec: { blocks: 'addon', head: 'train', res: '336 px', focus: ['blocks'] }, tune: 'Type of PEFT capacity',
+  scripted: true,
+  pts: ['Spend the last ~0.7% on wider adapters: <b>no gain</b>. On LoRA: <b>+0.6</b> in both seeds.', 'LoRA alone at the same total budget: a <b>tie</b>.'],
+  ptsAt: [3, 4],
+  take: 'LoRA is the efficient way to add capacity. AdaptFormer stays because it <b>trains ~20% faster</b>; LoRA alone <b>predicts faster</b> — a trade-off.', takeAt: 5,
+  viz() {
+    let s = '';
+    const x0 = 270, W = 420, px = v => x0 + (v - 76) / 1.6 * W;
+    s += T(x0, 24, 'Holdout top-1, 2-seed mean (axis starts at 76%)', { c: 'sm' }) + `<line x1="${x0}" y1="36" x2="${x0}" y2="318" class="ax"/>`;
+    const rows = [
+      ['Start: AdaptFormer, width 192', '4.27% · ~0.7% left to spend', 76.77, 'var(--plotNeutral)', ''],
+      ['Option 1: wider adapters (224)', '4.96% of backbone', 76.84, 'var(--plotNeutral)', '+0.07 — no gain'],
+      ['Option 2: AF + LoRA (final)', '~4.95% of backbone', 77.43, 'var(--train)', '+0.6 over wider adapters, both seeds'],
+      ['Check: LoRA alone', '~4.95% of backbone', 77.26, 'var(--cA)', 'tie with AF + LoRA (−0.17)']];
+    rows.forEach((r, i) => {
+      const y = 46 + i * 68;
+      s += stp(i + 1, T(16, y + 12, r[0], { c: 'lbl bold', an: 'a' }) + T(16, y + 30, r[1], { c: 'sm', an: 'a' }) + R(x0, y, px(r[2]) - x0, 28, { rx: 4, fill: r[3], an: 'gx', d: .1 }) + T(px(r[2]) + 8, y + 19, r[2].toFixed(2) + '%', { c: 'num', an: 'a', d: .6 }) + (r[4] ? T(x0 + 4, y + 47, r[4], { c: 'sm', an: 'a', d: .7, fill: i === 1 ? 'var(--muted)' : 'var(--good)' }) : ''));
+    });
+    s += stp(5, R(16, 322, 728, 40, { rx: 6, fill: 'var(--surfaceCool)', stroke: 'none', an: 'fi' }) + T(30, 347, 'Trade-off:  AdaptFormer trains ~20% faster  ·  LoRA alone predicts faster (mergeable)', { c: 'lbl', an: 'a', d: .2 }));
+    return svg(760, 370, s, 'Wider adapters versus LoRA at an equal budget');
+  },
+  notes: `<h3>Script (Van, Canva slide 11, ~30 s)</h3><p><b>[click 1 — start]</b> Next: what kind of parameters. We start from AdaptFormer at width 192 — 4.27% of the backbone, leaving about 0.7% to spend.</p>
+  <p><b>[click 2]</b> Option one: make the adapters wider. No gain.</p>
+  <p><b>[click 3]</b> Option two: add LoRA. Plus 0.6, in both seeds.</p>
+  <p><b>[click 4]</b> We then tried LoRA alone at the same total budget: a tie.</p>
+  <p><b>[click 5 — trade-off]</b> So LoRA is the efficient way to add capacity. We keep AdaptFormer because it trains about 20% faster; LoRA alone predicts faster. It's a trade-off.</p>`
+});
+
+/* ---- Final design ---- */
+/* Script, Canva slide 12: 75.3 → +1 recipe → +0.5 → +0.66 → ~2 pts at 4.94% → CodaBench 77.9 → 81.2 → 82.2 */
+S.push({
+  sec: 't2', kick: 'Task 2 · Final design', short: 'Final PEFT design', title: 'The final PEFT design, built one kept change at a time',
+  src: 'Holdout: 10,000 classes, 336 px, 3 epochs · CodaBench: plain view unless stated',
+  spec: { blocks: 'addon', head: 'proto', res: '448 px', focus: ['blocks', 'input'] }, tune: 'Final PEFT configuration',
+  scripted: true,
+  pts: ['Holdout: 75.3 → <b>77.4</b> — about two points in total, at <b>4.94%</b> of the backbone.', 'CodaBench: 77.9 → <b>81.2</b> at 448 px, and <b>82.2</b> with zoom inference.'],
+  ptsAt: [5, 6],
+  take: 'Every addition was screened on the holdout; only the retained recipe advanced to CodaBench.', takeAt: 6,
+  viz() {
+    let s = '';
+    const base = 220, H = 170, py = v => base - (v - 74.5) / 3.3 * H, cols = [50, 190, 330, 470, 610];
+    s += T(16, 22, 'Holdout top-1 at 336 px, 3 epochs (axis starts at 74.5%)', { c: 'sm' }) + `<line x1="30" y1="${base}" x2="740" y2="${base}" class="ax"/>`;
+    const steps = [['AF, default recipe', 75.27, null], ['+ cosine margin', 76.26, 75.27, '+0.99'], ['+ biases & norms', 76.76, 76.26, '+0.50'], ['+ LoRA', 77.43, 76.76, '+0.66'], ['Final: AF + LoRA', 77.43, 'full']];
+    steps.forEach((st0, i) => {
+      const x = cols[i], top = py(st0[1]), bot = st0[2] === null || st0[2] === 'full' ? base : py(st0[2]);
+      const fill = i === 0 ? 'var(--plotNeutral)' : i === 4 ? 'var(--train)' : 'var(--good)';
+      let g = R(x, top, 100, Math.max(bot - top, 3), { rx: 4, fill, an: 'gy' });
+      if (i > 0 && i < 4) g += `<line x1="${cols[i - 1] + 100}" y1="${py(st0[2])}" x2="${x}" y2="${py(st0[2])}" stroke="var(--frozen)" stroke-dasharray="3 3" class="fi"/>`;
+      g += T(x + 50, top - 8, i > 0 && i < 4 ? st0[3] : st0[1].toFixed(2) + '%', { a: 'middle', c: 'num', an: 'a', d: .4 }) + T(x + 50, base + 18, st0[0], { a: 'middle', c: 'sm', an: 'a' });
+      if (i === 4) g += T(x + 50, top - 28, '≈ +2 pp · 4.94%', { a: 'middle', c: 'sm bold', fill: 'var(--train)', an: 'a', d: .6 });
+      s += stp(i + 1, g);
+    });
+    let cbg = T(16, 270, 'CodaBench top-1: the same path at higher resolution, then zoom inference', { c: 'sm', an: 'a' });
+    const cb = [['AF, 336 px', 77.9], ['+ norms, 384 px', 79.4], ['448 px', 80.4], ['+ LoRA, 448 px', 81.2], ['+ crop & zoom', 82.2]];
+    const cy = v => 400 - (v - 77) / 6 * 100;
+    let d = `M${cols[0] + 50} ${cy(cb[0][1])}`; cb.forEach((c, i) => { if (i) d += ` L${cols[i] + 50} ${cy(c[1])}`; });
+    cbg += P(d, { c: 'flow', an: 'draw', d: .2, stroke: 'var(--cA)', sw: 2.5 });
+    cb.forEach((c, i) => { cbg += C(cols[i] + 50, cy(c[1]), 5, { fill: 'var(--cA)', an: 'pop', d: .2 + i * .2 }) + T(cols[i] + 50, cy(c[1]) - 12, c[1] + '%', { a: 'middle', c: 'num', an: 'a', d: .3 + i * .2 }) + T(cols[i] + 50, 420, c[0], { a: 'middle', c: 'sm', an: 'a', d: .2 + i * .2 }); });
+    s += stp(6, cbg);
+    return svg(760, 430, s, 'Waterfall of final design steps and CodaBench path');
+  },
+  notes: `<h3>Script (Van, Canva slide 12, ~25 s)</h3><p>Putting it together, from where we started. This is our final design.</p>
+  <p><b>[click 1]</b> AdaptFormer with the default recipe: 75.3 top-1.</p>
+  <p><b>[click 2]</b> Adding recipe tweaks, mainly a cosine margin on the head: plus one point.</p>
+  <p><b>[click 3]</b> Biases and LayerNorms in every block: plus 0.5.</p>
+  <p><b>[click 4]</b> LoRA: plus 0.66.</p>
+  <p><b>[click 5]</b> About two points in total, at 4.94% of the backbone.</p>
+  <p><b>[click 6]</b> On CodaBench the same path goes from 77.9 to 81.2 at 448 resolution, and 82.2 with zoom inference.</p>`
+});
+
+/* ---- Task 3 divider ---- */
+S.push({
+  type: 'section', sec: 't3', n: '3', title: 'Error analysis and prediction', spec: { blocks: 'frozen', head: 'frozen', predict: 'extend', res: '448 px', focus: ['input', 'predict'] },
+  tune: 'nothing — prediction only', pred: true,
+  q: '<b>Q3 ·</b> What causes errors after adaptation, and how can we improve predictions?',
+  desc: 'No weights change in this section. We first characterise the remaining errors on the holdout, then add two prediction-time extensions: a second, zoomed view and nearest-neighbour re-ranking.',
+  notes: `<p>Task 3 trains nothing. The schematic turns grey; only the output stage (green) changes. First we study the mistakes, then two tricks that improve predictions without retraining.</p>`
+});
+
+/* ---- Error gallery ---- */
+S.push({
+  sec: 't3', kick: 'Task 3 · Error analysis', short: 'What goes wrong', title: 'Look-alike relatives and unfamiliar looks are the two main causes of error',
+  src: 'Red box = the crop the model saw · % = model confidence · hand-picked illustrations, not frequencies · full FT at 336 px (screening run)',
+  spec: { blocks: 'frozen', head: 'frozen', predict: 'analyse', focus: ['predict'] }, tune: 'Nothing — error analysis', pred: true,
+  viz() { return errorCases(); },
+  pts: ['Each case: the holdout image (red box = crop the model saw), then training images of the <b>true</b> and the <b>predicted</b> class.', 'Tiny subjects and subjects outside the crop motivate a second, zoomed view.'],
+  take: 'The remaining mistakes are not random — the next slide measures how often each cause occurs.',
+  notes: `<p>Walk through the four cases. Look-alike relatives: two dowitcher species. Tiny subject: the hoverfly occupies a few pixels, so the model labels the flower. Subject outside the crop: the spider falls outside the centre crop. Unfamiliar look: the coneflower photographed in a state unlike its training images.</p><p>These are hand-picked illustrations, not frequencies.</p>`
+});
+
+/* ---- Flags ---- */
+S.push({
+  sec: 't3', kick: 'Task 3 · Error analysis', short: 'Causes of error', title: 'Most errors involve look-alikes or unfamiliar views',
+  src: 'All-class holdout (10,000 classes, 5 images each) · LoRA r24 · 11,111 errors · flags overlap and use the model’s own features',
+  spec: { blocks: 'frozen', head: 'frozen', predict: 'analyse', focus: ['predict'] }, tune: 'Nothing — error analysis', pred: true,
+  pts: ['<b>Sibling</b> (50%) and <b>messy class</b> (77%) reflect inter-class similarity.', '<b>Unseen look</b> (52%) and <b>two looks</b> (5%) reflect intra-class variation; only 4% of errors carry no flag.'],
+  take: 'About half of all errors are <b>unseen looks</b> and about half are <b>look-alike siblings</b>.',
+  viz() {
+    let s = '';
+    const W = 176, panels = [
+      ['Sibling', 'wrong prediction is a', 'closely related class', 50, 5539],
+      ['Unseen look', 'image unlike every training', 'image of its class', 52, 5763],
+      ['Two looks', 'image shows the class’s', 'rarer appearance', 5, 538],
+      ['Messy class', 'class’s training images', 'overlap another class', 77, 8537]];
+    panels.forEach((p, i) => {
+      const x = 16 + i * 184, d0 = i * .7;
+      s += R(x, 16, W, 220, { c: 'card', an: 'a', d: d0 });
+      s += T(x + 12, 40, p[0], { c: 'ttl', an: 'a', d: d0 });
+      s += T(x + 12, 58, p[1], { c: 'xs', an: 'a', d: d0 }) + T(x + 12, 72, p[2], { c: 'xs', an: 'a', d: d0 });
+      if (i === 0) { const A = cl(x + 62, 150, 14, 14, 14, 31), B = cl(x + 118, 158, 14, 14, 14, 37); s += dots(A, 'var(--cA)', d0 + .2, 3) + dots(B, 'var(--cB)', d0 + .3, 3); const mb = mean(B); s += star(mb[0], mb[1], 'var(--cB)', d0 + .5, .8) + ring(x + 92, 150, 'var(--cA)', d0 + .6) + P(`M${x + 99} 152 L${mb[0] - 9} ${mb[1] - 2}`, { c: 'flow', m: 'arR', an: 'draw', d: d0 + .8, stroke: 'var(--bad)' }); }
+      if (i === 1) { const A = cl(x + 60, 130, 18, 14, 13, 41); s += dots(A, 'var(--cA)', d0 + .2, 3) + ring(x + 140, 200, 'var(--cA)', d0 + .6) + P(`M${x + 132} 194 L${x + 82} 150`, { c: 'flow', an: 'draw', d: d0 + .8, dash: '4 3' }) + T(x + 120, 166, 'far', { c: 'xs', an: 'a', d: d0 + 1 }); }
+      if (i === 2) { const A = cl(x + 62, 125, 20, 14, 12, 51), A2 = cl(x + 130, 195, 6, 7, 6, 53); s += dots(A, 'var(--cA)', d0 + .2, 3) + dots(A2, 'var(--cA)', d0 + .4, 3) + ring(x + 128, 192, 'var(--cA)', d0 + .6); }
+      if (i === 3) { const A = cl(x + 80, 150, 18, 22, 20, 61), B = cl(x + 100, 160, 18, 22, 20, 67); s += dots(A, 'var(--cA)', d0 + .2, 3) + dots(B, 'var(--cB)', d0 + .3, 3); }
+      s += T(x + 12, 262, 'share of the 11,111 errors', { c: 'xs', an: 'a', d: 3 });
+      s += R(x + 12, 272, p[3] / 100 * 152, 18, { rx: 4, fill: 'var(--train)', an: 'gx', d: 3.1 + i * .15 });
+      s += T(x + 12, 308, p[3] + '%  (' + p[4].toLocaleString() + ')', { c: 'num', an: 'a', d: 3.4 + i * .15 });
+    });
+    return svg(760, 320, s, 'Four error flags illustrated');
+  },
+  notes: `<h3>Same picture as the challenge slide</h3><p>Each panel shows one cause. The ring is the misclassified image; colour is its true class.</p>
+  <ul><li><b>Sibling</b> and <b>messy class</b> = "different classes, similar appearance".</li><li><b>Unseen look</b> and <b>two looks</b> = "same class, different appearances".</li></ul>
+  <p>An image can carry several flags, so the bars sum to more than 100%. Only 4% of errors (436 images) have none. If asked whether messy class is the biggest risk: no — see Appendix E; unseen-look images fail 60% of the time, messy-class images only 29%.</p>`
+});
+
+/* ---- Zoom gallery ---- */
+S.push({
+  sec: 't3', kick: 'Task 3 · Prediction extension 1', short: 'Zoom: mechanism', title: 'Some images need a closer look: zoom re-classifies the evidence region',
+  src: 'Selected examples where zoom changed the answer, not how often · LoRA r24 at 336 px, all-class holdout · % = confidence (with zoom: average of both passes)',
+  spec: { blocks: 'frozen', head: 'frozen', predict: 'extend', predLabel: 'second view', focus: ['input', 'predict'] }, tune: 'Prediction: second, zoomed view', pred: true,
+  viz() { return zoomCases(); },
+  pts: ['Pass 1 locates where the model found its evidence (red box).', 'Pass 2 crops that region from a <b>2× copy</b> and classifies again; the two predictions are averaged.'],
+  take: 'No retraining: the only cost is one extra forward pass. Zoom can also break a correct answer (example 3).',
+  notes: `<p>Zoom finds where the model saw its evidence, crops it from a 2× copy, classifies again and averages the two predictions.</p><p>Examples 1 and 2: the subject is small or cluttered, so the second pass corrects the answer. Example 3 is honest: zooming in on the crest loses the context that separated the two titmice. These are selected examples, not frequencies — the next slide gives the net effect.</p>`
+});
+
+/* ---- Zoom chart ---- */
+S.push({
+  sec: 't3', kick: 'Task 3 · Prediction extension 1', short: 'Zoom vs flip', title: 'An attention-guided second view beats a flipped view at equal cost',
+  src: 'Holdout · full FT at 336 px after 3 epochs · centre crop 0.75 · centred box = same size as the aimed box, placed centrally',
+  spec: { blocks: 'frozen', head: 'frozen', predict: 'extend', predLabel: 'second view', focus: ['input', 'predict'] }, tune: 'Prediction: choice of second view', pred: true,
+  pts: ['Top-1: flip <b>78.97%</b>, centred box <b>79.43%</b>, aimed zoom <b>79.59%</b> (single view 78.8%).', 'The centred box isolates the effect of zooming; aiming the box adds the rest.'],
+  take: 'Same two passes as a flip, <b>four times the gain</b>.',
+  viz() {
+    let s = '';
+    const F = 170, cols = [['Single view', 78.8, ''], ['+ flipped view', 78.97, '+0.2'], ['+ centred box', 79.43, '+0.6'], ['+ aimed zoom', 79.59, '+0.8']];
+    cols.forEach((c, i) => {
+      const x = 16 + i * 186, y = 40, d = i * .6;
+      s += T(x, 28, c[0], { c: 'ttl', an: 'a', d });
+      s += R(x, y, F, F, { rx: 4, fill: 'var(--photoFill)', stroke: 'var(--photoLine)', an: 'a', d });
+      s += G(`<line x1="${x + 4}" y1="${y + F * .8}" x2="${x + F - 4}" y2="${y + F * .72}" stroke="var(--earth)" stroke-width="3"/>` + (i === 1 ? bird(x + F * .32, y + F * .65, .7, 'var(--illustration)', true) : bird(x + F * .68, y + F * .65, .7)), { an: 'a', d });
+      if (i === 2) s += R(x + F * .225, y + F * .225, F * .55, F * .55, { rx: 2, fill: 'none', stroke: 'var(--cA)', sw: 2.5, dash: '6 4', an: 'pop', d: d + .4 });
+      if (i === 3) s += `<g class="aim" style="--d:${d + .4}s">${R(x + F * .225, y + F * .225, F * .55, F * .55, { rx: 2, fill: 'none', stroke: 'var(--train)', sw: 3, dash: '6 4' })}</g>`;
+      s += R(x, 238, (c[1] - 78) / 2 * F, 22, { rx: 4, fill: i === 3 ? 'var(--train)' : 'var(--plotNeutral)', an: 'gx', d: 2.6 + i * .15 });
+      s += T(x, 284, c[1].toFixed(1) + '%', { c: 'big', an: 'a', d: 2.8 + i * .15 });
+      s += T(x + 104, 284, c[2], { c: 'num', fill: 'var(--good)', an: 'a', d: 2.9 + i * .15 });
+    });
+    return svg(760, 300, s, 'Four ways to take a second look');
+  },
+  notes: `<ul><li><b>Flip:</b> the second view is a mirror image. Barely helps (+0.2).</li><li><b>Centred box:</b> same-size crop at the centre, enlarged. Helps (+0.6) — the subject is often small, the same lesson as the resolution slide.</li><li><b>Aimed zoom:</b> the crop follows the model's evidence. Best (+0.8).</li></ul>
+  <p>Exact values: 79.59 with zoom, 79.43 with a centred box, 78.97 with flip.</p>`
+});
+
+/* ---- Near misses ---- */
+S.push({
+  sec: 't3', kick: 'Task 3 · Motivation for extension 2', short: 'Near misses', title: 'The right answer is usually close: top-5 accuracy is 92.0%',
+  src: 'All-class holdout (10,000 classes, 5 images each) · LoRA r24 · share of images with the true class among the k highest-scoring predictions',
+  spec: { blocks: 'frozen', head: 'frozen', predict: 'analyse', focus: ['predict'] }, tune: 'Nothing — error analysis', pred: true,
+  pts: ['Top-1 is 77.8% but top-5 is <b>92.0%</b>; top-1 → top-2 alone adds <b>+8.2 pp</b>.', 'Of the 11,111 errors, 37% rank the true class second and 64% within the top 5.'],
+  take: 'Re-ordering the short list could fix many errors <b>without retraining</b>.',
+  viz() {
+    let s = '';
+    s += R(16, 20, 290, 290, { c: 'card', an: 'a' });
+    s += T(32, 48, 'Example error: ranked predictions', { c: 'ttl', an: 'a' });
+    const g = [['#1', 'class 5395', '✗ predicted', 'var(--bad)'], ['#2', 'class 5393', '✓ true class', 'var(--good)'], ['#3', 'class 5401', '', ''], ['#4', 'class 2210', '', ''], ['#5', 'class 5388', '', '']];
+    g.forEach((r, i) => { const y = 66 + i * 44, d = .3 + i * .2; s += R(32, y, 258, 34, { fill: i === 1 ? 'var(--goodFill)' : i === 0 ? 'var(--badFill)' : 'var(--surface)', stroke: 'none', an: 'gx', d, rx: 6 }); s += T(44, y + 22, r[0], { c: 'num', an: 'a', d }) + T(80, y + 22, r[1], { an: 'a', d }) + T(280, y + 22, r[2], { a: 'end', c: 'sm', fill: r[3] || 'var(--muted)', an: 'a', d }); });
+    const x0 = 360, W = 370, cats = ['1', '2', '3', '5', '10'], vals = [77.8, 86, 89.2, 92, 94.4], px = i => x0 + i / 4 * W, py = v => 280 - (v - 74) / 22 * 240;
+    s += T(x0, 30, 'True class within the top-k predictions', { c: 'sm' });
+    s += `<line x1="${x0}" y1="280" x2="${x0 + W}" y2="280" class="ax"/>`;
+    let d = ''; vals.forEach((v, i) => d += (i ? ' L' : 'M') + px(i) + ' ' + py(v));
+    s += P(d, { c: 'flow', an: 'draw', d: 1.4, stroke: 'var(--train)', sw: 3 });
+    vals.forEach((v, i) => s += C(px(i), py(v), 5, { fill: 'var(--train)', an: 'pop', d: 1.4 + i * .2 }) + T(px(i), py(v) - 12, v.toFixed(1) + '%', { a: 'middle', c: 'num', an: 'a', d: 1.5 + i * .2 }) + T(px(i), 298, 'top-' + cats[i], { a: 'middle', c: 'sm' }));
+    s += T(px(0.5) + 14, py(80) + 2, '+8.2', { a: 'start', c: 'sm', fill: 'var(--good)', an: 'a', d: 2.6 });
+    return svg(760, 320, s, 'Ranked predictions and top-k accuracy');
+  },
+  notes: `<p>LoRA r24 on the all-class holdout: 77.8% top-1, 11,111 errors. In 37% of errors the true class was prediction #2; in 64% it was in the top 5. The biggest jump is top-1 → top-2 (+8.2 points).</p><p>The model often narrows the choice to a few candidates and picks the wrong one — so a second opinion on the short list should help. That is extension 2.</p>`
+});
+
+/* ---- kNN mechanism ---- */
+S.push({
+  sec: 't3', kick: 'Task 3 · Prediction extension 2', short: 'kNN re-ranking', title: 'kNN re-ranking scores the short list against individual training images',
+  src: 'Settings: top 5 candidates, 3 best cosines, weight 20 — fixed on one half of the classes, scored on the other · feature panel schematic',
+  spec: { blocks: 'frozen', head: 'frozen', predict: 'extend', predLabel: 'kNN re-rank', focus: ['predict'] }, tune: 'Prediction: kNN re-ranking', pred: true,
+  pts: ['Score = <b>log p + 20 × mean of the 3 best cosines</b> to each candidate’s training images.', 'Uses a feature bank of every training image, built once by the same model.'],
+  take: 'No training and no trainable parameters.',
+  viz() {
+    let s = '';
+    s += R(16, 16, 470, 320, { c: 'card', an: 'a' });
+    const A = cl(150, 160, 30, 26, 24, 71), B1 = cl(372, 110, 22, 24, 22, 79), B2 = cl(236, 262, 8, 12, 9, 83), B = B1.concat(B2);
+    s += dots(A, 'var(--cA)', .2) + dots(B, 'var(--cB)', .4);
+    const mA = mean(A), mB = mean(B);
+    s += star(mA[0], mA[1], 'var(--cA)', 1.2) + star(mB[0], mB[1], 'var(--cB)', 1.3);
+    s += T(mA[0] - 16, mA[1] + 4, 'prototype A', { c: 'xs', an: 'a', d: 1.3, a: 'end' }) + T(mB[0] + 16, mB[1] + 4, 'prototype B', { c: 'xs', an: 'a', d: 1.4 });
+    const q = [208, 236];
+    s += ring(q[0], q[1], 'var(--cB)', 1.8) + T(q[0] - 12, q[1] + 26, 'query (true class B)', { c: 'sm', an: 'a', d: 1.9, a: 'end' });
+    s += P(`M${q[0] - 6} ${q[1] - 8} L${mA[0] + 9} ${mA[1] + 9}`, { c: 'flow', m: 'arR', an: 'draw', d: 2.4, stroke: 'var(--bad)', dash: '5 4', sw: 2 });
+    s += T(30, 44, 'Head: nearest class prototype → A ✗', { c: 'lbl', fill: 'var(--bad)', an: 'a', d: 2.6 });
+    const near = B.map(p => [p, Math.hypot(p[0] - q[0], p[1] - q[1])]).sort((a, b) => a[1] - b[1]).slice(0, 3).map(x => x[0]);
+    near.forEach((p, i) => s += P(`M${q[0]} ${q[1]} L${p[0].toFixed(1)} ${p[1].toFixed(1)}`, { c: 'flow', an: 'draw', d: 3.3 + i * .2, stroke: 'var(--good)', sw: 2.5 }));
+    s += T(30, 66, 'kNN: 3 nearest training images → B ✓', { c: 'lbl', fill: 'var(--good)', an: 'a', d: 3.8 });
+    const lx = 510;
+    s += T(lx, 40, 'Top-5 short list', { c: 'ttl' });
+    s += `<g class="swapDown" style="--d:4.2s">${R(lx, 60, 234, 36, { fill: 'var(--badFill)', stroke: 'none', rx: 6 })}${T(lx + 12, 83, 'Class A', { c: 'lbl bold' })}</g>`;
+    s += `<g class="swapUp" style="--d:4.2s">${R(lx, 104, 234, 36, { fill: 'var(--goodFill)', stroke: 'none', rx: 6 })}${T(lx + 12, 127, 'Class B', { c: 'lbl bold' })}</g>`;
+    s += R(lx, 148, 234, 36, { fill: 'var(--surface)', stroke: 'none', rx: 6 }) + T(lx + 12, 171, 'Class C', { c: 'lbl' });
+    s += T(lx, 214, 'Re-scored: B moves to #1', { c: 'sm', fill: 'var(--good)', an: 'a', d: 6 });
+    s += T(lx, 252, 'Gain over the model alone', { c: 'sm', an: 'a', d: 6.2 }) + T(lx, 280, '+1.32 / +1.40 pp', { c: 'big', an: 'a', d: 6.3 });
+    s += T(lx, 308, 'holdout / CodaBench', { c: 'sm', an: 'a', d: 6.5 });
+    return svg(760, 350, s, 'kNN re-ranking illustration');
+  },
+  notes: `<h3>Why the head can be fooled</h3><p>The head represents each class by one average point (★). Class B has a rarer second appearance (bottom cluster), so B's average sits far from those images.</p>
+  <h3>The fix</h3><ol><li>The model proposes its top 5 classes (with zoom: averaged probabilities).</li><li>For each, take the 3 best cosine similarities between the query and that class's training images, and average them.</li><li>Score = log p + 20 × that average; re-sort.</li></ol>
+  <p>Settings were chosen on one half of the classes and scored on the other — never tuned on CodaBench.</p>`
+});
+
+/* ---- kNN variants ---- */
+S.push({
+  sec: 't3', kick: 'Task 3 · Prediction extension 2', short: 'kNN variants', title: 'Matching individual images beats matching class summaries',
+  src: 'All-class holdout (50,000 images) · LoRA r24, no extras · top 5 candidates · weight chosen on the other half of the classes',
+  spec: { blocks: 'frozen', head: 'frozen', predict: 'extend', predLabel: 'kNN re-rank', focus: ['predict'] }, tune: 'Prediction: choice of kNN variant', pred: true,
+  pts: ['Individual-image variants gain <b>+1.14 to +1.32 pp</b>; class summaries only +0.13 to +0.70 pp.', 'The chosen variant (mean of 3) keeps <b>+1.23 pp</b> on top of zoom.'],
+  take: 'Averaging a class erases its rare appearances; individual neighbours preserve them.',
+  viz() {
+    let s = '';
+    const x0 = 340, W = 280, px = v => v / 1.4 * W;
+    s += T(x0, 24, 'Gain over the model alone (pp)', { c: 'sm' }) + T(744, 24, 'on top of zoom', { c: 'sm', a: 'end' });
+    const G1 = [['kNN mean of 3 (chosen)', 'mean cosine to the class’s 3 closest images', 1.32, 1.23, true], ['kNN best match', 'cosine to the single closest image', 1.18, 1.02], ['Weighted vote', '50 nearest images of any class, vote', 1.14, 1.03]];
+    const G2 = [['3 k-means centres', 'best cosine to 3 centres of the class', .70, .69], ['Class mean (NCM)', 'cosine to the class average feature', .55, .49], ['kNN mean of all', 'mean cosine to all of the class’s images', .13, .13]];
+    let y = 44;
+    const row = (r, d) => T(16, y + 18, r[0], { c: 'lbl bold', an: 'a', d }) + T(16, y + 34, r[1], { c: 'sm', an: 'a', d }) + R(x0, y + 10, px(r[2]), 24, { rx: 4, fill: r[4] ? 'var(--good)' : 'var(--plotNeutral)', an: 'gx', d: d + .1 }) + T(x0 + px(r[2]) + 8, y + 27, '+' + r[2].toFixed(2), { c: 'num', an: 'a', d: d + .5 }) + T(744, y + 27, '+' + r[3].toFixed(2), { c: 'num', a: 'end', an: 'a', d: d + .5, fill: 'var(--muted)' });
+    s += T(16, y + 6, 'Compares with individual training images', { c: 'ttl', an: 'a', d: .1 }); y += 14;
+    G1.forEach((r, i) => { s += row(r, .3 + i * .3); y += 48; });
+    y += 16;
+    s += T(16, y + 6, 'Compares with a summary of the class', { c: 'ttl', an: 'a', d: 1.3 }); y += 14;
+    G2.forEach((r, i) => { s += row(r, 1.5 + i * .3); y += 48; });
+    return svg(760, y + 8, s, 'Gains of six kNN re-ranking variants');
+  },
+  notes: `<p>Six ways to compare the query with each candidate class. The three that compare with <b>individual</b> training images win clearly; the three that compare with a <b>summary</b> of the class (centres, mean) lose most of the gain, because a summary averages away the rare appearances that caused the error.</p><p>Settings tried: top 2 / 3 / 5, 1 or 3 matches, weight 0 to 40; both halves chose top 5, 3, 20. A learned linear re-ranker added only +0.29 over kNN mean of 3 after zoom and was not kept.</p>`
+});
+
+/* ---- Gains add up ---- */
+S.push({
+  sec: 't3', kick: 'Task 3 · Both extensions', short: 'Zoom + kNN', title: 'Zoom and kNN gains add up: +2.0 pp without retraining',
+  src: 'Holdout: all-class (10,000 classes, 5 images each), LoRA r24, centre crop 0.75 · CodaBench: same prediction pass, before vs after kNN',
+  spec: { blocks: 'frozen', head: 'frozen', predict: 'extend', focus: ['input', 'predict'] }, tune: 'Prediction: zoom + kNN combined', pred: true,
+  pts: ['Holdout: zoom +0.7, kNN +1.3, both <b>+2.0 pp</b> (78.31 → 80.27).', 'CodaBench after zoom: full FT 83.22 → <b>84.07</b>; PEFT 82.2 → <b>83.08</b>.'],
+  take: 'The two extensions repair <b>different</b> errors, so their gains add.',
+  viz() {
+    let s = '';
+    const base = 280, H = 210, py = v => base - (v - 77) / 3.6 * H;
+    s += T(16, 24, 'Holdout top-1 (axis starts at 77%)', { c: 'sm' });
+    s += `<line x1="16" y1="${base}" x2="470" y2="${base}" class="ax"/>`;
+    const vals = [['Plain', 78.31, ''], ['+ zoom', 79.04, '+0.7'], ['+ kNN', 79.63, '+1.3'], ['+ zoom and kNN', 80.27, '+2.0']];
+    vals.forEach((v, i) => {
+      const x = 30 + i * 112, d = .3 + i * .4;
+      s += R(x, py(v[1]), 84, base - py(v[1]), { rx: 4, fill: i === 0 ? 'var(--quiet)' : i === 3 ? 'var(--good)' : 'var(--cA)', an: 'gy', d });
+      s += T(x + 42, py(v[1]) - 8, v[1].toFixed(1), { a: 'middle', c: 'num', an: 'a', d: d + .5 });
+      if (v[2]) s += T(x + 42, py(v[1]) - 26, v[2] + ' pp', { a: 'middle', c: 'sm', fill: 'var(--good)', an: 'a', d: d + .6 });
+      s += T(x + 42, base + 18, v[0], { a: 'middle', c: 'sm' });
+    });
+    const lx = 506;
+    s += T(lx, 40, 'CodaBench, same prediction pass', { c: 'ttl', an: 'a', d: 2 });
+    [['LoRA, 336 px · + kNN', '78.42 → 79.82', '+1.40'], ['Full FT, 448 px · zoom → + kNN', '83.22 → 84.07', '+0.85'], ['PEFT, 448 px · zoom → + kNN', '82.20 → 83.08', '+0.88']].forEach((r, i) => {
+      const y = 74 + i * 66, d = 2.2 + i * .3;
+      s += R(lx, y, 238, 54, { fill: 'var(--surface)', stroke: 'none', rx: 8, an: 'gx', d });
+      s += T(lx + 12, y + 20, r[0], { c: 'sm', an: 'a', d: d + .1 }) + T(lx + 12, y + 42, r[1], { c: 'num', an: 'a', d: d + .1 }) + T(lx + 226, y + 42, r[2], { c: 'num', a: 'end', fill: 'var(--good)', an: 'a', d: d + .2 });
+    });
+    return svg(760, 310, s, 'Holdout gains of zoom and kNN, and CodaBench gains');
+  },
+  notes: `<p>On the holdout: plain 78.31, zoom alone +0.7, kNN alone +1.3, both together 80.27 (+2.0). On CodaBench the kNN gain held on top of zoom for both final systems: full FT 0.8322 → 0.8407, Task 2 0.822 → 0.8308.</p>`
+});
+
+/* ---- Final systems ---- */
+S.push({
+  sec: 'end', kick: 'Final systems', short: 'Final systems', title: 'With one prediction pipeline, PEFT finishes within 1.0 pp of full fine-tuning',
+  src: 'CodaBench · 448 px · 144 training minutes · crop 0.9 with zoom · Task 2 zoom and zoom + kNN from separate prediction runs of one checkpoint · resolution step not perfectly matched',
+  cycle: [
+    { spec: { blocks: 'train', head: 'proto', res: '448 px', predict: 'extend', focus: ['blocks', 'predict'] }, label: 'Full FT · <b>100%</b> of backbone trained' },
+    { spec: { blocks: 'addon', head: 'proto', res: '448 px', predict: 'extend', focus: ['blocks', 'predict'] }, label: 'AF + LoRA · <b>4.94%</b> of backbone trained' }
+  ],
+  pts: ['Full FT: 82.5 → 83.22 → <b>84.07</b>; AF + LoRA (4.94%): 81.2 → 82.2 → <b>83.08</b>.', 'The Task 1 score was built mainly by the recipe (+9.4) and resolution (+6.8).'],
+  take: 'The gap stays ≈1.0–1.3 pp at every stage: the extensions help both systems alike.',
+  viz() {
+    let s = '';
+    s += T(16, 24, 'Same pipeline · CodaBench top-1 (axis 81–85%)', { c: 'sm' });
+    const xs = [70, 195, 320], py = v => 290 - (v - 81) / 4 * 220;
+    [81, 82, 83, 84, 85].forEach(v => s += `<line x1="40" y1="${py(v)}" x2="360" y2="${py(v)}" stroke="var(--grid)"/>` + T(32, py(v) + 4, v, { a: 'end', c: 'xs' }));
+    const lines = [[[82.5, 83.22, 84.07], 'var(--cA)', 'Full FT, 100%', 0], [[81.2, 82.2, 83.08], 'var(--train)', 'AF + LoRA, 4.94%', 1.2]];
+    lines.forEach(L => {
+      let d = ''; L[0].forEach((v, i) => d += (i ? ' L' : 'M') + xs[i] + ' ' + py(v).toFixed(1));
+      s += P(d, { c: 'flow', an: 'draw', d: .3 + L[3], stroke: L[1], sw: 3 });
+      L[0].forEach((v, i) => s += C(xs[i], py(v), 5.5, { fill: L[1], an: 'pop', d: .4 + L[3] + i * .3 }) + T(xs[i] + (i === 2 ? 10 : 0), py(v) + (L[3] ? 20 : -12), String(v), { a: i === 2 ? 'start' : 'middle', c: 'num', an: 'a', d: .5 + L[3] + i * .3 }));
+      const lx = L[3] ? 200 : 60;
+      s += C(lx, 43, 5, { fill: L[1], an: 'pop', d: .2 + L[3] }) + T(lx + 10, 47, L[2], { c: 'sm', fill: L[1], an: 'a', d: .2 + L[3] });
+    });
+    ['Single view', '+ zoom', '+ zoom + kNN'].forEach((t, i) => s += T(xs[i], 312, t, { a: 'middle', c: 'sm' }));
+    s += `<line x1="400" y1="20" x2="400" y2="320" stroke="var(--grid)"/>`;
+    const x0 = 420, py2 = v => 290 - (v - 60) / 30 * 240;
+    s += T(x0, 24, 'What built the Task 1 score (axis from 60%)', { c: 'sm' });
+    s += `<line x1="${x0}" y1="290" x2="744" y2="290" class="ax"/>`;
+    const steps = [['224 base', 66.3, 60], ['Recipe', 75.7, 66.3], ['448 px', 82.5, 75.7], ['Zoom', 83.22, 82.5], ['kNN', 84.07, 83.22]];
+    steps.forEach((r, i) => {
+      const x = x0 + 8 + i * 64, d = 2.2 + i * .35, top = py2(r[1]), bot = py2(r[2]);
+      s += R(x, top, 48, Math.max(bot - top, 3), { rx: 3, fill: i === 0 ? 'var(--quiet)' : 'var(--good)', fo: i === 0 ? 1 : .55, an: 'gy', d });
+      if (i) s += `<line x1="${x - 16}" y1="${bot}" x2="${x}" y2="${bot}" stroke="var(--flow)" stroke-dasharray="3 3" class="fi" style="--d:${d}s"/>`;
+      s += T(x + 24, top - 8, i ? '+' + (r[1] - r[2]).toFixed(i > 2 ? 2 : 1) : '66.3', { a: 'middle', c: 'num', an: 'a', d: d + .3 });
+      s += T(x + 24, 308, r[0], { a: 'middle', c: 'sm' });
+    });
+    s += T(744, py2(84.07) - 26, '= 84.07', { a: 'end', c: 'num', fill: 'var(--good)', an: 'a', d: 4.2 });
+    return svg(760, 324, s, 'Final systems through the prediction pipeline, and the Task 1 score build-up');
+  },
+  notes: `<p>Left: both final systems through the same pipeline. The gap is 1.3 points with a single view and about 1.0 point after zoom and kNN.</p><p>Right: where the Task 1 score came from. The scheduled full fine-tune at 224 px scored 66.3; the recipe (prototype head, layer decay, fitted schedule) added 9.4; moving to 448 px added 6.8; zoom +0.72 and kNN +0.85 complete 84.07. The resolution step's runs are not perfectly matched.</p>`
+});
+
+/* ---- Verdict ---- */
+S.push({
+  sec: 'end', kick: 'Answer to Q1', short: 'Verdict', title: 'Full FT wins accuracy and inference speed; PEFT wins parameter and memory efficiency',
+  src: 'CodaBench, zoom + kNN · 448 px · latency: A100, one session, per image, PEFT with LoRA merged (before merging: 13.45 and 33.78 ms)',
+  cycle: [
+    { spec: { blocks: 'train', head: 'proto', res: '448 px', predict: 'extend', focus: ['blocks'] }, label: 'Full FT · <b>100%</b> of backbone trained' },
+    { spec: { blocks: 'addon', head: 'proto', res: '448 px', predict: 'extend', focus: ['blocks'] }, label: 'PEFT · <b>4.94%</b> of backbone trained' }
+  ],
+  pts: ['Full FT leads by <b>≈1.0 pp</b> and is faster per image: 8.47 vs 11.27 ms.', 'PEFT trains 4.94% of the backbone and peaks at 14.66 vs 17.80 GB — yet completes the <b>same 5.5 epochs</b> in 144 min.'],
+  take: 'Fewer trainable parameters saved memory, <b>not training time</b>; the unmergeable AdaptFormer branch costs latency.',
+  viz() {
+    let s = '';
+    s += T(300, 30, 'Full fine-tuning', { a: 'middle', c: 'ttl' }) + T(500, 30, 'AF + LoRA (PEFT)', { a: 'middle', c: 'ttl' }) + T(680, 30, 'Winner', { a: 'middle', c: 'ttl' });
+    const rows = [
+      ['Top-1, zoom + kNN', '84.07%', '83.08%', 'Full FT', 0],
+      ['Trainable backbone', '100%', '4.94%', 'PEFT', 1],
+      ['Peak training VRAM', '17.80 GB', '14.66 GB', 'PEFT', 1],
+      ['Latency, one pass', '8.47 ms', '11.27 ms', 'Full FT', 0],
+      ['Latency with zoom', '23.43 ms', '29.88 ms', 'Full FT', 0],
+      ['Epochs in 144 minutes', '5.5', '5.5', 'tie', 2]];
+    rows.forEach((r, i) => {
+      const y = 48 + i * 52, d = .3 + i * .4, w = r[4];
+      s += R(16, y, 728, 42, { fill: i % 2 ? 'var(--surface)' : 'var(--card)', stroke: 'var(--line)', sw: 1, rx: 6, an: 'gx', d });
+      s += T(30, y + 26, r[0], { c: 'lbl bold', an: 'a', d });
+      s += T(300, y + 27, r[1], { a: 'middle', c: w === 0 ? 'num' : 'lbl', an: 'a', d: d + .15, fill: w === 0 ? 'var(--good)' : '' });
+      s += T(500, y + 27, r[2], { a: 'middle', c: w === 1 ? 'num' : 'lbl', an: 'a', d: d + .15, fill: w === 1 ? 'var(--good)' : '' });
+      s += R(624, y + 9, 112, 24, { rx: 12, fill: w === 2 ? 'var(--surfaceCool)' : 'var(--goodFill)', stroke: 'none', an: 'pop', d: d + .3 }) + T(680, y + 26, r[3], { a: 'middle', c: 'sm', an: 'a', d: d + .3, fill: w === 2 ? 'var(--muted)' : 'var(--good)' });
+    });
+    return svg(760, 370, s, 'Scorecard comparing full fine-tuning and PEFT');
+  },
+  notes: `<h3>Same conditions for both</h3><p>Same 448 px input, same 144 minutes, same head, same zoom and kNN. Both completed 5.5 epochs, so training fewer parameters saved no training time.</p>
+  <h3>Why PEFT is slower at inference</h3><p>LoRA is merged into the frozen weights at no cost, but AdaptFormer is a parallel branch that must run every time: 11.27 vs 8.47 ms per image (13.45 ms before merging LoRA), and 29.88 vs 23.43 ms with zoom.</p>
+  <h3>Where PEFT wins</h3><p>4.94% trainable, 14.66 vs 17.80 GB peak VRAM, and each new task needs only a small add-on instead of a full 86M copy.</p>`
+});
+
+/* ---- kNN trade-offs ---- */
+S.push({
+  sec: 'end', kick: 'Prediction extensions at deployment', short: 'kNN trade-offs', title: 'kNN’s gain held on Phase 2, at the cost of a 0.7 GB feature bank',
+  src: 'Full FT at 448 px · CodaBench Phase 1 (50,000 images) and Phase 2 (100,000 images) · latency: A100, per image · * measured on the LoRA all-class holdout, not this model',
+  spec: { blocks: 'train', head: 'proto', res: '448 px', predict: 'extend', predLabel: 'kNN bank', focus: ['predict'] }, tune: 'Prediction: kNN at deployment', pred: true,
+  pts: ['Phase 2: zoom 82.91 → zoom + kNN <b>83.84</b> (+0.93), with settings fixed in advance.', 'Under 0.1 ms extra per image once the bank exists.'],
+  take: 'kNN is cheap at prediction time but adds a <b>stored, model-specific</b> dependency.',
+  viz() {
+    return `<div class="htmlviz li-in" style="--d:.2s"><table class="kt"><thead><tr><th>Full FT at 448 px</th><th>Phase 1<br><small>50,000 images</small></th><th class="hl">Phase 2<br><small>100,000 images</small></th><th>Latency<br><small>batch 1</small></th><th>Extra storage</th></tr></thead>
+    <tbody><tr><td>Zoom</td><td>83.22</td><td class="hl">82.91</td><td>23.43 ms</td><td>None</td></tr><tr><td>Zoom + kNN</td><td>84.07</td><td class="hl">83.84</td><td>&lt; 0.1 ms more</td><td>0.7 GB bank</td></tr><tr class="g"><td>kNN’s gain</td><td>+0.85</td><td class="hl">+0.93</td><td></td><td></td></tr></tbody></table>
+    <div class="kgrid"><div class="kbox good li-in" style="--d:.8s"><h5>What kNN gives</h5><ul><li>+0.93 on Phase 2 — about 930 more correct images</li><li>No training and no trainable parameters</li><li>Under 0.1 ms per image once the bank exists</li><li>Settings fixed in advance; the gain held on Phase 2</li></ul></div>
+    <div class="kbox li-in" style="--d:1.2s"><h5>What kNN costs</h5><ul><li>A 0.7 GB bank must be kept and available</li><li>The bank takes about 25–30 min to build at 448 px</li><li>Rebuilt whenever the model changes</li><li>Only fixes errors with the truth in the top 5 (~64%*)</li><li>Breaks about 1 right answer per 2 it fixes*</li></ul></div></div></div>`;
+  },
+  notes: `<p>The kNN settings were fixed before Phase 2, and the gain held (+0.85 on Phase 1, +0.93 on Phase 2). The costs are operational: a 0.7 GB feature bank that must be rebuilt whenever the model changes, and it can only help when the truth is already in the top 5.</p>`
+});
+
+/* ---- What didn't work ---- */
+S.push({
+  sec: 'end', kick: 'Summary', short: 'What did not work', title: 'Negative results narrowed the search space',
+  src: 'Summary of ablations across Tasks 1–3',
+  spec: SPEC.none, tune: 'Summary — directions ruled out',
+  pts: ['Each negative result removed a direction and freed compute for the factors that moved accuracy.'],
+  take: 'Resolution, the head and where capacity sits mattered; epochs, parameter count and flips did not.',
+  viz() {
+    const L = [
+      ['More low-resolution epochs', '448 px at 4.1 epochs beat 224 px at 7.7 epochs'],
+      ['Concentrating LoRA in later blocks', '77.33 vs 77.26 — a tie at equal budget'],
+      ['Parameter count as a proxy for quality', 'BitFit (0.12%) beat last-block FT (2.75%) by 5.5 pp'],
+      ['Flip as the second prediction view', '+0.2 pp vs +0.8 pp for the aimed zoom'],
+      ['Small PEFT tweaks before fixing the head', 'head initialisation and learning rate outweighed module details']];
+    return `<div class="htmlviz"><ul class="dw">${L.map((r, i) => `<li class="li-in" style="--d:${.2 + i * .25}s"><i></i><b>${r[0]}</b><span>${r[1]}</span></li>`).join('')}</ul></div>`;
+  },
+  notes: `<p>Five directions that looked plausible and did not pay off. Each saved compute later: once a direction was ruled out on the pilot or holdout, it never reached CodaBench.</p>`
+});
+
+/* ---- Conclusion ---- */
+S.push({
+  sec: 'end', kick: 'Conclusion', short: 'Conclusion', title: 'Adaptation is a joint design problem',
+  src: 'Summary of findings · CodaBench and all-class holdout',
+  spec: { blocks: 'addon', head: 'proto', res: '448 px', predict: 'extend', focus: ['input', 'blocks', 'head', 'predict'] }, tune: 'All four factors interact',
+  pts: ['Evaluate training compute and trainable parameters <b>separately</b>.', 'Treat the classifier head as <b>part of</b> the adaptation method.', 'Test robustness on <b>unfamiliar appearances</b>.'],
+  take: 'Resolution × optimisation × parameter allocation × prediction design.',
+  viz() {
+    const Q = [
+      ['Q1', 'Full FT vs PEFT', '84.07 vs 83.08', ['Full FT wins accuracy and latency', 'PEFT wins parameters and VRAM', 'Same epochs in the same budget: no training time saved']],
+      ['Q2', 'PEFT strategies', 'AF + LoRA', ['With trainable biases and LayerNorms', 'Spread capacity across all blocks', 'Train the head fast from prototypes', 'DoRA and SSF tied; AdaLoRA lost 2.7 pp']],
+      ['Q3', 'Error analysis', '+0.72 / +0.93', ['Zoom on Phase 1, kNN on Phase 2', 'About half of errors each: unseen look, look-alike sibling', '~64% of errors have the truth in the top 5']]];
+    return `<div class="htmlviz"><div class="qcards">${Q.map((q, i) => `<div class="qc li-in" style="--d:${.2 + i * .35}s"><em>${q[0]}</em><h4>${q[1]}</h4><div class="v">${q[2]}</div><ul>${q[3].map(x => `<li>${x}</li>`).join('')}</ul></div>`).join('')}</div></div>`;
+  },
+  notes: `<h3>Answers</h3><ul><li><b>Q1:</b> full FT 84.07 vs PEFT 83.08; full FT wins accuracy and latency, PEFT wins parameters and VRAM; both reached the same epochs in the same budget.</li><li><b>Q2:</b> AdaptFormer + LoRA with trainable biases and LayerNorms, capacity spread over all blocks, a fast-learning prototype head. DoRA and SSF tied; AdaLoRA lost 2.7 points.</li><li><b>Q3:</b> errors are mostly unseen looks and look-alike siblings; zoom (+0.72, Phase 1) and kNN (+0.93, Phase 2) improve predictions without retraining.</li></ul>
+  <p>One sentence to remember: adapting a pretrained model is a joint design problem — image size, training recipe, where the trainable parts go, and how you predict all interact.</p>`
+});
+
+/* ---- Questions ---- */
+S.push({
+  type: 'end', sec: 'end', src: 'CodaBench top-1 · 448 px · with crop + zoom + kNN',
+  notes: `<p>Appendix slides follow (press → past this slide): LR sweep, full FT ablation, head × layer decay, the full FT recipe, error-flag definitions, and error rate by flag.</p>`
+});
+
+/* ---- Appendix ---- */
+const APP = [
+  ['A', 'Learning-rate sweep: with layer decay, 4e-4 is best', '../figures/van_lr_sweep.svg', 'Task 1 · full fine-tuning · layer decay 0.75'],
+  ['B', 'Full fine-tuning: the recipe, one change at a time', '../figures/full_ft_ablation.svg', 'Task 1 · 224 px ablations'],
+  ['C', 'Head initialisation × layer decay', '../figures/van_head_layer_decay.svg', 'Task 1 · 224 px · 3 epochs']
+];
+APP.forEach(a => S.push({ type: 'fig', sec: 'app', kick: 'Appendix ' + a[0], title: a[1], img: a[2], src: a[3], notes: `<p>Backup slide — show only if asked.</p>` }));
+
+S.push({
+  sec: 'app', kick: 'Appendix D', short: 'Full FT recipe', title: 'Final full fine-tuning recipe at 224 px: 75.7%',
+  src: 'Task 1 · ablations at 224 px, 3 epochs',
+  spec: { blocks: 'decay', head: 'proto', res: '224 px', focus: ['blocks', 'head'] }, tune: 'Full FT recipe',
+  pts: ['Prototype cosine head: <b>+1.61 pp</b> over a linear-probe head.', 'Removing layer decay: <b>−6.71 pp</b>.'],
+  take: 'The controlled comparison changes the optimisation recipe — not resolution or total budget.',
+  viz() {
+    const rows = [['Head', 'Prototype cosine'], ['Head learning rate', '4e-3'], ['Backbone learning rate', 'Top 4e-4, layer decay 0.75 (block 0: 1.27e-5 · block 5: 5.34e-5 · block 11: 3e-4)'], ['Schedule', '5% learning-rate warm-up, then cosine decay to zero'], ['Regularisation', 'Label smoothing 0.1 · drop path 0.1 · gradient clip 1.0'], ['Training', 'Batch 256 · bf16']];
+    return `<div class="htmlviz li-in" style="--d:.2s"><table class="kt left"><tbody>${rows.map(r => `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td></tr>`).join('')}</tbody></table></div>`;
+  },
+  notes: `<p>Backup slide — show only if asked about the exact Task 1 settings.</p>`
+});
+
+S.push({
+  sec: 'app', kick: 'Appendix E', short: 'Frequency vs risk', title: 'Frequency is not risk: unseen appearances fail 60% of the time',
+  src: 'Holdout error rate by flag · all 50,000 holdout images',
+  spec: { blocks: 'frozen', head: 'frozen', predict: 'analyse', focus: ['predict'] }, tune: 'Nothing — error analysis', pred: true,
+  pts: ['Messy-class images are 58% of the holdout; their error rate (29%) is close to the 22% average.', 'Unseen-look images (19% of the holdout) are misclassified <b>60%</b> of the time.'],
+  take: 'Unfamiliar appearances are the main risk; addressing them requires <b>more diverse training data</b>.',
+  viz() {
+    let s = '';
+    const x0 = 220, W = 470, px = v => x0 + v / 70 * W;
+    s += T(x0, 26, 'Error rate among images with this flag', { c: 'sm' });
+    const rows = [['All images', 'every holdout image', 22, 'var(--plotNeutral)'], ['Unseen look', '19% of all images', 60, 'var(--bad)'], ['Two looks', '3% of all images', 38, 'var(--info)'], ['Messy class', '58% of all images', 29, 'var(--info)']];
+    rows.forEach((r, i) => { const y = 50 + i * 62, d = .3 + i * .45; s += T(16, y + 12, r[0], { c: 'lbl bold', an: 'a', d }) + T(16, y + 29, r[1], { c: 'sm', an: 'a', d }); s += R(x0, y, px(r[2]) - x0, 28, { rx: 4, fill: r[3], an: 'gx', d: d + .1 }); s += T(px(r[2]) + 8, y + 19, r[2] + '% wrong', { c: 'num', an: 'a', d: d + .6 }); });
+    s += `<line x1="${px(22)}" y1="40" x2="${px(22)}" y2="300" stroke="var(--muted)" stroke-dasharray="4 4" class="fi" style="--d:.6s"/>`;
+    s += T(px(22) + 4, 316, 'average: 22% wrong', { c: 'sm', an: 'a', d: .7 });
+    return svg(760, 326, s, 'Error rate by flag');
+  },
+  notes: `<p>Backup slide. Over half of all images are in messy classes, so naturally many errors are too; their error rate (29%) is only slightly above average (22%). Unseen-look images are wrong 60% of the time — the real danger.</p>`
+});
+
+/* =====================================================================
+   ENGINE
+   ===================================================================== */
+let cur = 0;
+const deck = document.getElementById('deck'), slideEl = document.getElementById('slide'), notesEl = document.getElementById('notes');
+const MAIN = S.filter(s => s.sec !== 'app').length;
+document.getElementById('track').innerHTML = SECTIONS.map(s => `<div class="seg" data-s="${s.id}"><span>${s.label}</span><i><b></b></i></div>`).join('');
+
+function viewportBox() {
+  const vv = window.visualViewport;
+  return {
+    width: Math.max(1, vv ? vv.width : document.documentElement.clientWidth),
+    height: Math.max(1, vv ? vv.height : document.documentElement.clientHeight)
+  };
+}
+function fit() {
+  const v = viewportBox();
+  const compact = v.width <= 700 || matchMedia('(pointer:coarse)').matches;
+  const controls = compact ? 68 + Math.max(0, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')) || 0) : 0;
+  const availableHeight = Math.max(160, v.height - controls);
+  const s = Math.min(v.width / 1600, availableHeight / 900);
+  deck.style.left = (v.width / 2) + 'px';
+  deck.style.top = (availableHeight / 2) + 'px';
+  deck.style.transform = `translate(-50%,-50%) scale(${s})`;
+}
+addEventListener('resize', fit);
+addEventListener('orientationchange', fit);
+if (visualViewport) {
+  visualViewport.addEventListener('resize', fit);
+  visualViewport.addEventListener('scroll', fit);
+}
+fit();
+
+function clearTimers() { clearInterval(timer); timer = null; (window._timeouts || []).forEach(clearTimeout); window._timeouts = []; (window._intervals || []).forEach(clearInterval); window._intervals = []; }
+
+function trackerCard(sc) {
+  return `<div class="tcard"><h3>Where we tune</h3><div id="vitMini"></div><div class="tlabel${sc.pred ? ' pred' : ''}" id="tuneLbl"></div>${LEGEND}</div>`;
+}
+
+function build(sc) {
+  const t = sc.type || 'content';
+  if (t === 'title') return `<div class="title"><div class="bar"></div><div>
+    <div class="k">CS604 · Team 08 · ViT adaptation</div>
+    <h1>Accuracy–Efficiency Trade&#8209;offs</h1>
+    <p class="sub">Adapting pretrained Vision Transformers for fine-grained classification</p>
+    <div class="names"><span>Anastasia Frances Frederica</span><span>Le Thi Hong Van</span><span>Liu Wenqi</span><span>Xu Qianqian</span></div>
+    <div class="date">7 NOVEMBER 2026</div></div>
+    <div class="secR"><div id="vitMini"></div><div class="tlabel" id="tuneLbl"></div>${LEGEND}</div></div>`;
+  if (t === 'section') {
+    const items = S.filter(s => s.sec === sc.sec && !s.type).map((s, i) => `<li class="li-in" style="--d:${.5 + i * .12}s"><span>${s.short}</span><em${s.pred ? ' class="g"' : ''}>${s.tune || 'Full FT vs PEFT'}</em></li>`).join('');
+    return `<div class="sec"><div>
+      <div class="secT">Task ${sc.n} · ${sc.title}</div>
+      <div class="slideMeta">Section ${sc.n} of 3</div>
+      <p class="secQ">${sc.q}</p><p class="secD">${sc.desc}</p>
+      <ol class="agenda">${items}</ol></div>
+      <div class="secR"><div id="vitMini"></div><div class="tlabel${sc.pred ? ' pred' : ''}">Trainable in this section: <b>${sc.tune}</b></div>${LEGEND}</div></div>`;
+  }
+  if (t === 'end') return `<div class="endq"><h1>Questions?</h1><div class="slideMeta">Thank you</div>
+    <div class="tiles">
+      <div class="tile li-in" style="--d:.3s"><div class="v">84.07%</div><div class="l">Full fine-tuning · 100% of backbone trained</div></div>
+      <div class="tile li-in" style="--d:.5s"><div class="v">83.08%</div><div class="l">AF + LoRA PEFT · 4.94% of backbone trained</div></div>
+      <div class="tile li-in" style="--d:.7s"><div class="v">≈1.0 pp</div><div class="l">Accuracy gap at equal training time</div></div>
+    </div></div>`;
+  if (t === 'fig') return `<h2>${sc.title}</h2><div class="slideMeta">${sc.kick}</div>
+    <div class="vizcard" style="flex:1;min-height:0"><img class="fig" src="${sc.img}" alt="${sc.title}" data-path="${sc.img}" data-label="${sc.title}" onerror="handleFigureError(this)"></div>`;
+  // content slide
+  const sec = SECTIONS.find(s => s.id === sc.sec);
+  const side = sc.rq
+    ? `<ul class="rq">${sc.rq.map((r, i) => `<li class="li-in" style="--d:${.4 + i * .15}s"><em>${r[0]}</em><span>${r[1]}</span></li>`).join('')}</ul>`
+    : `<ul class="pts">${(sc.pts || []).map((p, i) => `<li class="li-in" data-pi="${i}">${p}</li>`).join('')}</ul>`;
+  return `<h2>${sc.title}</h2><div class="slideMeta">${sc.kick || sec.label}</div>
+    <div class="body"><div class="vizcard">${sc.photos ? photos(sc.photos, sc.photosClass, sc.photosAt) : ''}${sc.gallery ? gallery(sc.gallery) : ''}${sc.img ? `<img class="fig li-in" style="--d:.15s" src="${sc.img}" alt="${sc.imgAlt || sc.title}" data-path="report/${sc.img}" data-label="${sc.imgAlt || sc.title}" onerror="handleFigureError(this)">` : ''}${sc.viz ? sc.viz() : ''}</div>
+    <aside class="side">${trackerCard(sc)}${side}${sc.take ? `<div class="take li-in" data-take>${sc.take}</div>` : ''}</aside></div>`;
+}
+
+function mountTracker(sc) {
+  const el = document.getElementById('vitMini'); if (!el) return;
+  const lbl = document.getElementById('tuneLbl');
+  if (sc.cycle) {
+    let k = 0;
+    const show = () => { const c = sc.cycle[k % sc.cycle.length]; el.innerHTML = vit(c.spec); if (lbl) { lbl.innerHTML = c.label; lbl.classList.toggle('pred', !!c.pred); } k++; };
+    show(); every(show, 3400);
+  } else {
+    el.innerHTML = vit(sc.spec || SPEC.none);
+    if (lbl) lbl.innerHTML = `Tuned on this slide: <b>${sc.tune}</b>`;
+  }
+}
+
+function updateChrome() {
+  const sc = S[cur], si = SECTIONS.findIndex(s => s.id === sc.sec);
+  document.querySelectorAll('.seg').forEach((el, i) => {
+    const id = SECTIONS[i].id, mine = S.map((s, j) => [s, j]).filter(x => x[0].sec === id), n = mine.length;
+    let w = 0;
+    if (sc.sec === 'app' || i < si) w = 100; else if (i === si) w = (mine.findIndex(x => x[1] === cur) + 1) / n * 100;
+    el.classList.toggle('done', sc.sec === 'app' || i < si); el.classList.toggle('cur', i === si);
+    if (i === si) el.setAttribute('aria-current', 'step'); else el.removeAttribute('aria-current');
+    el.querySelector('b').style.width = w + '%';
+  });
+  document.getElementById('count').textContent = sc.sec === 'app' ? 'Appendix' : String(cur + 1).padStart(2, '0') + ' / ' + MAIN;
+  document.getElementById('src').innerHTML = sc.src ? sc.src : '';
+  const label = sc.title ? sc.title : (sc.type === 'title' ? 'Title' : 'Questions');
+  notesEl.innerHTML = `<div class="nt">Speaker notes · ${cur + 1}. ${label}</div>${sc.notes || ''}${sc.take && sc.type !== 'section' ? `<div class="take">${sc.take}</div>` : ''}`;
+  document.getElementById('slideStatus').textContent = sc.sec === 'app'
+    ? `Appendix slide. ${label}`
+    : `Slide ${cur + 1} of ${MAIN}. ${label}`;
+}
+
+let stepN = 0, stepMax = 0;
+function prepSteps(sc) {
+  if (!sc.type && !sc.scripted) {
+    // default build for unscripted slides: click 1 = the visual, click 2 = bullets + takeaway
+    const vc = slideEl.querySelector('.vizcard');
+    if (vc) [...vc.children].forEach(c => c.setAttribute('data-s', '1'));
+    slideEl.querySelectorAll('.side ul.pts, .side ul.rq, .side .take').forEach(e => e.setAttribute('data-s', vc ? '2' : '1'));
+  }
+  const dom = [...slideEl.querySelectorAll('[data-s],[data-only]')].map(e => +(e.dataset.s || e.dataset.only));
+  stepMax = Math.max(0, sc.nSteps || 0, sc.takeAt || 0, ...(sc.ptsAt || []), ...dom);
+  if (sc.scripted) {
+    slideEl.querySelectorAll('.side ul.pts > li').forEach(li => li.setAttribute('data-s', String((sc.ptsAt || [])[+li.dataset.pi] ?? stepMax)));
+    const tk = slideEl.querySelector('.side .take'); if (tk) tk.setAttribute('data-s', String(sc.takeAt ?? stepMax));
+  }
+}
+function applyStep() {
+  const sc = S[cur];
+  slideEl.querySelectorAll('[data-s]').forEach(e => e.classList.toggle('on', +e.dataset.s <= stepN));
+  slideEl.querySelectorAll('[data-only]').forEach(e => e.classList.toggle('on', +e.dataset.only === stepN));
+  if (sc.onStep) sc.onStep(stepN);
+  const c = document.getElementById('count');
+  const base = sc.sec === 'app' ? 'Appendix' : String(cur + 1).padStart(2, '0') + ' / ' + MAIN;
+  c.innerHTML = base + (stepMax ? `<small>${stepN}/${stepMax}</small>` : '');
+  document.getElementById('bPrev').disabled = cur === 0 && stepN === 0;
+  document.getElementById('bNext').disabled = cur === S.length - 1 && stepN >= stepMax;
+}
+function advance() { if (stepN < stepMax) { stepN++; applyStep(); } else go(cur + 1); }
+function retreat() { if (stepN > 0) { stepN--; applyStep(); } else if (cur > 0) go(cur - 1, true); }
+
+function render(atEnd, keepStep) {
+  clearTimers();
+  const sc = S[cur];
+  deck.classList.toggle('is-title', sc.type === 'title');
+  slideEl.innerHTML = build(sc);
+  slideEl.classList.remove('enter'); void slideEl.offsetWidth; slideEl.classList.add('enter');
+  if (sc.mount) sc.mount();
+  mountTracker(sc);
+  updateChrome();
+  prepSteps(sc);
+  stepN = keepStep != null ? Math.min(keepStep, stepMax) : atEnd ? stepMax : 0;
+  applyStep();
+  requestAnimationFrame(() => {
+    if (viewportBox().width <= 900) {
+      document.querySelectorAll('.vizcard').forEach(card => {
+        if (card.scrollWidth > card.clientWidth) card.scrollLeft = (card.scrollWidth - card.clientWidth) / 2;
+      });
+    }
+  });
+}
+function go(i, atEnd) { const n = Math.max(0, Math.min(S.length - 1, i)); if (n === cur && slideEl.innerHTML) return; cur = n; render(atEnd); try { history.replaceState(null, '', '#' + (cur + 1)); } catch (e) {} }
+
+function toggleNotes() {
+  const open = notesEl.classList.toggle('open');
+  document.getElementById('bNotes').setAttribute('aria-expanded', String(open));
+  notesEl.setAttribute('aria-hidden', String(!open));
+}
+function announce(message) {
+  const status = document.getElementById('slideStatus');
+  status.textContent = '';
+  requestAnimationFrame(() => { status.textContent = message; });
+}
+async function toggleFull() {
+  try {
+    if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+    else await document.exitFullscreen();
+  } catch (e) {
+    announce('Full screen is unavailable in this browser. The presentation remains open in the current window.');
+  }
+}
+document.getElementById('bPrev').onclick = () => retreat();
+document.getElementById('bNext').onclick = () => advance();
+document.getElementById('bReplay').onclick = () => render(false, stepN);
+document.getElementById('bNotes').onclick = toggleNotes;
+document.getElementById('bFull').onclick = toggleFull;
+document.addEventListener('fullscreenchange', () => {
+  document.getElementById('bFull').setAttribute('aria-pressed', String(!!document.fullscreenElement));
+  fit();
+});
+document.addEventListener('keydown', e => {
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  const k = e.key;
+  if (k === 'Escape' && notesEl.classList.contains('open')) { e.preventDefault(); toggleNotes(); return; }
+  if (e.target.closest && e.target.closest('button, a, input, select, textarea, [contenteditable="true"]')) return;
+  if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'Enter') { e.preventDefault(); advance(); }
+  else if (k === 'ArrowLeft' || k === 'PageUp' || k === 'Backspace') { e.preventDefault(); retreat(); }
+  else if (k === 'ArrowDown') { e.preventDefault(); go(cur + 1); }
+  else if (k === 'ArrowUp') { e.preventDefault(); go(cur - 1); }
+  else if (k === 'Home') go(0);
+  else if (k === 'End') go(MAIN - 1);
+  else if (k === 'n' || k === 'N') toggleNotes();
+  else if (k === 'f' || k === 'F') toggleFull();
+  else if (k === 'r' || k === 'R') render(false, stepN);
+});
+slideEl.addEventListener('click', e => { if (e.target.closest('button, a, input, select, textarea, .ctrl')) return; advance(); });
+const ctl = document.getElementById('ctl'); let hideT;
+addEventListener('mousemove', () => { ctl.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(() => ctl.classList.remove('show'), 2200); });
+ctl.addEventListener('focusin', () => { clearTimeout(hideT); ctl.classList.add('show'); });
+ctl.addEventListener('focusout', e => {
+  if (!ctl.contains(e.relatedTarget)) hideT = setTimeout(() => ctl.classList.remove('show'), 250);
+});
+motionQuery.addEventListener('change', () => render(false, stepN));
+// #12 opens slide 12; #12.3 opens slide 12 at build step 3 (handy for rehearsing a section)
+const hm = (location.hash || '').match(/^#(\d+)(?:\.(\d+))?/);
+if (hm && +hm[1] >= 1 && +hm[1] <= S.length) cur = +hm[1] - 1;
+render(false, hm && hm[2] != null ? +hm[2] : null);
+</script>
+</body>
+</html>
