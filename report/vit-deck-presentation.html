@@ -50,6 +50,30 @@ h2{font:600 42px/1.12 var(--serif);margin:6px 0 20px;letter-spacing:-.015em;max-
 .tcard{background:var(--surfaceCool);border:1px solid #c8d6df;border-radius:5px;padding:12px 14px 10px}
 .tcard h3{margin:0 0 4px;font:700 14px var(--narrow);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 .tcard svg{width:100%;height:auto;display:block}
+.taskTriptych{padding:10px 12px 8px}
+.taskStrip{display:grid;grid-template-columns:128px minmax(0,1fr);gap:6px;align-items:center;border-top:1px solid #c8d6df;padding:4px 0}
+.taskName{font-size:12.5px;line-height:1.22;color:var(--muted)}
+.taskName b{color:var(--train)}
+.taskStrip.pred .taskName b{color:var(--good)}
+.taskVit{min-width:0}
+.taskVit svg{width:100%;height:66px}
+.taskTriptych .legend{font-size:11.5px;gap:7px;margin-top:5px}
+.taskTriptych .sw{width:9px;height:9px;border-width:1.5px}
+.taskTriptych *{animation:none!important;transition:none!important}
+.overviewBody{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:28px}
+.overviewLeft{min-height:0;display:flex;flex-direction:column;gap:12px}
+.overviewLeft>.vizcard{flex:1;min-height:0}
+.overviewCopy{flex:none;display:block}
+.overviewCopy .rq{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;font-size:14.5px}
+.overviewCopy .rq li{grid-template-columns:30px 1fr;gap:5px;margin:0}
+.overviewCopy .rq li em{font-size:14px}
+.overviewCopy .take{margin-top:10px;padding:9px 14px;font-size:15.5px}
+.overviewBody>.taskTriptych{min-height:0;display:flex;flex-direction:column;padding:8px 12px 4px}
+.overviewBody>.taskTriptych .taskStrip{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);flex:1;padding:1px 0}
+.overviewBody>.taskTriptych .taskName{white-space:nowrap}
+.overviewBody>.taskTriptych .taskVit{min-height:0;display:flex;justify-content:center}
+.overviewBody>.taskTriptych .taskVit svg{width:100%;height:100%;max-height:132px}
+.overviewBody>.taskTriptych .legend{margin-top:2px}
 .tlabel{font-size:17px;line-height:1.38;margin-top:4px}
 .tlabel b{color:var(--train)}
 .tlabel.pred b{color:var(--good)}
@@ -166,12 +190,11 @@ ol.agenda li em.g{color:var(--good)}
 /* ---------- title + end ---------- */
 .title{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) 600px;gap:48px;align-items:center;padding:72px 80px 0 90px;isolation:isolate}
 .title::before{content:"";position:absolute;z-index:-1;top:0;left:0;right:0;height:92px;background:var(--chrome)}
-.title .k{position:absolute;left:90px;top:34px;font:700 19px var(--narrow);letter-spacing:.1em;text-transform:uppercase;color:#fff}
+.title .mastLabel{position:absolute;left:90px;top:34px;font:700 19px var(--narrow);letter-spacing:.1em;text-transform:uppercase;color:#fff}
 .title h1{font:600 76px/1.04 var(--serif);margin:16px 0 18px;letter-spacing:-.025em;max-width:14ch}
 .title .sub{font-size:28px;line-height:1.32;color:var(--muted);margin:0 0 44px;max-width:52ch}
 .title .names{display:grid;grid-template-columns:repeat(2,auto);justify-content:start;gap:6px 40px;font:600 17px var(--narrow);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .title .date{margin-top:30px;font:600 17px var(--narrow);letter-spacing:.1em;color:var(--ink);font-variant-numeric:tabular-nums}
-.title .bar{position:absolute;left:0;top:92px;width:22%;height:8px;background:var(--train)}
 .title .secR{background:#fff;border-color:#aebbc5}
 .endq{flex:1;display:flex;flex-direction:column;justify-content:center}
 .endq h1{font:600 96px/1 var(--serif);margin:0 0 40px}
@@ -278,6 +301,12 @@ svg text{font-family:var(--sans)}
   .vizcard>svg{flex:none;min-width:680px;min-height:320px}
   .side{flex:none;gap:12px}
   .tcard{padding:12px}
+  .taskStrip{grid-template-columns:1fr;padding:8px 0}
+  .taskVit svg{height:auto}
+  .overviewBody{display:flex;flex-direction:column;gap:14px}
+  .overviewCopy .rq{grid-template-columns:1fr;font-size:17px}
+  .overviewCopy .rq li{grid-template-columns:38px 1fr;margin-bottom:8px}
+  .overviewCopy .take{font-size:17px}
   ul.pts{font-size:18px}
   .take{margin-top:0;font-size:17px}
   .ctrl{flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:thin}
@@ -286,12 +315,11 @@ svg text{font-family:var(--sans)}
   .pgroup{min-height:145px}
   .title{position:relative;inset:auto;display:flex;flex-direction:column;gap:28px;align-items:stretch;padding:100px 22px 40px}
   .title::before{display:block;height:64px}
-  .title .k{left:22px;top:22px;font-size:15px}
+  .title .mastLabel{left:22px;top:22px;font-size:15px}
   .title h1{font-size:clamp(44px,13vw,64px);line-height:1.02;margin:12px 0 16px;overflow-wrap:anywhere}
   .title .sub{font-size:22px;margin-bottom:28px}
   .title .names{grid-template-columns:1fr;gap:8px}
   .title .date{margin-top:24px}
-  .title .bar{top:64px;width:30%;height:5px}
   .sec{display:flex;flex-direction:column;gap:24px;align-items:stretch}
   .secN{font-size:80px}
   .secT{font-size:42px}
@@ -486,7 +514,7 @@ const fig = k => {
   return `<figure class="ph${m.fit === 'contain' ? ' contain' : ''}"><img src="${m.src}" alt="${m.cap}" onerror="handlePhotoError(this)"><div class="miss" role="img" aria-label="Project image unavailable: ${m.cap}. Add report/${m.src}."><span>Project image unavailable</span><code>report/${m.src}</code></div><figcaption>${m.cap}</figcaption></figure>`;
 };
 const gallery = g => `<div class="gallery" style="grid-template-columns:repeat(${g.cols},minmax(0,1fr))">${g.groups.map((x, i) => `<div class="gcell li-in" style="--d:${.2 + i * .25}s"><h5>${x.label}</h5><div class="grow">${x.keys.map(fig).join('')}</div>${(x.lines || []).map(l => `<p class="${l[0]}">${l[1]}</p>`).join('')}</div>`).join('')}</div>`;
-const photos = (groups, cls, at) => `<div class="photos${cls ? ' ' + cls : ''}"${at ? ` data-s="${at}"` : ''}>${groups.map(g => `<div class="pgroup"${g.w ? ` style="flex:${g.w}"` : ''}>${g.label ? `<h5>${g.label}</h5>` : ''}<div>${g.keys.map(fig).join('')}</div></div>`).join('')}</div>`;
+const photos = (groups, cls, at) => `<div class="photos${cls ? ' ' + cls : ''}"${at ? ` data-s="${at}"` : ''}>${groups.map(g => `<div class="pgroup"${g.w ? ` style="flex:${g.w}"` : ''}${g.at != null ? ` data-s="${g.at}"` : ''}>${g.label ? `<h5>${g.label}</h5>` : ''}<div>${g.keys.map(fig).join('')}</div></div>`).join('')}</div>`;
 
 /* ---------- raw-photo layouts (report/slide-images/…) ---------- */
 const PH = (src, alt) => `<img src="${src}" alt="${alt}" loading="eager" onerror="this.classList.add('gone')">`;
@@ -557,11 +585,14 @@ S.push({
 S.push({
   sec: 'intro', kick: 'Overview', short: 'Overview', title: 'One pretrained ViT, three levers for adaptation',
   src: 'Schematic overview of the pipeline and the three tasks',
-  cycle: CYCLE3,
+  taskTriptych: true, scripted: true, nSteps: 3,
   rq: [['Q1', 'Full FT vs PEFT: which offers the better balance between accuracy and inference efficiency?'], ['Q2', 'PEFT strategies: how do method and placement choices affect performance?'], ['Q3', 'Errors: what limits predictions, and can we improve them without retraining?']],
   take: 'Central question: <b>how close can parameter-efficient adaptation get to full fine-tuning</b>, and at what cost?',
   viz() {
     let s = '';
+    s += R(16, 8, 728, 40, { rx: 6, fill: 'var(--surfaceCool)', stroke: 'none', an: 'fi' });
+    s += T(28, 24, 'Backbone · ViT-B/16 · 86M parameters', { c: 'lbl bold', an: 'a', d: .1 });
+    s += T(28, 40, 'timm: vit_base_patch16_224.augreg2_in21k_ft_in1k · ImageNet-21k → ImageNet-1k', { c: 'xs', an: 'a', d: .2 });
     s += R(16, 70, 110, 110, { c: 'card', an: 'a', fill: 'var(--photoFill)' });
     s += G(`<line x1="24" y1="160" x2="118" y2="146" stroke="var(--earth)" stroke-width="3"/>` + bird(76, 132, 1.05), { an: 'a', d: .1 });
     s += T(71, 200, 'Image', { a: 'middle', c: 'sm', an: 'a', d: .1 });
@@ -570,25 +601,25 @@ S.push({
     s += T(190, 200, '16×16 patches', { a: 'middle', c: 'sm', an: 'a', d: .5 });
     s += P('M236 125 H254', { m: 'ar', an: 'draw', d: .7 });
     for (let i = 0; i < 12; i++) s += R(260 + i * 18, 65, 13, 120, { rx: 3, c: 'nb', an: 'pop', d: .8 + i * .05 });
-    s += T(367, 200, '12 transformer blocks · 86M parameters', { a: 'middle', c: 'sm', an: 'a', d: 1.2 });
+    s += T(367, 200, '12 transformer blocks · 86M parameters', { a: 'middle', c: 'xs', an: 'a', d: 1.2 });
     s += P('M478 125 H496', { m: 'ar', an: 'draw', d: 1.4 });
     s += R(500, 65, 52, 120, { c: 'nb', an: 'pop', d: 1.5 });
     s += T(526, 129, 'Head', { a: 'middle', an: 'a', d: 1.5 });
-    s += T(526, 200, '10,000 classes', { a: 'middle', c: 'sm', an: 'a', d: 1.5 });
+    s += T(550, 200, '10,000 classes', { a: 'middle', c: 'sm', an: 'a', d: 1.5 });
     s += P('M558 125 H578', { m: 'ar', an: 'draw', d: 1.7 });
     s += R(582, 90, 162, 70, { c: 'card', an: 'pop', d: 1.8 });
     s += T(663, 118, 'Prediction', { a: 'middle', c: 'sm', an: 'a', d: 1.9 });
     s += T(663, 141, 'class 4745', { a: 'middle', c: 'num', an: 'a', d: 1.9 });
     s += R(260, 230, 292, 30, { c: 'tr', an: 'gx', d: 2.3 });
     s += T(406, 250, 'Task 1 · Full fine-tuning: all 86M trainable', { a: 'middle', an: 'a', d: 2.5 });
-    s += R(260, 268, 292, 30, { c: 'fz', an: 'gx', d: 2.9 });
+    s += R(220, 268, 372, 30, { c: 'fz', an: 'gx', d: 2.9 });
     for (let i = 0; i < 12; i++) s += R(264 + i * 23.5, 291, 14, 4, { rx: 1, fill: 'var(--train)', an: 'pop', d: 3.2 + i * .03 });
     s += T(406, 287, 'Task 2 · PEFT: frozen backbone + small modules', { a: 'middle', an: 'a', d: 3.1 });
     s += R(470, 306, 274, 30, { fill: 'var(--goodFill)', stroke: 'var(--good)', sw: 2, an: 'gx', d: 3.6 });
     s += T(607, 326, 'Task 3 · Prediction-time extensions', { a: 'middle', an: 'a', d: 3.8 });
     return svg(760, 350, s, 'Pipeline from image to prediction, with the three tasks marked');
   },
-  notes: `<h3>What the project is</h3><p>We take one pretrained Vision Transformer and adapt it to tell apart <b>10,000 look-alike species</b>.</p>
+  notes: `<h3>What the project is</h3><p>We take one pretrained Vision Transformer — the timm <b>ViT-B/16 AugReg checkpoint pretrained on ImageNet-21k and fine-tuned on ImageNet-1k</b> — and adapt it to tell apart <b>10,000 look-alike species</b>.</p>
   <p>The model reads an image as 16×16-pixel patches, passes them through 12 identical blocks, and a final head picks one of the 10,000 classes.</p>
   <h3>The three tasks</h3><ul><li><b>Task 1:</b> retrain every weight (most accurate, most expensive).</li><li><b>Task 2:</b> keep the 86M weights frozen and train small add-on modules instead.</li><li><b>Task 3:</b> train nothing; get better answers out of a trained model.</li></ul>
   <p>Point at the schematic: it cycles through the three tasks and shows what each one trains.</p>`
@@ -599,8 +630,9 @@ S.push({
   sec: 'intro', kick: 'The task', short: 'Why it is hard', title: 'Fine-grained recognition: near-identical classes, highly variable individuals',
   src: 'Training images from the challenge dataset, one class per caption',
   spec: SPEC.none, tune: 'Nothing yet — problem setup',
+  scripted: true, nSteps: 2, ptsAt: [2, 2], takeAt: 2,
   photosClass: 'fill grid2',
-  photos: [{ label: 'Different classes, similar appearance', keys: ['lookA', 'lookB', 'lookC', 'lookD'] }, { label: 'Same class, different appearances', keys: ['varA', 'varB', 'varC', 'varD'] }],
+  photos: [{ label: 'Different classes, similar appearance', keys: ['lookA', 'lookB', 'lookC', 'lookD'] }, { label: 'Same class, different appearances', keys: ['varA', 'varB', 'varC', 'varD'], at: 1 }],
   pts: ['<b>Inter-class similarity:</b> related species share shape, colour and texture; the decisive cue may span only a few pixels.', '<b>Intra-class variation:</b> pose, age, lighting, occlusion and background separate images of the same species.'],
   take: 'Both effects reappear in the error analysis (Task 3) as the main causes of the remaining mistakes.',
   sketch() {
@@ -645,7 +677,7 @@ S.push({
     s += T(130, 218, 'many configurations', { a: 'middle', an: 'a', d: 2.2 });
     s += R(296, 198, 168, 30, { c: 'tr', an: 'gx', d: 2.4, rx: 6 });
     s += T(380, 218, 'shortlisted', { a: 'middle', an: 'a', d: 2.6 });
-    s += R(586, 198, 88, 30, { c: 'tr', an: 'gx', d: 2.8, rx: 6 });
+    s += R(566, 198, 128, 30, { c: 'tr', an: 'gx', d: 2.8, rx: 6 });
     s += T(630, 218, 'final systems', { a: 'middle', an: 'a', d: 3.0 });
     s += T(380, 272, 'Pilot accuracies (~90%) are inflated: ten times fewer classes to confuse.', { a: 'middle', c: 'sm', an: 'a', d: 3.3 });
     s += T(380, 292, 'Pilot results are therefore compared only with other pilot results.', { a: 'middle', c: 'sm', an: 'a', d: 3.4 });
@@ -861,10 +893,10 @@ S.push({
   sec: 't2', kick: 'Task 2 · Methods', short: 'PEFT methods', title: 'Six PEFT families, each training under 5% of the backbone',
   src: 'Configurations selected per method · backbone % excludes the classifier head',
   spec: { blocks: 'addon', head: 'train', res: '336 px', focus: ['blocks'] }, tune: 'PEFT method (&lt; 5% trainable)',
-  scripted: true, nSteps: 6,
+  scripted: true, nSteps: 8,
   pts: ['Each method was tuned on its own design choices before the comparison.', 'The classifier head always trains and is not counted in the budget.'],
-  ptsAt: [6, 6],
-  take: 'LoRA can be <b>merged</b> into the frozen weights after training; adapter-style modules cannot.', takeAt: 6,
+  ptsAt: [8, 8],
+  take: 'LoRA can be <b>merged</b> into the frozen weights after training; adapter-style modules cannot.', takeAt: 8,
   viz() {
     const order = [['last', 'Selected layer'], ['bitfit', 'BitFit'], ['prefix', 'Prefix'], ['lora', 'LoRA'], ['serial', 'Serial adapter'], ['af', 'AdaptFormer'], ['full', 'Full FT'], ['final', 'Final design']];
     const ctrl = `<div class="ctrl" id="peftBtns" role="group" aria-label="Adaptation method">${order.map(o => `<button type="button" data-k="${o[0]}" aria-pressed="false">${o[1]}</button>`).join('')}</div>`;
@@ -912,15 +944,16 @@ S.push({
     document.querySelectorAll('#peftBtns button').forEach(b => b.onclick = () => show(b.dataset.k));
     window._peftShow = show;
   },
-  onStep(k) { if (window._peftShow) window._peftShow(['none', 'last', 'bitfit', 'prefix', 'lora', 'serial', 'af'][Math.min(k, 6)]); },
+  onStep(k) { if (window._peftShow) window._peftShow(['none', 'last', 'bitfit', 'prefix', 'lora', 'serial', 'af', 'full', 'final'][Math.min(k, 8)]); },
   notes: `<h3>Script (Qian, Canva slide 8)</h3><p><b>[on entry]</b> We explored several PEFT methods, keeping trainable backbone parameters below 5%, excluding the classifier head.</p><ul>
   <li><b>[click 1]</b> Selected-layer fine-tuning: training the full attention module in the last block worked best.</li>
   <li><b>[click 2]</b> BitFit: training all backbone biases performed best.</li>
   <li><b>[click 3]</b> Prefix tuning: inserting learnable key and value vectors into all blocks, length 50, was optimal.</li>
   <li><b>[click 4]</b> LoRA: we selected rank 24 across all blocks. DoRA offered similar accuracy at higher training cost, while AdaLoRA performed worse.</li>
   <li><b>[click 5]</b> Serial adapter: we fixed the width at 96 and selected a learning rate of 3×10⁻⁴.</li>
-  <li><b>[click 6]</b> AdaptFormer: we selected width 192, learned scaling and a CosFace margin of 0.1.</li></ul>
-  <p>The Full FT and Final design buttons are there for questions.</p>`
+  <li><b>[click 6]</b> AdaptFormer: we selected width 192, learned scaling and a CosFace margin of 0.1.</li>
+  <li><b>[click 7]</b> Full fine-tuning trains every backbone weight.</li>
+  <li><b>[click 8]</b> The final design keeps only LoRA, AdaptFormer, LayerNorms and biases trainable.</li></ul>`
 });
 
 /* ---- Scorecard ---- */
@@ -1184,13 +1217,17 @@ S.push({
   viz() {
     let s = '';
     const F = 170, cols = [['Single view', 78.8, ''], ['+ flipped view', 78.97, '+0.2'], ['+ centred box', 79.43, '+0.6'], ['+ aimed zoom', 79.59, '+0.8']];
+    const photo = 'slide-images/zoom_boxes/2_neurothemis_taiwanensis/first_pass.jpg';
+    const aimed = 'slide-images/zoom_boxes/2_neurothemis_taiwanensis/second_pass.jpg';
     cols.forEach((c, i) => {
       const x = 16 + i * 186, y = 40, d = i * .6;
       s += T(x, 28, c[0], { c: 'ttl', an: 'a', d });
       s += R(x, y, F, F, { rx: 4, fill: 'var(--photoFill)', stroke: 'var(--photoLine)', an: 'a', d });
-      s += G(`<line x1="${x + 4}" y1="${y + F * .8}" x2="${x + F - 4}" y2="${y + F * .72}" stroke="var(--earth)" stroke-width="3"/>` + (i === 1 ? bird(x + F * .32, y + F * .65, .7, 'var(--illustration)', true) : bird(x + F * .68, y + F * .65, .7)), { an: 'a', d });
-      if (i === 2) s += R(x + F * .225, y + F * .225, F * .55, F * .55, { rx: 2, fill: 'none', stroke: 'var(--cA)', sw: 2.5, dash: '6 4', an: 'pop', d: d + .4 });
-      if (i === 3) s += `<g class="aim" style="--d:${d + .4}s">${R(x + F * .225, y + F * .225, F * .55, F * .55, { rx: 2, fill: 'none', stroke: 'var(--train)', sw: 3, dash: '6 4' })}</g>`;
+      if (i === 0) s += `<image href="${photo}" x="${x}" y="${y}" width="${F}" height="${F}" preserveAspectRatio="xMidYMid slice" class="a" style="--d:${d}s;clip-path:inset(0 round 4px)"/>`;
+      if (i === 1) s += `<svg x="${x}" y="${y}" width="${F}" height="${F}" viewBox="0 0 ${F} ${F}" overflow="hidden" class="a" style="--d:${d}s"><image href="${photo}" x="0" y="0" width="${F}" height="${F}" preserveAspectRatio="xMidYMid slice" transform="translate(${F} 0) scale(-1 1)"/></svg>`;
+      if (i === 2) s += `<svg x="${x}" y="${y}" width="${F}" height="${F}" viewBox="0 0 ${F} ${F}" overflow="hidden" class="a" style="--d:${d}s"><image href="${photo}" x="${-F * .4}" y="${-F * .4}" width="${F * 1.8}" height="${F * 1.8}" preserveAspectRatio="xMidYMid slice"/></svg>`;
+      if (i === 3) s += `<image href="${aimed}" x="${x}" y="${y}" width="${F}" height="${F}" preserveAspectRatio="xMidYMid slice" class="a" style="--d:${d}s;clip-path:inset(0 round 4px)"/>`;
+      s += R(x, y, F, F, { rx: 4, fill: 'none', stroke: 'var(--photoLine)', sw: 1 });
       s += R(x, 238, (c[1] - 78) / 2 * F, 22, { rx: 4, fill: i === 3 ? 'var(--train)' : 'var(--plotNeutral)', an: 'gx', d: 2.6 + i * .15 });
       s += T(x, 284, c[1].toFixed(1) + '%', { c: 'big', an: 'a', d: 2.8 + i * .15 });
       s += T(x + 104, 284, c[2], { c: 'num', fill: 'var(--good)', an: 'a', d: 2.9 + i * .15 });
@@ -1534,11 +1571,16 @@ function clearTimers() { clearInterval(timer); timer = null; (window._timeouts |
 function trackerCard(sc) {
   return `<div class="tcard"><h3>Where we tune</h3><div id="vitMini"></div><div class="tlabel${sc.pred ? ' pred' : ''}" id="tuneLbl"></div>${LEGEND}</div>`;
 }
+function taskTriptych() {
+  return `<div class="tcard taskTriptych" data-s="2" aria-label="Comparison of the three project tasks"><h3>Three tasks</h3>${CYCLE3.map((c, i) =>
+    `<div class="taskStrip${c.pred ? ' pred' : ''}"><div class="taskName">${c.label}</div><div class="taskVit">${vit(c.spec)}</div></div>`
+  ).join('')}${LEGEND}</div>`;
+}
 
 function build(sc) {
   const t = sc.type || 'content';
-  if (t === 'title') return `<div class="title"><div class="bar"></div><div>
-    <div class="k">CS604 · Team 08 · ViT adaptation</div>
+  if (t === 'title') return `<div class="title"><div>
+    <div class="mastLabel">CS604 · Team 08 · ViT adaptation</div>
     <h1>Accuracy–Efficiency Trade&#8209;offs</h1>
     <p class="sub">Adapting pretrained Vision Transformers for fine-grained classification</p>
     <div class="names"><span>Anastasia Frances Frederica</span><span>Le Thi Hong Van</span><span>Liu Wenqi</span><span>Xu Qianqian</span></div>
@@ -1566,9 +1608,13 @@ function build(sc) {
   const side = sc.rq
     ? `<ul class="rq">${sc.rq.map((r, i) => `<li class="li-in" style="--d:${.4 + i * .15}s"><em>${r[0]}</em><span>${r[1]}</span></li>`).join('')}</ul>`
     : `<ul class="pts">${(sc.pts || []).map((p, i) => `<li class="li-in" data-pi="${i}">${p}</li>`).join('')}</ul>`;
+  const visual = `${sc.photos ? photos(sc.photos, sc.photosClass, sc.photosAt) : ''}${sc.gallery ? gallery(sc.gallery) : ''}${sc.img ? `<img class="fig li-in" style="--d:.15s" src="${sc.img}" alt="${sc.imgAlt || sc.title}" data-path="report/${sc.img}" data-label="${sc.imgAlt || sc.title}" onerror="handleFigureError(this)">` : ''}${sc.viz ? sc.viz() : ''}`;
+  const takeaway = sc.take ? `<div class="take li-in" data-take>${sc.take}</div>` : '';
+  if (sc.taskTriptych) return `<h2>${sc.title}</h2><div class="slideMeta">${sc.kick || sec.label}</div>
+    <div class="overviewBody"><div class="overviewLeft"><div class="vizcard" data-s="1">${visual}</div><aside class="side overviewCopy" data-s="3">${side}${takeaway}</aside></div>${taskTriptych()}</div>`;
   return `<h2>${sc.title}</h2><div class="slideMeta">${sc.kick || sec.label}</div>
-    <div class="body"><div class="vizcard">${sc.photos ? photos(sc.photos, sc.photosClass, sc.photosAt) : ''}${sc.gallery ? gallery(sc.gallery) : ''}${sc.img ? `<img class="fig li-in" style="--d:.15s" src="${sc.img}" alt="${sc.imgAlt || sc.title}" data-path="report/${sc.img}" data-label="${sc.imgAlt || sc.title}" onerror="handleFigureError(this)">` : ''}${sc.viz ? sc.viz() : ''}</div>
-    <aside class="side">${trackerCard(sc)}${side}${sc.take ? `<div class="take li-in" data-take>${sc.take}</div>` : ''}</aside></div>`;
+    <div class="body"><div class="vizcard">${visual}</div>
+    <aside class="side">${trackerCard(sc)}${side}${takeaway}</aside></div>`;
 }
 
 function mountTracker(sc) {
