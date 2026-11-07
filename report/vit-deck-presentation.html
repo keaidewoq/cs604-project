@@ -37,6 +37,7 @@ button:focus-visible{outline:3px solid var(--train);outline-offset:3px}
 #slide{position:absolute;left:0;right:0;top:66px;bottom:50px;padding:26px 64px 20px;display:flex;flex-direction:column}
 #deck.is-title #slide{top:0;bottom:0;padding:0}
 #slide.enter{animation:slideIn .55s cubic-bezier(.2,.8,.2,1) both}
+#deck.motion-off #slide,#deck.motion-off #slide *{animation:none!important;transition:none!important}
 @keyframes slideIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
 /* ---------- content slide ---------- */
 .slideMeta{font:700 15px var(--narrow);letter-spacing:.1em;text-transform:uppercase;color:var(--train);border-top:1px solid var(--line);padding-top:8px;margin:-8px 0 14px}
@@ -116,8 +117,8 @@ ul.pts li::before{content:"";position:absolute;left:2px;top:.62em;width:7px;heig
 .ecase h5{grid-column:1/-1;margin:0 0 2px;font:700 18px var(--sans);color:var(--ink)}
 .ecase .hd{font-size:13.5px;font-weight:700;line-height:1.2;align-self:end}
 .ecase .hd.n{font-weight:500;color:var(--muted)}
-.ecase .hd.ok,.zcase p.ok{color:var(--good)}
-.ecase .hd.no,.zcase p.no{color:var(--bad)}
+.ecase .hd.ok,.ecase .hd.no{padding:5px 7px;border:1px solid #c8d6df;border-radius:3px;background:var(--surfaceCool);color:var(--ink)}
+.zcase p.ok,.zcase p.no{padding:5px 7px;border:1px solid #c8d6df;border-radius:3px;background:var(--surfaceCool);color:var(--ink)}
 .ecase .col{display:flex;flex-direction:column;gap:5px;min-height:0}
 .ecase img,.zcase img{flex:1;min-height:0;width:100%;object-fit:contain;object-position:left center;display:block}
 .ecase img.gone,.zcase img.gone{visibility:hidden}
@@ -180,6 +181,7 @@ noscript .figure-fallback{position:fixed;inset:24px;z-index:30;background:var(--
 .secD{font-size:20px;line-height:1.46;color:var(--muted);margin:0 0 22px;max-width:62ch}
 ol.agenda{margin:0;padding:0;list-style:none;counter-reset:ag}
 ol.agenda li{counter-increment:ag;display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line);font-size:18.5px}
+ol.agenda.noMeta li{grid-template-columns:34px 1fr}
 ol.agenda li::before{content:counter(ag,decimal-leading-zero);font:700 15px var(--narrow);color:var(--muted);font-variant-numeric:tabular-nums}
 ol.agenda li em{font-style:normal;font:600 15px var(--narrow);letter-spacing:.035em;color:var(--train);text-transform:uppercase}
 ol.agenda li em.g{color:var(--good)}
@@ -519,24 +521,24 @@ const photos = (groups, cls, at) => `<div class="photos${cls ? ' ' + cls : ''}"$
 /* ---------- raw-photo layouts (report/slide-images/…) ---------- */
 const PH = (src, alt) => `<img src="${src}" alt="${alt}" loading="eager" onerror="this.classList.add('gone')">`;
 const ERR = [
-  { dir: '1_look_alike_relatives', label: 'Look-alike relatives', t: 'long_billed_dowitcher', tn: 'Long-billed Dowitcher', m: 'short_billed_dowitcher', mn: 'Short-billed Dowitcher', pc: 34 },
-  { dir: '2_tiny_subject', label: 'Tiny subject', t: 'thick_legged_hoverfly', tn: 'Thick-legged Hoverfly', m: 'white_meadowsweet', mn: 'White meadowsweet', pc: 89 },
-  { dir: '3_subject_outside_the_crop', label: 'Subject outside the crop', t: 'silver_garden_spider', tn: 'Silver Garden Spider', m: 'reed_meadowgrass', mn: 'Reed meadowgrass', pc: 18 },
-  { dir: '4_unfamiliar_look', label: 'Unfamiliar look', t: 'purple_coneflower', tn: 'Purple coneflower', m: 'meadow_spittlebug', mn: 'Meadow spittlebug', pc: 14 }];
+  { dir: '1_look_alike_relatives', label: 'Look-alike relatives', t: 'long_billed_dowitcher', ti: 3474, tn: 'Long-billed Dowitcher', m: 'short_billed_dowitcher', mi: 3473, mn: 'Short-billed Dowitcher', pc: 34 },
+  { dir: '2_tiny_subject', label: 'Tiny subject', t: 'thick_legged_hoverfly', ti: 489, tn: 'Thick-legged Hoverfly', m: 'white_meadowsweet', mi: 9491, mn: 'White meadowsweet', pc: 89 },
+  { dir: '3_subject_outside_the_crop', label: 'Subject outside the crop', t: 'silver_garden_spider', ti: 15, tn: 'Silver Garden Spider', m: 'reed_meadowgrass', mi: 6377, mn: 'Reed meadowgrass', pc: 18 },
+  { dir: '4_unfamiliar_look', label: 'Unfamiliar look', t: 'purple_coneflower', ti: 6750, tn: 'Purple coneflower', m: 'meadow_spittlebug', mi: 523, mn: 'Meadow spittlebug', pc: 14 }];
 function errorCases() {
   return `<div class="ecases">${ERR.map((c, i) => {
     const b = `slide-images/error_examples/${c.dir}/`;
     return `<div class="ecase li-in" style="--d:${.15 + i * .3}s"><h5>${c.label}</h5>
-      <div class="hd n">Holdout photo</div><div class="hd ok">True: ${c.tn}</div><div class="hd no">Model: ${c.mn} (${c.pc}%)</div>
+      <div class="hd n">Holdout photo</div><div class="hd ok">True class: ${c.ti}</div><div class="hd no">Model class: ${c.mi}</div>
       <div class="col">${PH(b + 'holdout_photo.jpg', c.label + ': holdout photo, red box marks the crop the model saw')}</div>
       <div class="col">${PH(b + `true_${c.t}_1.jpg`, 'Training photo of ' + c.tn)}${PH(b + `true_${c.t}_2.jpg`, 'Training photo of ' + c.tn)}</div>
       <div class="col">${PH(b + `model_${c.m}_1.jpg`, 'Training photo of ' + c.mn)}${PH(b + `model_${c.m}_2.jpg`, 'Training photo of ' + c.mn)}</div></div>`;
   }).join('')}</div>`;
 }
 const ZOOM = [
-  { dir: '1_small_honey_ant', tn: 'Small Honey Ant', first: ['no', 'Blacklegged Tick (15%)'], zoom: ['ok', 'Small Honey Ant (13%)'] },
-  { dir: '2_neurothemis_taiwanensis', tn: 'Neurothemis taiwanensis', first: ['no', 'Common Parasol (50%)'], zoom: ['ok', 'Neurothemis taiwanensis (46%)'] },
-  { dir: '3_black_crested_titmouse', tn: 'Black-crested Titmouse', first: ['ok', 'Black-crested Titmouse (77%)'], zoom: ['no', 'Tufted Titmouse (46%)'] }];
+  { dir: '1_small_honey_ant', tn: '766', first: ['no', '142 (15%)'], zoom: ['ok', '766 (13%)'] },
+  { dir: '2_neurothemis_taiwanensis', tn: '2527', first: ['no', '2525 (50%)'], zoom: ['ok', '2527 (46%)'] },
+  { dir: '3_black_crested_titmouse', tn: '4026', first: ['ok', '4026 (77%)'], zoom: ['no', '4027 (46%)'] }];
 function zoomCases() {
   return `<div class="zcases">${ZOOM.map((c, i) => {
     const b = `slide-images/zoom_boxes/${c.dir}/`;
@@ -1587,12 +1589,13 @@ function build(sc) {
     <div class="date">7 NOVEMBER 2026</div></div>
     <div class="secR"><div id="vitMini"></div><div class="tlabel" id="tuneLbl"></div>${LEGEND}</div></div>`;
   if (t === 'section') {
-    const items = S.filter(s => s.sec === sc.sec && !s.type).map((s, i) => `<li class="li-in" style="--d:${.5 + i * .12}s"><span>${s.short}</span><em${s.pred ? ' class="g"' : ''}>${s.tune || 'Full FT vs PEFT'}</em></li>`).join('');
+    const showAgendaMeta = sc.sec !== 't3';
+    const items = S.filter(s => s.sec === sc.sec && !s.type).map((s, i) => `<li class="li-in" style="--d:${.5 + i * .12}s"><span>${s.short}</span>${showAgendaMeta ? `<em${s.pred ? ' class="g"' : ''}>${s.tune || 'Full FT vs PEFT'}</em>` : ''}</li>`).join('');
     return `<div class="sec"><div>
       <div class="secT">Task ${sc.n} · ${sc.title}</div>
       <div class="slideMeta">Section ${sc.n} of 3</div>
       <p class="secQ">${sc.q}</p><p class="secD">${sc.desc}</p>
-      <ol class="agenda">${items}</ol></div>
+      <ol class="agenda${showAgendaMeta ? '' : ' noMeta'}">${items}</ol></div>
       <div class="secR"><div id="vitMini"></div><div class="tlabel${sc.pred ? ' pred' : ''}">Trainable in this section: <b>${sc.tune}</b></div>${LEGEND}</div></div>`;
   }
   if (t === 'end') return `<div class="endq"><h1>Questions?</h1><div class="slideMeta">Thank you</div>
@@ -1681,14 +1684,16 @@ function retreat() { if (stepN > 0) { stepN--; applyStep(); } else if (cur > 0) 
 function render(atEnd, keepStep) {
   clearTimers();
   const sc = S[cur];
+  const immediateAnimated = [5, 6, 8, 9, 11].includes(cur);
   deck.classList.toggle('is-title', sc.type === 'title');
+  deck.classList.toggle('motion-off', cur >= 4 && cur <= 11 && !immediateAnimated && cur !== 7 && cur !== 10);
   slideEl.innerHTML = build(sc);
   slideEl.classList.remove('enter'); void slideEl.offsetWidth; slideEl.classList.add('enter');
   if (sc.mount) sc.mount();
   mountTracker(sc);
   updateChrome();
   prepSteps(sc);
-  stepN = keepStep != null ? Math.min(keepStep, stepMax) : atEnd ? stepMax : 0;
+  stepN = keepStep != null ? Math.min(keepStep, stepMax) : (atEnd || immediateAnimated) ? stepMax : 0;
   applyStep();
   requestAnimationFrame(() => {
     if (viewportBox().width <= 900) {
