@@ -36,6 +36,7 @@ button:focus-visible{outline:3px solid var(--train);outline-offset:3px}
 #deck.is-title .top,#deck.is-title .foot{display:none}
 #slide{position:absolute;left:0;right:0;top:66px;bottom:50px;padding:26px 64px 20px;display:flex;flex-direction:column}
 #deck.is-title #slide{top:0;bottom:0;padding:0}
+:fullscreen,:fullscreen *{cursor:none!important}
 #slide.enter{animation:slideIn .55s cubic-bezier(.2,.8,.2,1) both}
 #deck.motion-off #slide,#deck.motion-off #slide *{animation:none!important;transition:none!important}
 @keyframes slideIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
@@ -269,6 +270,11 @@ svg text{font-family:var(--sans)}
 #ctl button:hover{background:rgba(255,255,255,.12)}
 #ctl button[aria-pressed="true"],#ctl button[aria-expanded="true"]{background:var(--card);color:var(--ink);border-color:var(--card)}
 #ctl button:disabled{cursor:not-allowed;opacity:.42}
+:fullscreen #ctl{display:none}
+#laserTrail{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:99;display:none}
+:fullscreen #laserTrail.active{display:block}
+#laser{position:fixed;left:0;top:0;width:10px;height:10px;border:2px solid var(--train);border-radius:50%;background:#fff;box-shadow:0 1px 6px rgba(159,49,49,.72),0 2px 14px rgba(159,49,49,.38);transform:translate(-50%,-50%);pointer-events:none;z-index:100;display:none}
+:fullscreen #laser.active{display:block}
 #notes{position:fixed;left:0;right:0;bottom:0;max-height:42vh;overflow:auto;background:var(--chrome);color:var(--darkText);padding:18px 28px max(70px,calc(54px + env(safe-area-inset-bottom)));font-size:17px;line-height:1.52;transform:translateY(100%);transition:transform .35s;z-index:15;border-top:3px solid var(--train)}
 #notes.open{transform:none}
 #notes h3{font:700 14px var(--narrow);letter-spacing:.09em;text-transform:uppercase;color:#ffb98a;margin:14px 0 5px}
@@ -277,7 +283,7 @@ svg text{font-family:var(--sans)}
 #notes>*{max-width:72ch}
 #notes .take{background:var(--darkRaised);font-size:16px;margin-top:10px}
 #notes .nt{font:700 14px var(--narrow);letter-spacing:.09em;text-transform:uppercase;color:var(--darkMuted);margin-bottom:8px}
-@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition:none!important}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition:none!important}#laserTrail{display:none!important}}
 @media (max-width:700px),(pointer:coarse){
   #ctl{width:calc(100vw - 16px);max-width:none;bottom:max(8px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:5px;opacity:1}
   #ctl button{min-width:0;min-height:44px;padding:6px 3px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -358,6 +364,8 @@ svg text{font-family:var(--sans)}
   <button id="bFull" type="button" title="Full screen (F)" aria-pressed="false">Full</button>
 </div>
 <aside id="notes" role="region" aria-label="Speaker notes" aria-hidden="true"></aside>
+<canvas id="laserTrail" aria-hidden="true"></canvas>
+<div id="laser" aria-hidden="true"></div>
 <noscript><div class="figure-fallback"><b>JavaScript is required to run this slide deck.</b><span>Enable JavaScript, then reload the file. The source remains available in report/presentation_storyboard.md.</span></div></noscript>
 
 <script>
@@ -1031,13 +1039,13 @@ S.push({
   sec: 't2', kick: 'Task 2 · Where should the budget go?', short: 'Where the budget goes', title: 'Cheap adaptation in every block helps; once every block can adapt, placement barely matters',
   src: '10,000-class holdout · 336 px · 3 epochs · 2 seeds (biases/norms: 1 seed, repeated on CodaBench +0.5) · differences < 0.4 pp are ties',
   spec: { blocks: 'addon', head: 'train', res: '336 px', focus: ['blocks'] }, tune: 'Placement of PEFT parameters',
-  scripted: true,
+  scripted: true, nSteps: 1,
   pts: ['LayerNorms + biases in every block: <b>+0.50 pp</b> for only 0.14% of the backbone — kept.', 'Same budget, all 12 blocks vs last 8: LoRA and AdaptFormer both <b>tie</b> over two seeds.'],
-  ptsAt: [2, 3],
-  take: 'Once every block can adapt, <b>placement barely matters</b>.', takeAt: 4,
+  ptsAt: [0, 1],
+  take: 'Once every block can adapt, <b>placement barely matters</b>.', takeAt: 1,
   viz() {
     let s = '';
-    s += stp(1, R(16, 8, 728, 40, { rx: 6, fill: 'var(--surfaceCool)', stroke: 'none', an: 'fi' }) + T(30, 34, 'A 5% budget means two decisions:  ① <tspan style="font-weight:700">where</tspan> to put the parameters (this slide)  ·  ② <tspan style="font-weight:700">what kind</tspan> (next slide)', { c: 'lbl', an: 'a' }));
+    s += stp(0, R(16, 8, 728, 40, { rx: 6, fill: 'var(--surfaceCool)', stroke: 'none', an: 'fi' }) + T(30, 34, 'A 5% budget means two decisions:  ① <tspan style="font-weight:700">where</tspan> to put the parameters (this slide)  ·  ② <tspan style="font-weight:700">what kind</tspan> (next slide)', { c: 'lbl', an: 'a' }));
     // left: biases + norms ablation
     const b0 = 330, pl = v => b0 - (v - 75.5) / 1.6 * 190;
     let L = T(16, 78, 'LayerNorms + biases, off vs on', { c: 'ttl', an: 'a' }) + T(16, 96, 'AdaptFormer w192 · axis from 75.5', { c: 'xs', an: 'a' });
@@ -1046,7 +1054,7 @@ S.push({
     L += R(180, pl(76.76), 90, b0 - pl(76.76), { rx: 4, fill: 'var(--train)', an: 'gy', d: .5 }) + T(225, pl(76.76) - 8, '76.76', { a: 'middle', c: 'num', an: 'a', d: .9 });
     L += T(95, b0 + 18, 'frozen · 4.13%', { a: 'middle', c: 'sm' }) + T(225, b0 + 18, 'trained everywhere · 4.27%', { a: 'middle', c: 'sm' });
     L += T(160, 128, '+0.50 pp for +0.14%', { a: 'middle', c: 'lbl bold', fill: 'var(--good)', an: 'a', d: 1.2 });
-    s += stp(2, L);
+    s += stp(0, L);
     // right: placement at equal budget
     const pr = v => b0 - (v - 76) / 1.6 * 190;
     let Rt = `<line x1="330" y1="70" x2="330" y2="350" stroke="var(--grid)"/>` + T(350, 78, 'Placement at equal budget: all 12 blocks vs last 8', { c: 'ttl', an: 'a' }) + T(350, 96, 'biases + LayerNorms trainable in every block · 2 seeds · axis from 76', { c: 'xs', an: 'a' });
@@ -1060,13 +1068,13 @@ S.push({
       return o;
     };
     Rt += pair(370, 'LoRA · 4.94%', 77.26, 77.33, .1) + pair(570, 'AdaptFormer · 4.27%', 76.77, 76.90, .4);
-    s += stp(3, Rt);
+    s += stp(1, Rt);
     return svg(760, 392, s, 'Biases and LayerNorms ablation and placement ties');
   },
-  notes: `<h3>Script (Van, Canva slide 10, ~30 s)</h3><p><b>[click 1 — banner]</b> A 5% budget means two decisions: where to put the parameters, and what kind. We ran an ablation for each.</p>
-  <p><b>[click 2 — left bars]</b> First, LayerNorms and biases in every block only take up a tiny 0.14% of the backbone, but give us a gain of half a point. We kept them.</p>
-  <p><b>[click 3 — right bars]</b> Then the second ablation, placement: same budget, all 12 blocks vs only the last 8. LoRA and AdaptFormer over two seeds both give a tie.</p>
-  <p><b>[click 4 — takeaway]</b> So once every block can adapt, placement barely matters.</p>`
+  notes: `<h3>Script (Van, Canva slide 10, ~30 s)</h3><p><b>[on entry — banner and left bars]</b> A 5% budget means two decisions: where to put the parameters, and what kind. We ran an ablation for each.</p>
+  <p>First, LayerNorms and biases in every block only take up a tiny 0.14% of the backbone, but give us a gain of half a point. We kept them.</p>
+  <p><b>[click 1 — right bars and takeaway]</b> Then, the second ablation: placement. Same budget, all 12 blocks versus only the last 8. LoRA and AdaptFormer over two seeds both give a tie.</p>
+  <p>So once every block can adapt, placement barely matters.</p>`
 });
 
 /* ---- What kind ---- */
@@ -1075,10 +1083,10 @@ S.push({
   sec: 't2', kick: 'Task 2 · What kind of capacity?', short: 'What kind of module', title: 'At an equal budget, LoRA beats wider adapters; AF + LoRA and LoRA alone tie',
   src: '10,000-class holdout · 336 px · 3 epochs · 2-seed means · differences < 0.4 pp are ties',
   spec: { blocks: 'addon', head: 'train', res: '336 px', focus: ['blocks'] }, tune: 'Type of PEFT capacity',
-  scripted: true,
-  pts: ['Spend the last ~0.7% on wider adapters: <b>no gain</b>. On LoRA: <b>+0.6</b> in both seeds.', 'LoRA alone at the same total budget: a <b>tie</b>.'],
-  ptsAt: [3, 4],
-  take: 'LoRA is the efficient way to add capacity. AdaptFormer stays because it <b>trains ~20% faster</b>; LoRA alone <b>predicts faster</b> — a trade-off.', takeAt: 5,
+  scripted: true, nSteps: 3,
+  pts: ['Wider adapters: <b>no gain</b>.', 'Add LoRA: <b>+0.6</b> in both seeds.', 'LoRA alone at the same total budget: a <b>tie</b>.'],
+  ptsAt: [1, 2, 3],
+  take: 'LoRA is the efficient way to add capacity. AdaptFormer stays because it <b>trains ~20% faster</b>; LoRA alone <b>predicts faster</b> — a trade-off.', takeAt: 3,
   viz() {
     let s = '';
     const x0 = 270, W = 420, px = v => x0 + (v - 76) / 1.6 * W;
@@ -1090,16 +1098,16 @@ S.push({
       ['Check: LoRA alone', '~4.95% of backbone', 77.26, 'var(--cA)', 'tie with AF + LoRA (−0.17)']];
     rows.forEach((r, i) => {
       const y = 46 + i * 68;
-      s += stp(i + 1, T(16, y + 12, r[0], { c: 'lbl bold', an: 'a' }) + T(16, y + 30, r[1], { c: 'sm', an: 'a' }) + R(x0, y, px(r[2]) - x0, 28, { rx: 4, fill: r[3], an: 'gx', d: .1 }) + T(px(r[2]) + 8, y + 19, r[2].toFixed(2) + '%', { c: 'num', an: 'a', d: .6 }) + (r[4] ? T(x0 + 4, y + 47, r[4], { c: 'sm', an: 'a', d: .7, fill: i === 1 ? 'var(--muted)' : 'var(--good)' }) : ''));
+      s += stp(i, T(16, y + 12, r[0], { c: 'lbl bold', an: 'a' }) + T(16, y + 30, r[1], { c: 'sm', an: 'a' }) + R(x0, y, px(r[2]) - x0, 28, { rx: 4, fill: r[3], an: 'gx', d: .1 }) + T(px(r[2]) + 8, y + 19, r[2].toFixed(2) + '%', { c: 'num', an: 'a', d: .6 }) + (r[4] ? T(x0 + 4, y + 47, r[4], { c: 'sm', an: 'a', d: .7, fill: i === 1 ? 'var(--muted)' : 'var(--good)' }) : ''));
     });
-    s += stp(5, R(16, 322, 728, 40, { rx: 6, fill: 'var(--surfaceCool)', stroke: 'none', an: 'fi' }) + T(30, 347, 'Trade-off:  AdaptFormer trains ~20% faster  ·  LoRA alone predicts faster (mergeable)', { c: 'lbl', an: 'a', d: .2 }));
+    s += stp(3, R(16, 322, 728, 40, { rx: 6, fill: 'var(--surfaceCool)', stroke: 'none', an: 'fi' }) + T(30, 347, 'Trade-off:  AdaptFormer trains ~20% faster  ·  LoRA alone predicts faster (mergeable)', { c: 'lbl', an: 'a', d: .2 }));
     return svg(760, 370, s, 'Wider adapters versus LoRA at an equal budget');
   },
-  notes: `<h3>Script (Van, Canva slide 11, ~30 s)</h3><p><b>[click 1 — start]</b> Next: what kind of parameters. We start from AdaptFormer at width 192 — 4.27% of the backbone, leaving about 0.7% to spend.</p>
-  <p><b>[click 2]</b> Option one: make the adapters wider. No gain.</p>
-  <p><b>[click 3]</b> Option two: add LoRA. Plus 0.6, in both seeds.</p>
-  <p><b>[click 4]</b> We then tried LoRA alone at the same total budget: a tie.</p>
-  <p><b>[click 5 — trade-off]</b> So LoRA is the efficient way to add capacity. We keep AdaptFormer because it trains about 20% faster; LoRA alone predicts faster. It's a trade-off.</p>`
+  notes: `<h3>Script (Van, Canva slide 11, ~30 s)</h3><p><b>[on entry — start]</b> Next: what kind of parameters. In this experiment, we start from AdaptFormer at width 192 — that's 4.27% of the backbone, leaving about 0.7% to spend.</p>
+  <p><b>[click 1 — wider adapters]</b> Option one: make the adapters wider. No gain.</p>
+  <p><b>[click 2 — add LoRA]</b> Option two: add LoRA. We gained 0.6, in both seeds.</p>
+  <p><b>[click 3 — LoRA alone and trade-off]</b> We then tried LoRA alone at the same total budget: a tie.</p>
+  <p>So LoRA is the efficient way to add capacity. We keep AdaptFormer because it trains about 20% faster; LoRA alone predicts faster. It's a trade-off.</p>`
 });
 
 /* ---- Final design ---- */
@@ -1108,10 +1116,10 @@ S.push({
   sec: 't2', kick: 'Task 2 · Final design', short: 'Final PEFT design', title: 'The final PEFT design, built one kept change at a time',
   src: 'Holdout: 10,000 classes, 336 px, 3 epochs · CodaBench: plain view unless stated',
   spec: { blocks: 'addon', head: 'proto', res: '448 px', focus: ['blocks', 'input'] }, tune: 'Final PEFT configuration',
-  scripted: true,
+  scripted: true, nSteps: 1,
   pts: ['Holdout: 75.3 → <b>77.4</b> — about two points in total, at <b>4.94%</b> of the backbone.', 'CodaBench: 77.9 → <b>81.2</b> at 448 px, and <b>82.2</b> with zoom inference.'],
-  ptsAt: [5, 6],
-  take: 'Every addition was screened on the holdout; only the retained recipe advanced to CodaBench.', takeAt: 6,
+  ptsAt: [0, 1],
+  take: 'Every addition was screened on the holdout; only the retained recipe advanced to CodaBench.', takeAt: 1,
   viz() {
     let s = '';
     const base = 220, H = 170, py = v => base - (v - 74.5) / 3.3 * H, cols = [50, 190, 330, 470, 610];
@@ -1124,7 +1132,7 @@ S.push({
       if (i > 0 && i < 4) g += `<line x1="${cols[i - 1] + 100}" y1="${py(st0[2])}" x2="${x}" y2="${py(st0[2])}" stroke="var(--frozen)" stroke-dasharray="3 3" class="fi"/>`;
       g += T(x + 50, top - 8, i > 0 && i < 4 ? st0[3] : st0[1].toFixed(2) + '%', { a: 'middle', c: 'num', an: 'a', d: .4 }) + T(x + 50, base + 18, st0[0], { a: 'middle', c: 'sm', an: 'a' });
       if (i === 4) g += T(x + 50, top - 28, '≈ +2 pp · 4.94%', { a: 'middle', c: 'sm bold', fill: 'var(--train)', an: 'a', d: .6 });
-      s += stp(i + 1, g);
+      s += stp(0, g);
     });
     let cbg = T(16, 270, 'CodaBench top-1: the same path at higher resolution, then zoom inference', { c: 'sm', an: 'a' });
     const cb = [['AF, 336 px', 77.9], ['+ norms, 384 px', 79.4], ['448 px', 80.4], ['+ LoRA, 448 px', 81.2], ['+ crop & zoom', 82.2]];
@@ -1132,16 +1140,11 @@ S.push({
     let d = `M${cols[0] + 50} ${cy(cb[0][1])}`; cb.forEach((c, i) => { if (i) d += ` L${cols[i] + 50} ${cy(c[1])}`; });
     cbg += P(d, { c: 'flow', an: 'draw', d: .2, stroke: 'var(--cA)', sw: 2.5 });
     cb.forEach((c, i) => { cbg += C(cols[i] + 50, cy(c[1]), 5, { fill: 'var(--cA)', an: 'pop', d: .2 + i * .2 }) + T(cols[i] + 50, cy(c[1]) - 12, c[1] + '%', { a: 'middle', c: 'num', an: 'a', d: .3 + i * .2 }) + T(cols[i] + 50, 420, c[0], { a: 'middle', c: 'sm', an: 'a', d: .2 + i * .2 }); });
-    s += stp(6, cbg);
+    s += stp(1, cbg);
     return svg(760, 430, s, 'Waterfall of final design steps and CodaBench path');
   },
-  notes: `<h3>Script (Van, Canva slide 12, ~25 s)</h3><p>Putting it together, from where we started. This is our final design.</p>
-  <p><b>[click 1]</b> AdaptFormer with the default recipe: 75.3 top-1.</p>
-  <p><b>[click 2]</b> Adding recipe tweaks, mainly a cosine margin on the head: plus one point.</p>
-  <p><b>[click 3]</b> Biases and LayerNorms in every block: plus 0.5.</p>
-  <p><b>[click 4]</b> LoRA: plus 0.66.</p>
-  <p><b>[click 5]</b> About two points in total, at 4.94% of the backbone.</p>
-  <p><b>[click 6]</b> On CodaBench the same path goes from 77.9 to 81.2 at 448 resolution, and 82.2 with zoom inference.</p>`
+  notes: `<h3>Script (Van, Canva slide 12, ~25 s)</h3><p><b>[on entry — holdout waterfall]</b> Putting it together, from where we started. This is our final design. AdaptFormer with the default recipe: 75.3 top-1 accuracy. Adding recipe tweaks, mainly a cosine margin on the head: plus one point. Biases and LayerNorms in every block: plus 0.5. LoRA: plus 0.66. About two points in total, at 4.94% of the backbone.</p>
+  <p><b>[click 1 — CodaBench path]</b> On CodaBench the same path goes from 77.9 to 81.2 at 448 resolution, and 82.2 with zoom inference.</p>`
 });
 
 /* ---- Task 3 divider ---- */
@@ -1730,6 +1733,7 @@ document.getElementById('bNotes').onclick = toggleNotes;
 document.getElementById('bFull').onclick = toggleFull;
 document.addEventListener('fullscreenchange', () => {
   document.getElementById('bFull').setAttribute('aria-pressed', String(!!document.fullscreenElement));
+  if (!document.fullscreenElement) clearLaser();
   fit();
 });
 document.addEventListener('keydown', e => {
@@ -1748,8 +1752,68 @@ document.addEventListener('keydown', e => {
   else if (k === 'r' || k === 'R') render(false, stepN);
 });
 slideEl.addEventListener('click', e => { if (e.target.closest('button, a, input, select, textarea, .ctrl')) return; advance(); });
-const ctl = document.getElementById('ctl'); let hideT;
-addEventListener('mousemove', () => { ctl.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(() => ctl.classList.remove('show'), 2200); });
+const ctl = document.getElementById('ctl');
+const laser = document.getElementById('laser');
+const laserTrail = document.getElementById('laserTrail');
+const laserCtx = laserTrail.getContext('2d');
+const trailPoints = [];
+const TRAIL_LIFE = 135;
+let hideT, trailFrame = 0;
+
+function sizeLaserTrail() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  laserTrail.width = Math.round(innerWidth * dpr);
+  laserTrail.height = Math.round(innerHeight * dpr);
+  laserTrail.style.width = innerWidth + 'px';
+  laserTrail.style.height = innerHeight + 'px';
+  laserCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function clearLaser() {
+  laser.classList.remove('active');
+  laserTrail.classList.remove('active');
+  trailPoints.length = 0;
+  if (trailFrame) cancelAnimationFrame(trailFrame);
+  trailFrame = 0;
+  laserCtx.clearRect(0, 0, innerWidth, innerHeight);
+}
+function drawLaserTrail(now) {
+  while (trailPoints.length && now - trailPoints[0].t > TRAIL_LIFE) trailPoints.shift();
+  laserCtx.clearRect(0, 0, innerWidth, innerHeight);
+  if (trailPoints.length > 1) {
+    for (let i = 1; i < trailPoints.length; i++) {
+      const a = Math.max(0, 1 - (now - trailPoints[i].t) / TRAIL_LIFE);
+      laserCtx.beginPath();
+      laserCtx.moveTo(trailPoints[i - 1].x, trailPoints[i - 1].y);
+      laserCtx.lineTo(trailPoints[i].x, trailPoints[i].y);
+      laserCtx.lineCap = 'round';
+      laserCtx.lineWidth = 2 + a * 2;
+      laserCtx.strokeStyle = `rgba(159, 49, 49, ${a * .78})`;
+      laserCtx.shadowColor = `rgba(159, 49, 49, ${a * .5})`;
+      laserCtx.shadowBlur = 7;
+      laserCtx.stroke();
+    }
+    laserCtx.shadowBlur = 0;
+  }
+  if (trailPoints.length) trailFrame = requestAnimationFrame(drawLaserTrail);
+  else trailFrame = 0;
+}
+addEventListener('mousemove', e => {
+  ctl.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(() => ctl.classList.remove('show'), 2200);
+  if (document.fullscreenElement) {
+    laser.style.left = e.clientX + 'px';
+    laser.style.top = e.clientY + 'px';
+    laser.classList.add('active');
+    if (!reducedMotion()) {
+      laserTrail.classList.add('active');
+      trailPoints.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+      if (trailPoints.length > 12) trailPoints.shift();
+      if (!trailFrame) trailFrame = requestAnimationFrame(drawLaserTrail);
+    }
+  }
+});
+addEventListener('resize', sizeLaserTrail);
+addEventListener('mouseleave', clearLaser);
+sizeLaserTrail();
 ctl.addEventListener('focusin', () => { clearTimeout(hideT); ctl.classList.add('show'); });
 ctl.addEventListener('focusout', e => {
   if (!ctl.contains(e.relatedTarget)) hideT = setTimeout(() => ctl.classList.remove('show'), 250);
