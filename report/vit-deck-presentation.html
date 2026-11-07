@@ -903,12 +903,12 @@ S.push({
   sec: 't2', kick: 'Task 2 · Methods', short: 'PEFT methods', title: 'Six PEFT families, each training under 5% of the backbone',
   src: 'Configurations selected per method · backbone % excludes the classifier head',
   spec: { blocks: 'addon', head: 'train', res: '336 px', focus: ['blocks'] }, tune: 'PEFT method (&lt; 5% trainable)',
-  scripted: true, nSteps: 8,
+  scripted: true, nSteps: 6,
   pts: ['Each method was tuned on its own design choices before the comparison.', 'The classifier head always trains and is not counted in the budget.'],
-  ptsAt: [8, 8],
-  take: 'LoRA can be <b>merged</b> into the frozen weights after training; adapter-style modules cannot.', takeAt: 8,
+  ptsAt: [6, 6],
+  take: 'LoRA can be <b>merged</b> into the frozen weights after training; adapter-style modules cannot.', takeAt: 6,
   viz() {
-    const order = [['last', 'Selected layer'], ['bitfit', 'BitFit'], ['prefix', 'Prefix'], ['lora', 'LoRA'], ['serial', 'Serial adapter'], ['af', 'AdaptFormer'], ['full', 'Full FT'], ['final', 'Final design']];
+    const order = [['last', 'Selected layer'], ['bitfit', 'BitFit'], ['prefix', 'Prefix'], ['lora', 'LoRA'], ['serial', 'Serial adapter'], ['af', 'AdaptFormer']];
     const ctrl = `<div class="ctrl" id="peftBtns" role="group" aria-label="Adaptation method">${order.map(o => `<button type="button" data-k="${o[0]}" aria-pressed="false">${o[1]}</button>`).join('')}</div>`;
     let s = '';
     s += P('M340 6 V306', { c: 'flow', anim: false });
@@ -937,9 +937,7 @@ S.push({
       prefix: { parts: [], add: ['a-prefix'], blocks: 'all', txt: '<b>Prefix tuning:</b> learnable key and value vectors in <b>all blocks</b>, length <b>50</b>, was optimal. Tried: last 1 / last 4 / all blocks; length 5 / 20 / 50. <b>1.07%</b>.' },
       lora: { parts: [], add: ['a-lora'], blocks: 'all', txt: '<b>LoRA:</b> <b>rank 24 across all blocks</b>. DoRA gave similar accuracy at higher training cost; AdaLoRA performed worse. <b>4.12%</b>.' },
       serial: { parts: [], add: ['a-ser1', 'a-ser2'], blocks: 'all', txt: '<b>Serial adapter:</b> width fixed at <b>96</b>; learning rate <b>3×10⁻⁴</b> selected (vs 1e-3, 3e-3). <b>4.68%</b>.' },
-      af: { parts: [], add: ['a-af'], blocks: 'all', txt: '<b>AdaptFormer:</b> width <b>192</b>, learned scaling, CosFace margin <b>0.1</b>. Tried: width 64 / 192; fixed vs learned scale; margin 0 / 0.1 / 0.2. <b>4.13%</b>.' },
-      full: { parts: ['p-ln1', 'p-attn', 'p-ln2', 'p-mlp', 'b1', 'b2', 'b3', 'b4'], add: [], blocks: 'all', txt: '<b>Full fine-tuning (Task 1):</b> every weight trains — <b>100%</b> of the backbone.' },
-      final: { parts: ['p-ln1', 'p-ln2', 'b1', 'b2', 'b3', 'b4'], add: ['a-lora', 'a-af'], blocks: 'all', txt: '<b>Final design:</b> LoRA on attention + AdaptFormer beside the MLP + all LayerNorms and biases. <b>4.94%</b> of the backbone (448 px).' }
+      af: { parts: [], add: ['a-af'], blocks: 'all', txt: '<b>AdaptFormer:</b> width <b>192</b>, learned scaling, CosFace margin <b>0.1</b>. Tried: width 64 / 192; fixed vs learned scale; margin 0 / 0.1 / 0.2. <b>4.13%</b>.' }
     };
     const all = ['p-ln1', 'p-attn', 'p-ln2', 'p-mlp', 'b1', 'b2', 'b3', 'b4'], adds = ['a-prefix', 'a-lora', 'a-af', 'a-ser1', 'a-ser2'];
     const show = k => {
@@ -954,16 +952,14 @@ S.push({
     document.querySelectorAll('#peftBtns button').forEach(b => b.onclick = () => show(b.dataset.k));
     window._peftShow = show;
   },
-  onStep(k) { if (window._peftShow) window._peftShow(['none', 'last', 'bitfit', 'prefix', 'lora', 'serial', 'af', 'full', 'final'][Math.min(k, 8)]); },
+  onStep(k) { if (window._peftShow) window._peftShow(['none', 'last', 'bitfit', 'prefix', 'lora', 'serial', 'af'][Math.min(k, 6)]); },
   notes: `<h3>Script (Qian, Canva slide 8)</h3><p><b>[on entry]</b> We explored several PEFT methods, keeping trainable backbone parameters below 5%, excluding the classifier head.</p><ul>
   <li><b>[click 1]</b> Selected-layer fine-tuning: training the full attention module in the last block worked best.</li>
   <li><b>[click 2]</b> BitFit: training all backbone biases performed best.</li>
   <li><b>[click 3]</b> Prefix tuning: inserting learnable key and value vectors into all blocks, length 50, was optimal.</li>
   <li><b>[click 4]</b> LoRA: we selected rank 24 across all blocks. DoRA offered similar accuracy at higher training cost, while AdaLoRA performed worse.</li>
   <li><b>[click 5]</b> Serial adapter: we fixed the width at 96 and selected a learning rate of 3×10⁻⁴.</li>
-  <li><b>[click 6]</b> AdaptFormer: we selected width 192, learned scaling and a CosFace margin of 0.1.</li>
-  <li><b>[click 7]</b> Full fine-tuning trains every backbone weight.</li>
-  <li><b>[click 8]</b> The final design keeps only LoRA, AdaptFormer, LayerNorms and biases trainable.</li></ul>`
+  <li><b>[click 6]</b> AdaptFormer: we selected width 192, learned scaling and a CosFace margin of 0.1.</li></ul>`
 });
 
 /* ---- Scorecard ---- */
@@ -1687,7 +1683,7 @@ function retreat() { if (stepN > 0) { stepN--; applyStep(); } else if (cur > 0) 
 function render(atEnd, keepStep) {
   clearTimers();
   const sc = S[cur];
-  const immediateAnimated = [5, 6, 8, 9, 11].includes(cur);
+  const immediateAnimated = [5, 6, 8, 9, 11].includes(cur) || cur >= 16;
   deck.classList.toggle('is-title', sc.type === 'title');
   deck.classList.toggle('motion-off', cur >= 4 && cur <= 11 && !immediateAnimated && cur !== 7 && cur !== 10);
   slideEl.innerHTML = build(sc);
