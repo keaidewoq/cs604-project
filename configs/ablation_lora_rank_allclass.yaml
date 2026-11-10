@@ -1,0 +1,40 @@
+# LoRA rank on all 10,000 classes: r16 vs r24, 60 training minutes each.
+# Full-scale check of the pilot rank result (configs/ablation_lora_r24.yaml arm C: r24 +0.66,
+# repeated as C16 in configs/ablation_lora_depth_control.yaml: -0.54). The pilot misjudged
+# full FT vs LoRA (a capacity question), so rank is checked on the real class count too.
+#
+# Run: python scripts/ablation.py --spec configs/ablation_lora_rank_allclass.yaml \
+#        --data_root /content/data --output_dir /content/drive/MyDrive/CS604_RUNS [--only <arms>]
+# Launcher: notebooks/colab_launcher_ana_lora_rank.ipynb
+#
+# Same holdout as configs/allclass_holdout_lora_no_extras.yaml and
+# configs/ablation_peft_controlled.yaml (all classes, 5 per class held out, subset seed 0;
+# 40 fit images per class). Same recipe as the controlled comparison
+# (configs/peft_controlled_336.yaml: 336 px, prototype cosine head from the fit images,
+# head lr 3e-3, no extras, plain crop 0.9 at evaluation), but 60 training minutes instead
+# of 20 (5% warmup + cosine fitted to 60 min, ~3 epochs), so rank has room to matter.
+# Only the rank changes; alpha = rank in both (LoRA scaling 1.0, as in the recipe).
+#
+# Backbone %, head excluded: r24 3,538,944 = 4.12%; r16 2,359,296 = 2.74%.
+# Cost on an A100 40GB: ~65-70 min per arm (60 training + holdout eval + start-up),
+# two arms ~2.3 h. Run every arm on the same GPU type: arms get equal minutes.
+# Seed noise is ~0.3 points; differences under ~0.4 are ties. The seed arms are optional.
+base: peft_controlled_336.yaml          # relative to this file
+base_prototypes: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+pilot:
+  num_classes_subset: 10000             # all classes
+  holdout_per_class: 5
+  subset_seed: 0
+  max_train_minutes: 60                 # overrides the recipe's 20 for every arm
+  save_resume_state: true               # a dropped session resumes the arm instead of restarting
+arms:
+  A_lora_r24: {}                        # reference (the recipe as written)
+  B_lora_r16:
+    lora_rank: 16
+    lora_alpha: 16
+  # Optional second seed for each, if there is time (another ~2.3 h):
+  A_lora_r24_seed1: {seed: 1}
+  B_lora_r16_seed1:
+    lora_rank: 16
+    lora_alpha: 16
+    seed: 1
