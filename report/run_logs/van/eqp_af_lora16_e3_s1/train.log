@@ -1,0 +1,150 @@
+initialized classifier from /content/cs604-inputs/class_prototypes_336.pt
+device=NVIDIA RTX PRO 6000 Blackwell Server Edition mode=adaptformer trainable=11,942,413 (12.210%), backbone 4,262,412 (4.96% of the pretrained backbone, head excluded)
+adapter_init pca: 16 batches, variance explained per block 0.99 0.95 0.81 0.77 0.76 0.74 0.71 0.71 0.68 0.64 0.64 0.74
+saved checkpoint step=0 -> baseline.pt (baseline_step_000000.pt)
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+initial validation top1=42.51% (0 optimizer updates)
+saved checkpoint step=0 -> baseline.pt (baseline_step_000000.pt)
+saved checkpoint step=0 -> best.pt (best_step_000000.pt)
+step 50 loss 6.2196 577.4 img/s
+step 100 loss 5.6953 601.8 img/s
+step 150 loss 5.6930 601.6 img/s
+step 200 loss 5.7932 601.6 img/s
+step 250 loss 6.0926 601.6 img/s
+step 300 loss 6.2186 601.4 img/s
+step 350 loss 6.2289 601.4 img/s
+step 400 loss 6.0928 601.4 img/s
+step 450 loss 6.1065 601.1 img/s
+step 500 loss 6.0445 601.2 img/s
+saved checkpoint step=500 -> last.pt (resume_step_000500.pt)
+step 550 loss 5.9424 575.1 img/s
+step 600 loss 5.9334 601.1 img/s
+step 650 loss 5.8826 601.2 img/s
+step 700 loss 5.8191 601.3 img/s
+step 750 loss 5.8076 601.3 img/s
+step 800 loss 5.7780 601.3 img/s
+step 850 loss 5.8197 601.3 img/s
+step 900 loss 5.6868 601.3 img/s
+step 950 loss 5.6746 601.5 img/s
+step 1000 loss 5.6655 601.2 img/s
+saved checkpoint step=1000 -> last.pt (resume_step_001000.pt)
+step 1050 loss 5.5907 573.7 img/s
+step 1100 loss 5.6169 601.2 img/s
+step 1150 loss 5.6028 601.6 img/s
+step 1200 loss 5.5655 601.5 img/s
+step 1250 loss 5.5736 601.2 img/s
+step 1300 loss 5.6150 601.0 img/s
+step 1350 loss 5.4853 601.1 img/s
+step 1400 loss 5.4609 601.5 img/s
+step 1450 loss 5.4722 601.2 img/s
+step 1500 loss 5.4701 601.2 img/s
+saved checkpoint step=1500 -> last.pt (resume_step_001500.pt)
+step 1550 loss 5.3919 574.7 img/s
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+validation top1=69.08% loss=1.4279
+saved checkpoint step=1563 -> best.pt (best_step_001563.pt)
+saved checkpoint step=1563 -> last.pt (resume_step_001563.pt)
+step 1600 loss 4.8107 215.8 img/s
+step 1650 loss 4.7396 601.6 img/s
+step 1700 loss 4.8814 601.2 img/s
+step 1750 loss 4.8342 601.8 img/s
+step 1800 loss 4.9206 601.8 img/s
+step 1850 loss 5.0066 601.0 img/s
+step 1900 loss 5.0433 601.3 img/s
+step 1950 loss 5.0227 601.9 img/s
+step 2000 loss 5.1131 601.8 img/s
+saved checkpoint step=2000 -> last.pt (resume_step_002000.pt)
+step 2050 loss 5.0572 576.2 img/s
+step 2100 loss 5.1495 600.9 img/s
+step 2150 loss 5.1304 601.3 img/s
+step 2200 loss 5.1336 601.6 img/s
+step 2250 loss 5.1911 601.5 img/s
+step 2300 loss 5.1510 601.8 img/s
+step 2350 loss 5.1681 601.6 img/s
+step 2400 loss 5.1339 601.4 img/s
+step 2450 loss 5.1434 601.6 img/s
+step 2500 loss 5.1584 601.3 img/s
+saved checkpoint step=2500 -> last.pt (resume_step_002500.pt)
+step 2550 loss 5.1578 573.9 img/s
+step 2600 loss 5.1672 601.8 img/s
+step 2650 loss 5.1647 601.2 img/s
+step 2700 loss 5.0904 601.2 img/s
+step 2750 loss 5.1502 601.1 img/s
+step 2800 loss 5.1249 600.9 img/s
+step 2850 loss 5.0796 601.1 img/s
+step 2900 loss 5.1391 601.3 img/s
+step 2950 loss 5.1054 601.2 img/s
+step 3000 loss 5.0794 601.3 img/s
+saved checkpoint step=3000 -> last.pt (resume_step_003000.pt)
+step 3050 loss 5.1152 575.9 img/s
+step 3100 loss 4.9778 601.1 img/s
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+validation top1=75.54% loss=1.1680
+saved checkpoint step=3126 -> best.pt (best_step_003126.pt)
+saved checkpoint step=3126 -> last.pt (resume_step_003126.pt)
+step 3150 loss 4.6445 217.2 img/s
+step 3200 loss 4.2487 601.6 img/s
+step 3250 loss 4.3216 601.6 img/s
+step 3300 loss 4.3436 601.3 img/s
+step 3350 loss 4.4196 601.1 img/s
+step 3400 loss 4.4055 601.3 img/s
+step 3450 loss 4.4683 601.3 img/s
+step 3500 loss 4.4579 601.3 img/s
+saved checkpoint step=3500 -> last.pt (resume_step_003500.pt)
+step 3550 loss 4.5012 538.5 img/s
+step 3600 loss 4.5478 601.5 img/s
+step 3650 loss 4.5454 601.7 img/s
+step 3700 loss 4.5421 601.5 img/s
+step 3750 loss 4.4815 601.5 img/s
+step 3800 loss 4.5681 601.4 img/s
+step 3850 loss 4.5921 601.4 img/s
+step 3900 loss 4.5395 601.4 img/s
+step 3950 loss 4.5037 601.4 img/s
+step 4000 loss 4.5532 601.4 img/s
+saved checkpoint step=4000 -> last.pt (resume_step_004000.pt)
+step 4050 loss 4.5894 541.4 img/s
+step 4100 loss 4.5537 601.3 img/s
+step 4150 loss 4.5396 601.5 img/s
+step 4200 loss 4.5099 601.3 img/s
+step 4250 loss 4.5728 601.5 img/s
+step 4300 loss 4.5427 601.4 img/s
+step 4350 loss 4.5661 601.6 img/s
+step 4400 loss 4.5226 602.0 img/s
+step 4450 loss 4.5292 601.8 img/s
+step 4500 loss 4.5190 601.4 img/s
+saved checkpoint step=4500 -> last.pt (resume_step_004500.pt)
+step 4550 loss 4.5254 540.0 img/s
+step 4600 loss 4.6212 601.5 img/s
+step 4650 loss 4.5732 601.6 img/s
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+validation top1=77.41% loss=1.1624
+saved checkpoint step=4689 -> best.pt (best_step_004689.pt)
+saved checkpoint step=4689 -> last.pt (resume_step_004689.pt)

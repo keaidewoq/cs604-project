@@ -1,0 +1,21 @@
+{
+  "config": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\full_ft_20261017_122237\\config_laptop.yaml",
+  "ckpt": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\full_ft_20261017_122237\\last.pt",
+  "bank": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\rerank_flip\\bank_full_ft_20261017_122237.pt",
+  "bank_checkpoint": "/content/drive/MyDrive/CS604_RUNS/full_ft_20261017_122237/last.pt",
+  "split": "val",
+  "photos": 50000,
+  "crop_pct": 0.9,
+  "K": 5,
+  "m": 3,
+  "betas": [
+    20.0
+  ],
+  "main_submission": "val_team_08.txt = zoomflip_knn_b20",
+  "changed_vs_zoom_knn_b20": {
+    "zoom": 2578,
+    "zoomflip": 2695,
+    "zoomflip_knn_b20": 661
+  },
+  "seconds_total_4_passes": 844.9
+}

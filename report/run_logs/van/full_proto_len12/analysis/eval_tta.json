@@ -1,0 +1,107 @@
+{
+  "checkpoint": "..\\cs604-outputs\\full_proto_len12\\best.pt",
+  "checkpoint_sha256": "dbd9f1bf82e9eb04e950d351816ccdfc5cc343ffef141d1338c97a1758540e1d",
+  "checkpoint_step": 18756,
+  "samples": 50000,
+  "data_config": {
+    "input_size": [
+      3,
+      224,
+      224
+    ],
+    "interpolation": "bicubic",
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "crop_pct": 0.9,
+    "crop_mode": "center"
+  },
+  "gate": null,
+  "git": {
+    "git_commit": "44db0d5692cffa309ac52e5db033ba8874c3fed2",
+    "git_dirty": false,
+    "git_branch": "prototype-baseline",
+    "git_worktree": "C:\\Users\\Van Le\\cs604-project\\cs604-prototype-baseline"
+  },
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "results": {
+    "crop_0.6": {
+      "crop_pct": 0.6,
+      "acc_plain": 0.7557,
+      "acc_flip": 0.7559,
+      "acc_mean_logits": 0.75716,
+      "acc_mean_probs": 0.75726,
+      "loss_plain": 1.323107566986084,
+      "loss_mean_probs": 1.3119361199951172,
+      "elapsed_sec": 100.46813259995542
+    },
+    "crop_0.65": {
+      "crop_pct": 0.65,
+      "acc_plain": 0.75844,
+      "acc_flip": 0.75794,
+      "acc_mean_logits": 0.7602,
+      "acc_mean_probs": 0.76014,
+      "loss_plain": 1.3160434019470215,
+      "loss_mean_probs": 1.3064604974365235,
+      "elapsed_sec": 102.01204719999805
+    },
+    "crop_0.7": {
+      "crop_pct": 0.7,
+      "acc_plain": 0.75704,
+      "acc_flip": 0.75848,
+      "acc_mean_logits": 0.7599,
+      "acc_mean_probs": 0.76,
+      "loss_plain": 1.3280542047119142,
+      "loss_mean_probs": 1.3175351663208008,
+      "elapsed_sec": 100.8825948999729
+    },
+    "crop_0.75": {
+      "crop_pct": 0.75,
+      "acc_plain": 0.75512,
+      "acc_flip": 0.7555,
+      "acc_mean_logits": 0.75728,
+      "acc_mean_probs": 0.7578,
+      "loss_plain": 1.3413223683166504,
+      "loss_mean_probs": 1.3314733659362794,
+      "elapsed_sec": 100.92354670003988
+    },
+    "crop_0.8": {
+      "crop_pct": 0.8,
+      "acc_plain": 0.75438,
+      "acc_flip": 0.75278,
+      "acc_mean_logits": 0.75644,
+      "acc_mean_probs": 0.7562,
+      "loss_plain": 1.3556716000366211,
+      "loss_mean_probs": 1.3436826864624023,
+      "elapsed_sec": 100.61833019996993
+    },
+    "crop_0.9": {
+      "crop_pct": 0.9,
+      "acc_plain": 0.74474,
+      "acc_flip": 0.74482,
+      "acc_mean_logits": 0.74752,
+      "acc_mean_probs": 0.74738,
+      "loss_plain": 1.4096760778808595,
+      "loss_mean_probs": 1.396156756591797,
+      "elapsed_sec": 101.19261869997717
+    },
+    "all_crops_flip_mean_probs": {
+      "crop_pct": [
+        0.6,
+        0.65,
+        0.7,
+        0.75,
+        0.8,
+        0.9
+      ],
+      "acc": 0.7742999792098999
+    }
+  }
+}

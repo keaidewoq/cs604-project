@@ -1,0 +1,16 @@
+{
+  "val_images": 50000,
+  "internal_val_sha256": "19a10c37a775559f4eee516215ad10c4b906ee50d66f7cbd95bc5ec88f2f2f69",
+  "prototype_file": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\prototypes\\class_prototypes.pt",
+  "prototype_file_sha256": "c4c90ef9443c1430c519c4496829117563e21c796037f764a89c5ab1ea11b68f",
+  "loss": 3.5015153243255615,
+  "accuracy": 0.43926,
+  "images_per_sec": 674.7804790658015,
+  "elapsed_sec": 74.09817199991085,
+  "initial_internal_accuracy": 0.43926,
+  "expected_initial_accuracy": 0.439,
+  "initial_accuracy_tolerance": 0.001,
+  "accuracy_delta": 0.00025999999999998247,
+  "passed": true,
+  "optimizer_steps": 0
+}

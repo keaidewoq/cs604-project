@@ -1,0 +1,46 @@
+device=NVIDIA L4 mode=adaptformer trainable=11,930,881 (12.200%), backbone 4,250,880 (4.94% of the pretrained backbone, head excluded)
+step 3150 loss 4.2854 74.3 img/s
+step 3200 loss 4.3482 78.9 img/s
+step 3250 loss 4.4400 79.2 img/s
+step 3300 loss 4.4129 79.3 img/s
+step 3350 loss 4.4469 79.2 img/s
+step 3400 loss 4.4815 79.2 img/s
+step 3450 loss 4.4589 79.2 img/s
+step 3500 loss 4.5463 79.2 img/s
+saved checkpoint step=3500 -> last.pt (resume_step_003500.pt)
+step 3550 loss 4.5531 71.1 img/s
+step 3600 loss 4.5170 79.3 img/s
+step 3650 loss 4.5523 79.3 img/s
+step 3700 loss 4.5387 79.2 img/s
+step 3750 loss 4.5552 79.2 img/s
+step 3800 loss 4.5921 79.2 img/s
+step 3850 loss 4.5366 79.2 img/s
+step 3900 loss 4.5429 79.3 img/s
+step 3950 loss 4.5939 79.2 img/s
+step 4000 loss 4.5107 79.2 img/s
+saved checkpoint step=4000 -> last.pt (resume_step_004000.pt)
+step 4050 loss 4.5766 77.2 img/s
+step 4100 loss 4.5445 79.2 img/s
+step 4150 loss 4.5271 79.2 img/s
+step 4200 loss 4.5790 79.2 img/s
+step 4250 loss 4.5254 79.2 img/s
+step 4300 loss 4.5487 79.2 img/s
+step 4350 loss 4.5661 79.2 img/s
+step 4400 loss 4.4880 79.2 img/s
+step 4450 loss 4.5846 79.3 img/s
+step 4500 loss 4.5172 79.2 img/s
+saved checkpoint step=4500 -> last.pt (resume_step_004500.pt)
+step 4550 loss 4.5199 77.5 img/s
+step 4600 loss 4.5093 79.2 img/s
+step 4650 loss 4.4479 79.2 img/s
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+validation top1=77.23% loss=1.1345
+saved checkpoint step=4689 -> best.pt (best_step_004689.pt)
+saved checkpoint step=4689 -> last.pt (resume_step_004689.pt)

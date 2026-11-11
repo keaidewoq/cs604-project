@@ -1,0 +1,21 @@
+{
+  "config": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\van_adaptformer_20261021_083823\\config.yaml",
+  "ckpt": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\van_adaptformer_20261021_083823\\last.pt",
+  "bank": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\rerank_flip\\bank_van_adaptformer_20261021_083823.pt",
+  "bank_checkpoint": "/content/drive/MyDrive/CS604_RUNS/van_adaptformer_20261021_083823/last.pt",
+  "split": "val",
+  "photos": 50000,
+  "crop_pct": 0.9,
+  "K": 5,
+  "m": 3,
+  "betas": [
+    20.0
+  ],
+  "main_submission": "val_team_08.txt = zoomflip_knn_b20",
+  "changed_vs_zoom_knn_b20": {
+    "zoom": 2587,
+    "zoomflip": 2679,
+    "zoomflip_knn_b20": 808
+  },
+  "seconds_total_4_passes": 989.8
+}

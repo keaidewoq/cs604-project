@@ -1,0 +1,142 @@
+{
+  "name": "r1_lr1e-2_ls0",
+  "round": 1,
+  "note": "",
+  "cfg": {
+    "timm_checkpoint": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+    "num_classes": 10000,
+    "mode": "head",
+    "head_type": "cosine",
+    "cosine_head_fp32": true,
+    "cosine_scale": 20.0,
+    "cosine_scale_trainable": true,
+    "prototype_file": "C:/Users/Van Le/cs604-project/cs604-outputs/prototypes/class_prototypes.pt",
+    "expected_initial_accuracy": 0.439,
+    "initial_accuracy_tolerance": 0.001,
+    "split_seed": 604,
+    "val_per_class": 5,
+    "train_groups": [
+      "clean"
+    ],
+    "batch_size": 256,
+    "epochs": 10,
+    "max_steps": null,
+    "lr": 0.01,
+    "weight_decay": 0.0,
+    "label_smoothing": 0.0,
+    "precision": "bf16",
+    "seed": 0
+  },
+  "initial_accuracy": 0.439,
+  "initial_loss": 3.501497841796875,
+  "final_accuracy": 0.60888,
+  "final_loss": 2.177975068359375,
+  "best_accuracy": 0.60888,
+  "best_epoch": 10,
+  "final_scale": 105.43548583984375,
+  "optimizer_steps": 15630,
+  "total_steps": 15630,
+  "warmup_steps": 782,
+  "train_views": [
+    "clean/view_00"
+  ],
+  "elapsed_sec": 35.13819220010191,
+  "curve": [
+    {
+      "epoch": 1,
+      "step": 1563,
+      "train_loss": 2.905081623880358,
+      "accuracy": 0.47592,
+      "loss": 2.4196730419921875,
+      "scale": 36.43951416015625,
+      "elapsed_sec": 3.5884714999701828
+    },
+    {
+      "epoch": 2,
+      "step": 3126,
+      "train_loss": 1.5767351322576775,
+      "accuracy": 0.51176,
+      "loss": 2.2605795703125,
+      "scale": 48.9834098815918,
+      "elapsed_sec": 7.081089300103486
+    },
+    {
+      "epoch": 3,
+      "step": 4689,
+      "train_loss": 0.9580952845089571,
+      "accuracy": 0.5252,
+      "loss": 2.315424140625,
+      "scale": 63.91869354248047,
+      "elapsed_sec": 10.587251499993727
+    },
+    {
+      "epoch": 4,
+      "step": 6252,
+      "train_loss": 0.5683016981440939,
+      "accuracy": 0.53308,
+      "loss": 2.539027275390625,
+      "scale": 84.53617858886719,
+      "elapsed_sec": 14.08033649995923
+    },
+    {
+      "epoch": 5,
+      "step": 7815,
+      "train_loss": 0.2906608361886696,
+      "accuracy": 0.55266,
+      "loss": 2.62385556640625,
+      "scale": 105.43548583984375,
+      "elapsed_sec": 17.58307579997927
+    },
+    {
+      "epoch": 6,
+      "step": 9378,
+      "train_loss": 0.11008356232255678,
+      "accuracy": 0.5809,
+      "loss": 2.387757998046875,
+      "scale": 105.43548583984375,
+      "elapsed_sec": 21.102025400148705
+    },
+    {
+      "epoch": 7,
+      "step": 10941,
+      "train_loss": 0.04431529176288588,
+      "accuracy": 0.59798,
+      "loss": 2.256259384765625,
+      "scale": 105.43548583984375,
+      "elapsed_sec": 24.62376600014977
+    },
+    {
+      "epoch": 8,
+      "step": 12504,
+      "train_loss": 0.023684220365889165,
+      "accuracy": 0.606,
+      "loss": 2.1987300341796874,
+      "scale": 105.43548583984375,
+      "elapsed_sec": 28.129915799945593
+    },
+    {
+      "epoch": 9,
+      "step": 14067,
+      "train_loss": 0.016987285016060484,
+      "accuracy": 0.60846,
+      "loss": 2.180607775878906,
+      "scale": 105.43548583984375,
+      "elapsed_sec": 31.633113000076264
+    },
+    {
+      "epoch": 10,
+      "step": 15630,
+      "train_loss": 0.014489870077512696,
+      "accuracy": 0.60888,
+      "loss": 2.177975068359375,
+      "scale": 105.43548583984375,
+      "elapsed_sec": 35.13804750004783
+    }
+  ],
+  "git_commit": "8b266e103e8aac794ee16f7dfa6a24552ca1fd31",
+  "git_dirty": false,
+  "git_branch": "prototype-baseline",
+  "git_worktree": "C:\\Users\\Van Le\\cs604-project\\cs604-prototype-baseline",
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "finished": "2026-10-05 14:00:37"
+}

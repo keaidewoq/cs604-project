@@ -1,0 +1,114 @@
+{
+  "checkpoint": "..\\cs604-outputs\\af_bn_bias_norm_e3\\best.pt",
+  "checkpoint_sha256": "70877e650ac356ac835b45812ac81f73aaa8f616312c3fe5033f55c2e64b87bf",
+  "checkpoint_step": 4689,
+  "samples": 50000,
+  "settings": {
+    "crop_pct": 0.75,
+    "reference_crop_pct": 0.9,
+    "maps": [
+      "cam"
+    ],
+    "mass": [
+      0.7
+    ],
+    "min_side": 8,
+    "zoom_factor": 2,
+    "grid": 21
+  },
+  "gate": {
+    "reference": 0.76756,
+    "reproduced": 0.7676200270652771,
+    "crop_pct": 0.9
+  },
+  "git": {
+    "git_commit": "e0b1d54dc8b4ae2e9672f17ea8d64150f46cfdf7",
+    "git_dirty": false,
+    "git_branch": "prototype-baseline",
+    "git_worktree": "C:\\Users\\Van Le\\cs604-project\\cs604-prototype-baseline"
+  },
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "elapsed_sec": {
+    "crop0.9": 230.95225299987942,
+    "crop0.75": 462.36873750016093
+  },
+  "results": {
+    "crop0.9/plain": {
+      "all": 0.7676200270652771,
+      "even": 0.7697200179100037,
+      "odd": 0.7655199766159058
+    },
+    "crop0.9/flip": {
+      "all": 0.7679799795150757,
+      "even": 0.7689599990844727,
+      "odd": 0.7670000195503235
+    },
+    "crop0.9/plain+flip": {
+      "all": 0.7703999876976013,
+      "even": 0.7720000147819519,
+      "odd": 0.7688000202178955
+    },
+    "crop0.75/plain": {
+      "all": 0.7743600010871887,
+      "even": 0.7765600085258484,
+      "odd": 0.772159993648529
+    },
+    "crop0.75/flip": {
+      "all": 0.7767199873924255,
+      "even": 0.7779600024223328,
+      "odd": 0.7754799723625183
+    },
+    "crop0.75/plain+flip": {
+      "all": 0.7768999934196472,
+      "even": 0.7787200212478638,
+      "odd": 0.7750800251960754
+    },
+    "crop0.75/cam_m0.7/zoom": {
+      "all": 0.7673400044441223,
+      "even": 0.7677599787712097,
+      "odd": 0.7669199705123901
+    },
+    "crop0.75/cam_m0.7/plain+zoom": {
+      "all": 0.7847599983215332,
+      "even": 0.7853999733924866,
+      "odd": 0.7841200232505798
+    },
+    "crop0.75/cam_m0.7/4pass": {
+      "all": 0.7857199907302856,
+      "even": 0.7862399816513062,
+      "odd": 0.7851999998092651
+    },
+    "crop0.9+crop0.75/4pass_flips": {
+      "all": 0.7842400074005127,
+      "even": 0.7858800292015076,
+      "odd": 0.7825999855995178
+    }
+  },
+  "by_box_side": {
+    "crop0.75/cam_m0.7": {
+      "mean_side": 14.725099563598633,
+      "buckets": {
+        "side_0-9": {
+          "images": 640,
+          "plain": 0.8421875238418579,
+          "plain+zoom": 0.859375
+        },
+        "side_10-13": {
+          "images": 13245,
+          "plain": 0.8530766367912292,
+          "plain+zoom": 0.8634956479072571
+        },
+        "side_14-17": {
+          "images": 32423,
+          "plain": 0.7501465082168579,
+          "plain+zoom": 0.7610955238342285
+        },
+        "side_18-21": {
+          "images": 3692,
+          "plain": 0.6928493976593018,
+          "plain+zoom": 0.6971830725669861
+        }
+      }
+    }
+  }
+}

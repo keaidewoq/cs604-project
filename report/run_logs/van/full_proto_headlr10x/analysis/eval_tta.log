@@ -1,0 +1,6 @@
+{"crop_0.65": {"crop_pct": 0.65, "acc_plain": 0.74442, "acc_flip": 0.74588, "acc_mean_logits": 0.74786, "acc_mean_probs": 0.74808, "loss_plain": 1.1797925686645507, "loss_mean_probs": 1.1682589304351807, "elapsed_sec": 102.84988559992053}}
+{"crop_0.7": {"crop_pct": 0.7, "acc_plain": 0.74568, "acc_flip": 0.7453, "acc_mean_logits": 0.74808, "acc_mean_probs": 0.74854, "loss_plain": 1.1849131670379638, "loss_mean_probs": 1.173338839492798, "elapsed_sec": 113.5071484001819}}
+{"crop_0.75": {"crop_pct": 0.75, "acc_plain": 0.74306, "acc_flip": 0.743, "acc_mean_logits": 0.74546, "acc_mean_probs": 0.74546, "loss_plain": 1.19507763961792, "loss_mean_probs": 1.1841326489257813, "elapsed_sec": 104.63547109998763}}
+{"crop_0.9": {"crop_pct": 0.9, "acc_plain": 0.72984, "acc_flip": 0.73172, "acc_mean_logits": 0.73378, "acc_mean_probs": 0.73358, "loss_plain": 1.2593516035461425, "loss_mean_probs": 1.2428951112365723, "elapsed_sec": 101.53973449999467}}
+all crops + flip, mean softmax: 0.76356
+wrote ..\cs604-outputs\full_proto_headlr10x\analysis\eval_tta.json

@@ -1,0 +1,16 @@
+{
+  "source": "H:\\My Drive\\cs604\\outputs\\eqp_af_bn_e3_s1",
+  "synced_at": "2026-11-04T22:05:23+0800",
+  "status": "completed",
+  "files": {
+    "baseline.json": "512ff948a0e6f2194c1db7d54d1934fbe647af2398de62ebd3202113888a3ae3",
+    "baseline.pt": "2a5db5c65d649b2217b03254ab9dcbf952276eca071c3b9853bc120790376575",
+    "best.pt": "2e74198f4200bb3d6bd21d3ec5c3e7d83084c51bddb2a9f9da73d57f83199fd4",
+    "checkpoint_hashes.jsonl": "e878926ee845ef9870929daf86acdbbeaafd5b1ad95bf7b9a3e09014159beb85",
+    "config.json": "ed33ea9d579dc78798b281e6077d143bc2c37023018b3722c45eb2d5fc4e85c0",
+    "last.pt": "e1c640988809a079aaff8c17e705419145a9d420322bf5e472eb09b84ed52e24",
+    "run.json": "e26447ec97a542709bf7703c307124a654e204ae26a5e5742c7bf969a007072a",
+    "splits/internal_train.txt": "6a018ce87c6a625297c746fec8adc44b8165c8199aa59cc152a26ee79b644138",
+    "splits/internal_val.txt": "19a10c37a775559f4eee516215ad10c4b906ee50d66f7cbd95bc5ec88f2f2f69"
+  }
+}

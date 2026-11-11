@@ -1,0 +1,74 @@
+{
+  "checkpoint": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\res_screen_512\\last.pt",
+  "checkpoint_sha256": "a6fb3de18f9c7dadc71622f8b47cfb31f9f896cafa19604f30ee8be246d82204",
+  "checkpoint_step": 1141,
+  "samples": 50000,
+  "data_config": {
+    "input_size": [
+      3,
+      512,
+      512
+    ],
+    "interpolation": "bicubic",
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "crop_pct": 0.9,
+    "crop_mode": "center"
+  },
+  "gate": null,
+  "git": {
+    "git_commit": "80914f6d01e471bfd080fb9d6c8d38df733aaa0e",
+    "git_dirty": false,
+    "git_branch": "prototype-baseline",
+    "git_worktree": "C:\\Users\\Van Le\\cs604-project\\cs604-prototype-baseline"
+  },
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "results": {
+    "crop_0.75": {
+      "crop_pct": 0.75,
+      "acc_plain": 0.64782,
+      "acc_flip": 0.64762,
+      "acc_mean_logits": 0.64936,
+      "acc_mean_probs": 0.64944,
+      "loss_plain": 1.7217534451293945,
+      "loss_mean_probs": 1.7160518966674805,
+      "elapsed_sec": 540.9036949999863
+    },
+    "crop_0.9": {
+      "crop_pct": 0.9,
+      "acc_plain": 0.6498,
+      "acc_flip": 0.65038,
+      "acc_mean_logits": 0.65148,
+      "acc_mean_probs": 0.65152,
+      "loss_plain": 1.7218524645996094,
+      "loss_mean_probs": 1.7147280123901367,
+      "elapsed_sec": 538.6561892999744
+    },
+    "crop_1": {
+      "crop_pct": 1.0,
+      "acc_plain": 0.64632,
+      "acc_flip": 0.64652,
+      "acc_mean_logits": 0.64822,
+      "acc_mean_probs": 0.64804,
+      "loss_plain": 1.7425653298950194,
+      "loss_mean_probs": 1.7345450883483886,
+      "elapsed_sec": 531.6502225000004
+    },
+    "all_crops_flip_mean_probs": {
+      "crop_pct": [
+        0.75,
+        0.9,
+        1.0
+      ],
+      "acc": 0.6586199998855591
+    }
+  }
+}

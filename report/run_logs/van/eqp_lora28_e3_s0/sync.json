@@ -1,0 +1,18 @@
+{
+  "source": "H:\\My Drive\\cs604\\outputs\\eqp_lora28_e3_s0",
+  "synced_at": "2026-11-04T14:10:13+0800",
+  "status": "completed",
+  "files": {
+    "baseline.json": "1dc51e3d704f72de7940a2e9bb91b22513c201a485e42afffc9d368e76778065",
+    "baseline.pt": "52d3f1d0f6407b2dde90d323571e760242251ffc2273d58db7014d6d1bc10aae",
+    "best.pt": "c7d4a692bd81ae4c0e487ff4ab3ebc26b0a840533569b9c486e24279f3151e9f",
+    "checkpoint_hashes.jsonl": "0eb78efc7dda36e70a47bd479dccea74fc9b5c661aa1c98582c9f03f16723695",
+    "config.json": "0560339e8c8cc6bd7810aeed0df864ee69adc04ec80d296896d3bf4eabedf6d6",
+    "last.pt": "c96e7333cde1cb877ecddbb6e033f3adb9de892d1f628bd8c44dd4330f7f91e9",
+    "metrics.csv": "d6958e4c3912aa00ac2905d4d3f98a7c347409a30e9d6b2375023fa2dd3a9a1b",
+    "run.json": "f4931d5036d970891221d92ac08c66f0a72db11906ea6477233c2fff62d73254",
+    "splits/internal_train.txt": "6a018ce87c6a625297c746fec8adc44b8165c8199aa59cc152a26ee79b644138",
+    "splits/internal_val.txt": "19a10c37a775559f4eee516215ad10c4b906ee50d66f7cbd95bc5ec88f2f2f69",
+    "train.log": "b631d7f9fde847921ed863d2649fbba14896c26287a1d62bef88fa87b021638b"
+  }
+}

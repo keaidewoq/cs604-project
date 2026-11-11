@@ -1,0 +1,16 @@
+{
+  "val_images": 50000,
+  "internal_val_sha256": "19a10c37a775559f4eee516215ad10c4b906ee50d66f7cbd95bc5ec88f2f2f69",
+  "prototype_file": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\prototypes_dinov2\\class_prototypes.pt",
+  "prototype_file_sha256": "60a22c99ef0fdc19e9752c787c07381dc4e6bbb620b64b89a6167f38182ab889",
+  "loss": 2.601551643295288,
+  "accuracy": 0.53758,
+  "images_per_sec": 762.0195809842097,
+  "elapsed_sec": 65.61511179991066,
+  "initial_internal_accuracy": 0.53758,
+  "expected_initial_accuracy": null,
+  "initial_accuracy_tolerance": 0.001,
+  "accuracy_delta": null,
+  "passed": true,
+  "optimizer_steps": 0
+}

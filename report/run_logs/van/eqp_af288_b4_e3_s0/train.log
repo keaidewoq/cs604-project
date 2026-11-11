@@ -1,0 +1,26 @@
+device=NVIDIA RTX PRO 6000 Blackwell Server Edition mode=adaptformer trainable=11,349,513 (11.675%), backbone 3,669,512 (4.27% of the pretrained backbone, head excluded)
+step 4050 loss 4.6371 112.0 img/s
+step 4100 loss 4.6227 698.8 img/s
+step 4150 loss 4.5934 715.1 img/s
+step 4200 loss 4.6528 715.1 img/s
+step 4250 loss 4.5970 714.7 img/s
+step 4300 loss 4.6438 714.5 img/s
+step 4350 loss 4.6390 714.6 img/s
+step 4400 loss 4.5805 714.3 img/s
+step 4450 loss 4.6819 714.6 img/s
+step 4500 loss 4.6120 714.3 img/s
+saved checkpoint step=4500 -> last.pt (resume_step_004500.pt)
+step 4550 loss 4.6271 474.7 img/s
+step 4600 loss 4.5931 714.5 img/s
+step 4650 loss 4.5416 714.6 img/s
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+validation top1=76.97% loss=1.1925
+saved checkpoint step=4689 -> best.pt (best_step_004689.pt)
+saved checkpoint step=4689 -> last.pt (resume_step_004689.pt)

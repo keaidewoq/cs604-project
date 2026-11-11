@@ -1,0 +1,8 @@
+{
+  "train_images": 400000,
+  "val_images": 50000,
+  "internal_top1_accuracy": 0.439,
+  "elapsed_sec": 4861.196998699801,
+  "images_per_sec": 92.56979302018806,
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU"
+}

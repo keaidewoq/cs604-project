@@ -1,0 +1,18 @@
+{
+  "checkpoint": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\af_e_combined_e3\\best.pt",
+  "checkpoint_sha256": "2aa36372b87456f6ac1397c3834d0a445e6c8a16330d39700a49e71d520b25f3",
+  "checkpoint_step": 4689,
+  "checkpoint_best_accuracy": 0.76258,
+  "config_file": "configs/experiments/af_e_combined_e3.yaml",
+  "predict_git_commit": "bc3e3a350150eef387275b08f5d645923b90e8a5",
+  "split": "val",
+  "crop_pct": 0.75,
+  "tta_flip": true,
+  "forward_passes_per_image": 2,
+  "samples": 50000,
+  "elapsed_sec": 476.69385879999027,
+  "images_per_sec": 104.8891213448144,
+  "milliseconds_per_image": 9.533877175999805,
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "submission_sha256": "15a3924c55a9e28518efafddb16e5cf9bd228c177c979704ea03c733442466ce"
+}

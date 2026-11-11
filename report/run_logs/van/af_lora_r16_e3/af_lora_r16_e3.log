@@ -1,0 +1,159 @@
+﻿python.exe : Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher 
+rate limits and faster downloads.
+At C:\Users\Van Le\AppData\Local\Temp\claude\C--Users-Van-Le-cs604-project\3c169c51-e080-41db-b552-a7bc0cf5e8e6\scratch
+pad\run_af_lora_r16_e3.ps1:4 char:1
++ & "C:\Users\Van Le\.venvs\cs604\Scripts\python.exe" scripts\train.py  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Warning: You ar...ster downloads.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+initialized classifier from C:/Users/Van Le/cs604-project/cs604-outputs/prototypes_336/class_prototypes.pt
+device=NVIDIA GeForce RTX 5080 Laptop GPU mode=adaptformer trainable=11,942,413 (12.210%), backbone 4,262,412 (4.96% of the pretrained backbone, head excluded)
+adapter_init pca: 16 batches, variance explained per block 0.99 0.95 0.81 0.77 0.76 0.74 0.71 0.71 0.68 0.64 0.64 0.73
+saved checkpoint step=0 -> baseline.pt (baseline_step_000000.pt)
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+initial validation top1=42.53% (0 optimizer updates)
+saved checkpoint step=0 -> baseline.pt (baseline_step_000000.pt)
+saved checkpoint step=0 -> best.pt (best_step_000000.pt)
+step 50 loss 6.1928 99.7 img/s
+step 100 loss 5.6715 175.3 img/s
+step 150 loss 5.6776 174.9 img/s
+step 200 loss 5.7780 175.0 img/s
+step 250 loss 6.1116 174.1 img/s
+step 300 loss 6.1872 174.9 img/s
+step 350 loss 6.1251 174.7 img/s
+step 400 loss 6.1311 174.6 img/s
+step 450 loss 6.0772 174.6 img/s
+step 500 loss 6.0094 174.8 img/s
+saved checkpoint step=500 -> last.pt (resume_step_000500.pt)
+step 550 loss 5.9890 170.6 img/s
+step 600 loss 5.8746 174.8 img/s
+step 650 loss 5.8852 174.7 img/s
+step 700 loss 5.8610 174.6 img/s
+step 750 loss 5.8301 174.6 img/s
+step 800 loss 5.8328 174.6 img/s
+step 850 loss 5.7388 174.6 img/s
+step 900 loss 5.6901 174.6 img/s
+step 950 loss 5.6768 174.5 img/s
+step 1000 loss 5.6587 174.5 img/s
+saved checkpoint step=1000 -> last.pt (resume_step_001000.pt)
+step 1050 loss 5.6450 164.5 img/s
+step 1100 loss 5.6040 174.6 img/s
+step 1150 loss 5.5512 174.6 img/s
+step 1200 loss 5.6015 174.6 img/s
+step 1250 loss 5.6007 174.6 img/s
+step 1300 loss 5.5066 174.7 img/s
+step 1350 loss 5.5417 174.7 img/s
+step 1400 loss 5.4635 174.7 img/s
+step 1450 loss 5.4471 174.7 img/s
+step 1500 loss 5.3931 174.8 img/s
+saved checkpoint step=1500 -> last.pt (resume_step_001500.pt)
+step 1550 loss 5.4484 164.3 img/s
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+validation top1=69.27% loss=1.4173
+saved checkpoint step=1563 -> best.pt (best_step_001563.pt)
+saved checkpoint step=1563 -> last.pt (resume_step_001563.pt)
+step 1600 loss 4.7985 44.7 img/s
+step 1650 loss 4.7659 175.9 img/s
+step 1700 loss 4.8947 175.4 img/s
+step 1750 loss 4.9356 175.0 img/s
+step 1800 loss 4.9995 175.1 img/s
+step 1850 loss 4.9811 175.0 img/s
+step 1900 loss 5.0834 174.9 img/s
+step 1950 loss 5.0388 174.5 img/s
+step 2000 loss 5.1007 174.7 img/s
+saved checkpoint step=2000 -> last.pt (resume_step_002000.pt)
+step 2050 loss 5.1117 165.3 img/s
+step 2100 loss 5.1043 175.1 img/s
+step 2150 loss 5.1903 175.0 img/s
+step 2200 loss 5.1415 174.9 img/s
+step 2250 loss 5.1524 174.7 img/s
+step 2300 loss 5.1461 174.6 img/s
+step 2350 loss 5.1228 174.1 img/s
+step 2400 loss 5.2582 173.9 img/s
+step 2450 loss 5.1469 173.8 img/s
+step 2500 loss 5.1690 173.7 img/s
+saved checkpoint step=2500 -> last.pt (resume_step_002500.pt)
+step 2550 loss 5.0943 164.6 img/s
+step 2600 loss 5.1333 173.9 img/s
+step 2650 loss 5.1072 173.7 img/s
+step 2700 loss 5.1494 173.4 img/s
+step 2750 loss 5.1377 173.2 img/s
+step 2800 loss 5.0750 173.1 img/s
+step 2850 loss 5.1459 173.0 img/s
+step 2900 loss 5.1158 172.9 img/s
+step 2950 loss 5.0874 173.1 img/s
+step 3000 loss 5.0313 173.0 img/s
+saved checkpoint step=3000 -> last.pt (resume_step_003000.pt)
+step 3050 loss 5.1113 159.9 img/s
+step 3100 loss 5.0123 173.5 img/s
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+validation top1=75.66% loss=1.1617
+saved checkpoint step=3126 -> best.pt (best_step_003126.pt)
+saved checkpoint step=3126 -> last.pt (resume_step_003126.pt)
+step 3150 loss 4.6293 42.7 img/s
+step 3200 loss 4.2552 175.4 img/s
+step 3250 loss 4.3801 174.5 img/s
+step 3300 loss 4.3283 174.1 img/s
+step 3350 loss 4.3870 173.6 img/s
+step 3400 loss 4.4429 173.6 img/s
+step 3450 loss 4.4029 173.5 img/s
+step 3500 loss 4.5066 173.3 img/s
+saved checkpoint step=3500 -> last.pt (resume_step_003500.pt)
+step 3550 loss 4.5030 161.7 img/s
+step 3600 loss 4.4895 170.8 img/s
+step 3650 loss 4.5395 170.8 img/s
+step 3700 loss 4.5216 170.9 img/s
+step 3750 loss 4.5501 170.6 img/s
+step 3800 loss 4.5757 170.4 img/s
+step 3850 loss 4.5462 169.6 img/s
+step 3900 loss 4.5643 171.5 img/s
+step 3950 loss 4.6144 172.2 img/s
+step 4000 loss 4.5083 171.8 img/s
+saved checkpoint step=4000 -> last.pt (resume_step_004000.pt)
+step 4050 loss 4.6113 162.0 img/s
+step 4100 loss 4.5652 171.9 img/s
+step 4150 loss 4.5554 172.4 img/s
+step 4200 loss 4.6051 172.2 img/s
+step 4250 loss 4.5441 172.5 img/s
+step 4300 loss 4.5947 171.8 img/s
+step 4350 loss 4.5824 172.0 img/s
+step 4400 loss 4.5213 172.0 img/s
+step 4450 loss 4.6232 170.9 img/s
+step 4500 loss 4.5587 171.6 img/s
+saved checkpoint step=4500 -> last.pt (resume_step_004500.pt)
+step 4550 loss 4.5598 162.5 img/s
+step 4600 loss 4.5401 171.4 img/s
+step 4650 loss 4.4870 171.8 img/s
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+validation top1=77.33% loss=1.1588
+saved checkpoint step=4689 -> best.pt (best_step_004689.pt)
+saved checkpoint step=4689 -> last.pt (resume_step_004689.pt)

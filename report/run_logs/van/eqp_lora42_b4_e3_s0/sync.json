@@ -1,0 +1,17 @@
+{
+  "source": "H:\\My Drive\\cs604\\outputs\\eqp_lora42_b4_e3_s0",
+  "files": {
+    "config.json": "35886492d30ff52bdfba9f020cc93c55553e65139534dacb44b49f1ddc6648db",
+    "run.json": "819c1e418dde283e8ff09567b59f2bfc9ddc3256a3fdb6bfc6e165b9ebce1617",
+    "checkpoint_hashes.jsonl": "1e2e36f7e5c2c210195162b560367e9acd7547f8ac1672a9d72137744c58d194",
+    "baseline.pt": "3ed9842dbe89f3353545b6fcb2f8f38a44fff5e22bc983364d6aa9c5e1c5445d",
+    "baseline.json": "c8a6f20695eba8737209dfafcb104ffa09bc33da62548430b11b0b2ce8292e46",
+    "metrics.csv": "23a6ef128d2af1b0523697b94bfb77ea631fc0b5c696d313da4fcaad815b7232",
+    "train.log": "373f4dfec3b43ec9900ccb6b41cb2413273c34f6bad69e030faa7d7db5effaed",
+    "splits\\internal_train.txt": "6a018ce87c6a625297c746fec8adc44b8165c8199aa59cc152a26ee79b644138",
+    "splits\\internal_val.txt": "19a10c37a775559f4eee516215ad10c4b906ee50d66f7cbd95bc5ec88f2f2f69",
+    "best.pt": "df24129d18797e1e991b7dae0cbec06209d9e1e0fdbcd62df48a040c10e623ad",
+    "last.pt": "607e83422d33627ef83ab4de81740169a420d20c831db9b9d032f7d5cd0d887e"
+  },
+  "note": "salvage copy: final checkpoint hashes not logged (Drive full); best/last checked against numbered step-4689 copies"
+}

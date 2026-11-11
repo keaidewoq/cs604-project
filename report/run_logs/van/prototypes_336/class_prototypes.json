@@ -1,0 +1,9 @@
+{
+  "timm_checkpoint": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+  "train_images": 400000,
+  "val_images": 50000,
+  "internal_top1_accuracy": 0.42534,
+  "elapsed_sec": 889.7972250999883,
+  "images_per_sec": 505.7332022466496,
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU"
+}

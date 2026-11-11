@@ -1,0 +1,16 @@
+{
+  "val_images": 50000,
+  "internal_val_sha256": "19a10c37a775559f4eee516215ad10c4b906ee50d66f7cbd95bc5ec88f2f2f69",
+  "head_init_file": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\head_sweep_augreg2\\points\\r1_lr3e-3_ls01.head.pt",
+  "head_init_file_sha256": "7f3f76be7101c9c4219280128d6eb92fbda1d757d0a1d1d35e9d9c84ecacab7b",
+  "loss": 2.2483231463623046,
+  "accuracy": 0.6037,
+  "images_per_sec": 630.9424152015937,
+  "elapsed_sec": 79.24653470003977,
+  "initial_internal_accuracy": 0.6037,
+  "expected_initial_accuracy": 0.6037,
+  "initial_accuracy_tolerance": 0.001,
+  "accuracy_delta": 0.0,
+  "passed": true,
+  "optimizer_steps": 0
+}

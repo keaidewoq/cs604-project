@@ -1,0 +1,5 @@
+{"crop_0.75": {"crop_pct": 0.75, "acc_plain": 0.75338, "acc_flip": 0.7528, "acc_mean_logits": 0.7554, "acc_mean_probs": 0.75542, "loss_plain": 1.2354999835205078, "loss_mean_probs": 1.2247606736755372, "elapsed_sec": 102.82299829996191}}
+{"crop_0.8": {"crop_pct": 0.8, "acc_plain": 0.75036, "acc_flip": 0.75148, "acc_mean_logits": 0.75458, "acc_mean_probs": 0.75444, "loss_plain": 1.246672907485962, "loss_mean_probs": 1.2344528705596924, "elapsed_sec": 104.50663479999639}}
+{"crop_0.85": {"crop_pct": 0.85, "acc_plain": 0.74596, "acc_flip": 0.74658, "acc_mean_logits": 0.7503, "acc_mean_probs": 0.74998, "loss_plain": 1.2731200762939454, "loss_mean_probs": 1.2588504383850099, "elapsed_sec": 104.17971179983579}}
+all crops + flip, mean softmax: 0.76348
+wrote ..\cs604-outputs\full_proto_len6\analysis\eval_tta_tight.json

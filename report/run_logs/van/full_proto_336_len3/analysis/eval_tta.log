@@ -1,0 +1,11 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{"crop_0.6": {"crop_pct": 0.6, "acc_plain": 0.7786, "acc_flip": 0.77894, "acc_mean_logits": 0.78096, "acc_mean_probs": 0.78112, "loss_plain": 1.0574765846824645, "loss_mean_probs": 1.0505195134925842, "elapsed_sec": 199.73990730009973}}
+{"crop_0.65": {"crop_pct": 0.65, "acc_plain": 0.78314, "acc_flip": 0.78366, "acc_mean_logits": 0.78536, "acc_mean_probs": 0.78544, "loss_plain": 1.035843605079651, "loss_mean_probs": 1.029171671142578, "elapsed_sec": 198.97689400007948}}
+{"crop_0.7": {"crop_pct": 0.7, "acc_plain": 0.78636, "acc_flip": 0.78538, "acc_mean_logits": 0.7876, "acc_mean_probs": 0.78762, "loss_plain": 1.0251953719902038, "loss_mean_probs": 1.0185684358787537, "elapsed_sec": 200.19248009985313}}
+{"crop_0.75": {"crop_pct": 0.75, "acc_plain": 0.78798, "acc_flip": 0.78728, "acc_mean_logits": 0.78968, "acc_mean_probs": 0.7897, "loss_plain": 1.0207879414176941, "loss_mean_probs": 1.013434647731781, "elapsed_sec": 200.0403285000939}}
+{"crop_0.8": {"crop_pct": 0.8, "acc_plain": 0.78696, "acc_flip": 0.78606, "acc_mean_logits": 0.78856, "acc_mean_probs": 0.78848, "loss_plain": 1.022536734828949, "loss_mean_probs": 1.0154194416999818, "elapsed_sec": 199.5914286999032}}
+{"crop_0.85": {"crop_pct": 0.85, "acc_plain": 0.78628, "acc_flip": 0.7856, "acc_mean_logits": 0.78814, "acc_mean_probs": 0.78796, "loss_plain": 1.0311907311630248, "loss_mean_probs": 1.0213722059631347, "elapsed_sec": 199.20631449995562}}
+{"crop_0.9": {"crop_pct": 0.9, "acc_plain": 0.78388, "acc_flip": 0.78246, "acc_mean_logits": 0.78536, "acc_mean_probs": 0.78514, "loss_plain": 1.0467801402664185, "loss_mean_probs": 1.038715435733795, "elapsed_sec": 206.21626510005444}}
+{"crop_1": {"crop_pct": 1.0, "acc_plain": 0.77646, "acc_flip": 0.77664, "acc_mean_logits": 0.77964, "acc_mean_probs": 0.77948, "loss_plain": 1.0775084795761107, "loss_mean_probs": 1.0679633345794677, "elapsed_sec": 199.73004669998772}}
+all crops + flip, mean softmax: 0.80202
+wrote ..\cs604-outputs\full_proto_336_len3\analysis\eval_tta.json

@@ -1,0 +1,69 @@
+﻿python.exe : Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher 
+rate limits and faster downloads.
+At C:\Users\Van Le\AppData\Local\Temp\claude\C--Users-Van-Le-cs604-project\3c169c51-e080-41db-b552-a7bc0cf5e8e6\scratch
+pad\run_af_lora.ps1:4 char:1
++ & "C:\Users\Van Le\.venvs\cs604\Scripts\python.exe" scripts\train.py  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Warning: You ar...ster downloads.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+initialized classifier from C:/Users/Van Le/cs604-project/cs604-outputs/prototypes_336/class_prototypes.pt
+device=NVIDIA GeForce RTX 5080 Laptop GPU mode=adaptformer trainable=11,647,501 (11.945%), backbone 3,967,500 (4.61% of the pretrained backbone, head excluded)
+adapter_init pca: 16 batches, variance explained per block 0.99 0.95 0.81 0.77 0.76 0.74 0.71 0.71 0.68 0.64 0.64 0.73
+saved checkpoint step=0 -> baseline.pt (baseline_step_000000.pt)
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+initial validation top1=42.53% (0 optimizer updates)
+saved checkpoint step=0 -> baseline.pt (baseline_step_000000.pt)
+saved checkpoint step=0 -> best.pt (best_step_000000.pt)
+step 50 loss 6.0183 104.1 img/s
+step 100 loss 5.9891 178.8 img/s
+step 150 loss 6.3911 178.2 img/s
+step 200 loss 6.3530 178.1 img/s
+step 250 loss 6.3659 178.1 img/s
+step 300 loss 6.2202 177.7 img/s
+step 350 loss 6.0882 177.9 img/s
+step 400 loss 6.0671 177.9 img/s
+step 450 loss 5.9974 177.8 img/s
+step 500 loss 5.9128 177.8 img/s
+saved checkpoint step=500 -> last.pt (resume_step_000500.pt)
+step 550 loss 5.8564 170.0 img/s
+step 600 loss 5.7546 177.8 img/s
+step 650 loss 5.7224 177.8 img/s
+step 700 loss 5.7013 177.8 img/s
+step 750 loss 5.6322 177.8 img/s
+step 800 loss 5.5955 177.7 img/s
+step 850 loss 5.4919 177.8 img/s
+step 900 loss 5.4174 177.7 img/s
+step 950 loss 5.3734 177.6 img/s
+step 1000 loss 5.3298 177.7 img/s
+saved checkpoint step=1000 -> last.pt (resume_step_001000.pt)
+step 1050 loss 5.3029 170.0 img/s
+step 1100 loss 5.2412 177.7 img/s
+step 1150 loss 5.1941 177.7 img/s
+step 1200 loss 5.2287 177.7 img/s
+step 1250 loss 5.2202 177.6 img/s
+step 1300 loss 5.1408 177.6 img/s
+step 1350 loss 5.1613 177.6 img/s
+step 1400 loss 5.1024 177.7 img/s
+step 1450 loss 5.0991 177.7 img/s
+step 1500 loss 5.0537 177.7 img/s
+saved checkpoint step=1500 -> last.pt (resume_step_001500.pt)
+step 1550 loss 5.0989 169.5 img/s
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+validation top1=73.54% loss=1.1796
+saved checkpoint step=1563 -> best.pt (best_step_001563.pt)
+saved checkpoint step=1563 -> last.pt (resume_step_001563.pt)

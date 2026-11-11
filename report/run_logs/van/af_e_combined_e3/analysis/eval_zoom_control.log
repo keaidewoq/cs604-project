@@ -1,0 +1,17 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+crop0.9: 233 s
+crop0.75: 704 s
+crop0.9/plain                               76.280  (even 76.432, odd 76.128)
+crop0.9/flip                                76.310  (even 76.504, odd 76.116)
+crop0.9/plain+flip                          76.526  (even 76.716, odd 76.336)
+crop0.75/plain                              76.938  (even 77.260, odd 76.616)
+crop0.75/flip                               76.878  (even 77.108, odd 76.648)
+crop0.75/plain+flip                         77.100  (even 77.368, odd 76.832)
+crop0.75/cam_m0.7/zoom                      76.062  (even 76.340, odd 75.784)
+crop0.75/cam_m0.7/plain+zoom                77.946  (even 78.140, odd 77.752)
+crop0.75/cam_m0.7/4pass                     78.076  (even 78.308, odd 77.844)
+crop0.75/center_m0.7/zoom                   74.488  (even 74.520, odd 74.456)
+crop0.75/center_m0.7/plain+zoom             77.666  (even 77.792, odd 77.540)
+crop0.75/center_m0.7/4pass                  77.810  (even 77.872, odd 77.748)
+crop0.9+crop0.75/4pass_flips                77.898  (even 78.132, odd 77.664)
+wrote ..\cs604-outputs\af_e_combined_e3\analysis\eval_zoom_control.json

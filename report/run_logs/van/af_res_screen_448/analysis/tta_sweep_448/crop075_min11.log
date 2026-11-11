@@ -1,0 +1,20 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+crop0.9: 414 s
+crop0.75: 1623 s
+crop0.9/plain                               62.716  (even 63.048, odd 62.384)
+crop0.9/flip                                62.794  (even 63.172, odd 62.416)
+crop0.9/plain+flip                          62.886  (even 63.280, odd 62.492)
+crop0.75/plain                              62.902  (even 63.192, odd 62.612)
+crop0.75/flip                               62.894  (even 63.180, odd 62.608)
+crop0.75/plain+flip                         63.048  (even 63.316, odd 62.780)
+crop0.75/cam_m0.5/zoom                      58.374  (even 58.724, odd 58.024)
+crop0.75/cam_m0.5/plain+zoom                63.236  (even 63.632, odd 62.840)
+crop0.75/cam_m0.5/4pass                     63.246  (even 63.596, odd 62.896)
+crop0.75/cam_m0.7/zoom                      61.482  (even 61.676, odd 61.288)
+crop0.75/cam_m0.7/plain+zoom                63.400  (even 63.556, odd 63.244)
+crop0.75/cam_m0.7/4pass                     63.592  (even 63.764, odd 63.420)
+crop0.75/cam_m0.9/zoom                      62.760  (even 62.976, odd 62.544)
+crop0.75/cam_m0.9/plain+zoom                63.456  (even 63.684, odd 63.228)
+crop0.75/cam_m0.9/4pass                     63.536  (even 63.816, odd 63.256)
+crop0.9+crop0.75/4pass_flips                63.770  (even 64.136, odd 63.404)
+wrote C:\Users\Van Le\cs604-project\cs604-outputs\af_res_screen_448\analysis\tta_sweep_448\crop075_min11.json

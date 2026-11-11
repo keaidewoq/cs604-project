@@ -1,0 +1,212 @@
+{
+  "checkpoint": "..\\cs604-outputs\\af_e_combined_e3\\best.pt",
+  "checkpoint_sha256": "2aa36372b87456f6ac1397c3834d0a445e6c8a16330d39700a49e71d520b25f3",
+  "checkpoint_step": 4689,
+  "samples": 256,
+  "settings": {
+    "crop_pct": 0.75,
+    "reference_crop_pct": 0.9,
+    "maps": [
+      "attn",
+      "cam"
+    ],
+    "mass": [
+      0.5,
+      0.8
+    ],
+    "min_side": 8,
+    "zoom_factor": 2,
+    "grid": 21
+  },
+  "gate": null,
+  "git": {
+    "git_commit": "6ef0b18e6e959a3d0f01ec04549ac56a43454aef",
+    "git_dirty": true,
+    "git_branch": "prototype-baseline",
+    "git_worktree": "C:\\Users\\Van Le\\cs604-project\\cs604-prototype-baseline"
+  },
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "elapsed_sec": {
+    "crop0.9": 13.795615799957886,
+    "crop0.75": 19.04680830007419
+  },
+  "results": {
+    "crop0.9/plain": {
+      "all": 0.73828125,
+      "even": 0.734375,
+      "odd": 0.7421875
+    },
+    "crop0.9/flip": {
+      "all": 0.75,
+      "even": 0.71875,
+      "odd": 0.78125
+    },
+    "crop0.9/plain+flip": {
+      "all": 0.7421875,
+      "even": 0.703125,
+      "odd": 0.78125
+    },
+    "crop0.75/plain": {
+      "all": 0.796875,
+      "even": 0.7578125,
+      "odd": 0.8359375
+    },
+    "crop0.75/flip": {
+      "all": 0.7890625,
+      "even": 0.734375,
+      "odd": 0.84375
+    },
+    "crop0.75/plain+flip": {
+      "all": 0.80078125,
+      "even": 0.765625,
+      "odd": 0.8359375
+    },
+    "crop0.75/attn_m0.5/zoom": {
+      "all": 0.72265625,
+      "even": 0.703125,
+      "odd": 0.7421875
+    },
+    "crop0.75/attn_m0.5/plain+zoom": {
+      "all": 0.79296875,
+      "even": 0.75,
+      "odd": 0.8359375
+    },
+    "crop0.75/attn_m0.5/4pass": {
+      "all": 0.796875,
+      "even": 0.7578125,
+      "odd": 0.8359375
+    },
+    "crop0.75/attn_m0.8/zoom": {
+      "all": 0.80078125,
+      "even": 0.7578125,
+      "odd": 0.84375
+    },
+    "crop0.75/attn_m0.8/plain+zoom": {
+      "all": 0.80859375,
+      "even": 0.765625,
+      "odd": 0.8515625
+    },
+    "crop0.75/attn_m0.8/4pass": {
+      "all": 0.80859375,
+      "even": 0.765625,
+      "odd": 0.8515625
+    },
+    "crop0.75/cam_m0.5/zoom": {
+      "all": 0.7890625,
+      "even": 0.7421875,
+      "odd": 0.8359375
+    },
+    "crop0.75/cam_m0.5/plain+zoom": {
+      "all": 0.80859375,
+      "even": 0.7578125,
+      "odd": 0.859375
+    },
+    "crop0.75/cam_m0.5/4pass": {
+      "all": 0.80859375,
+      "even": 0.7578125,
+      "odd": 0.859375
+    },
+    "crop0.75/cam_m0.8/zoom": {
+      "all": 0.78515625,
+      "even": 0.7421875,
+      "odd": 0.828125
+    },
+    "crop0.75/cam_m0.8/plain+zoom": {
+      "all": 0.796875,
+      "even": 0.75,
+      "odd": 0.84375
+    },
+    "crop0.75/cam_m0.8/4pass": {
+      "all": 0.796875,
+      "even": 0.75,
+      "odd": 0.84375
+    },
+    "crop0.9+crop0.75/4pass_flips": {
+      "all": 0.7890625,
+      "even": 0.7578125,
+      "odd": 0.8203125
+    }
+  },
+  "by_box_side": {
+    "crop0.75/attn_m0.5": {
+      "mean_side": 18.16796875,
+      "buckets": {
+        "side_0-9": {
+          "images": 1,
+          "plain": 1.0,
+          "plain+zoom": 1.0
+        },
+        "side_10-13": {
+          "images": 8,
+          "plain": 0.75,
+          "plain+zoom": 0.625
+        },
+        "side_14-17": {
+          "images": 66,
+          "plain": 0.7878788113594055,
+          "plain+zoom": 0.7878788113594055
+        },
+        "side_18-21": {
+          "images": 181,
+          "plain": 0.8011049628257751,
+          "plain+zoom": 0.8011049628257751
+        }
+      }
+    },
+    "crop0.75/attn_m0.8": {
+      "mean_side": 20.50390625,
+      "buckets": {
+        "side_14-17": {
+          "images": 4,
+          "plain": 1.0,
+          "plain+zoom": 1.0
+        },
+        "side_18-21": {
+          "images": 252,
+          "plain": 0.7936508059501648,
+          "plain+zoom": 0.8055555820465088
+        }
+      }
+    },
+    "crop0.75/cam_m0.5": {
+      "mean_side": 18.89453125,
+      "buckets": {
+        "side_0-9": {
+          "images": 2,
+          "plain": 1.0,
+          "plain+zoom": 1.0
+        },
+        "side_10-13": {
+          "images": 11,
+          "plain": 0.8181818127632141,
+          "plain+zoom": 0.9090909361839294
+        },
+        "side_14-17": {
+          "images": 46,
+          "plain": 0.8478260636329651,
+          "plain+zoom": 0.8478260636329651
+        },
+        "side_18-21": {
+          "images": 197,
+          "plain": 0.7817258834838867,
+          "plain+zoom": 0.7918781638145447
+        }
+      }
+    },
+    "crop0.75/cam_m0.8": {
+      "mean_side": 20.4375,
+      "buckets": {
+        "side_14-17": {
+          "images": 9,
+          "plain": 0.5555555820465088,
+          "plain+zoom": 0.5555555820465088
+        },
+        "side_18-21": {
+          "images": 247,
+          "plain": 0.8056679964065552,
+          "plain+zoom": 0.8056679964065552
+        }
+      }
+    }
+  }
+}

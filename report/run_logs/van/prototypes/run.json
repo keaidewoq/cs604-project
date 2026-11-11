@@ -1,0 +1,13 @@
+{
+  "mode": "prototype",
+  "git_commit": "be70be0111b5933431949e08fa2dcc0d4a1d7bb5",
+  "git_dirty": true,
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "best_internal_accuracy": 0.439,
+  "trainable_params": 0,
+  "trainable_pct": 0.0,
+  "elapsed_sec": 4861.197,
+  "gpu_hours": 1.350,
+  "max_mem_gb": 2.42,
+  "notes": "Frozen class prototypes from 40 training images per class. No weights were trained."
+}

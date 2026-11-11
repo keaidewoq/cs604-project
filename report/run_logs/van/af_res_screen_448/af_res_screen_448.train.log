@@ -1,0 +1,50 @@
+initialized classifier from C:/Users/Van Le/cs604-project/cs604-outputs/prototypes_448/class_prototypes.pt
+time budget 0.48 x 48 GB-hours = 1.45 wall-clock hours on 15.92 GB
+device=NVIDIA GeForce RTX 5080 Laptop GPU mode=adaptformer trainable=11,352,589 (11.646%), backbone 3,672,588 (4.26% of the pretrained backbone, head excluded)
+adapter_init pca: 16 batches, variance explained per block 0.99 0.95 0.83 0.79 0.77 0.75 0.72 0.71 0.69 0.65 0.64 0.75
+step 50 loss 6.1692 77.6 img/s | budget 4.1% used, ~3.1 epochs fit
+step 100 loss 6.3814 96.3 img/s | budget 6.6% used, ~3.9 epochs fit
+step 150 loss 6.6200 96.1 img/s | budget 9.2% used, ~4.2 epochs fit
+step 200 loss 6.5578 95.3 img/s | budget 11.8% used, ~4.3 epochs fit
+step 250 loss 6.5360 95.7 img/s | budget 14.3% used, ~4.5 epochs fit
+step 300 loss 6.4142 95.8 img/s | budget 16.9% used, ~4.5 epochs fit
+step 350 loss 6.2889 96.1 img/s | budget 19.5% used, ~4.6 epochs fit
+saved checkpoint step=391 -> last.pt (resume_step_000391.pt)
+step 400 loss 5.8225 74.5 img/s | budget 22.7% used, ~4.5 epochs fit
+step 450 loss 4.1767 95.9 img/s | budget 25.3% used, ~4.6 epochs fit
+step 500 loss 4.5590 94.2 img/s | budget 27.9% used, ~4.6 epochs fit
+saved checkpoint step=500 -> last.pt (resume_step_000500.pt)
+step 550 loss 4.7981 93.4 img/s | budget 30.5% used, ~4.6 epochs fit
+step 600 loss 5.0333 95.7 img/s | budget 33.1% used, ~4.6 epochs fit
+step 650 loss 5.1261 93.0 img/s | budget 35.7% used, ~4.7 epochs fit
+step 700 loss 5.2261 94.5 img/s | budget 38.3% used, ~4.7 epochs fit
+step 750 loss 5.2228 94.2 img/s | budget 40.9% used, ~4.7 epochs fit
+saved checkpoint step=782 -> last.pt (resume_step_000782.pt)
+step 800 loss 4.6452 71.7 img/s | budget 44.3% used, ~4.6 epochs fit
+step 850 loss 3.6576 96.4 img/s | budget 46.9% used, ~4.6 epochs fit
+step 900 loss 3.7951 96.3 img/s | budget 49.4% used, ~4.7 epochs fit
+step 950 loss 3.9616 96.1 img/s | budget 52.0% used, ~4.7 epochs fit
+step 1000 loss 4.0128 96.1 img/s | budget 54.6% used, ~4.7 epochs fit
+saved checkpoint step=1000 -> last.pt (resume_step_001000.pt)
+step 1050 loss 4.1309 93.6 img/s | budget 57.2% used, ~4.7 epochs fit
+step 1100 loss 4.1371 96.0 img/s | budget 59.7% used, ~4.7 epochs fit
+step 1150 loss 4.2237 95.6 img/s | budget 62.3% used, ~4.7 epochs fit
+saved checkpoint step=1173 -> last.pt (resume_step_001173.pt)
+step 1200 loss 3.7258 73.6 img/s | budget 65.6% used, ~4.7 epochs fit
+step 1250 loss 3.2661 95.9 img/s | budget 68.2% used, ~4.7 epochs fit
+step 1300 loss 3.2987 94.7 img/s | budget 70.8% used, ~4.7 epochs fit
+step 1350 loss 3.2082 95.9 img/s | budget 73.3% used, ~4.7 epochs fit
+step 1400 loss 3.2948 95.9 img/s | budget 75.9% used, ~4.7 epochs fit
+step 1450 loss 3.2832 93.9 img/s | budget 78.5% used, ~4.7 epochs fit
+step 1500 loss 3.3028 93.8 img/s | budget 81.1% used, ~4.7 epochs fit
+saved checkpoint step=1500 -> last.pt (resume_step_001500.pt)
+step 1550 loss 3.2858 92.3 img/s | budget 83.8% used, ~4.7 epochs fit
+saved checkpoint step=1564 -> last.pt (resume_step_001564.pt)
+step 1600 loss 3.0431 72.1 img/s | budget 87.2% used, ~4.7 epochs fit
+step 1650 loss 2.9964 96.0 img/s | budget 89.7% used, ~4.7 epochs fit
+step 1700 loss 3.0015 95.4 img/s | budget 92.3% used, ~4.7 epochs fit
+step 1750 loss 2.9544 95.4 img/s | budget 94.9% used, ~4.7 epochs fit
+step 1800 loss 2.9910 95.6 img/s | budget 97.5% used, ~4.7 epochs fit
+step 1850 loss 2.9941 95.7 img/s | budget 100.0% used, ~4.7 epochs fit
+saved checkpoint step=1850 -> last.pt (resume_step_001850.pt)
+stopped at the time budget; the learning rate had already decayed to zero

@@ -1,0 +1,85 @@
+{
+  "checkpoint": "..\\cs604-outputs\\full_proto_len6\\best.pt",
+  "checkpoint_sha256": "59d82d6859cc422ecb9efbd70b4a938d8de87d0a8f6cc1aece3e6c20283d4f0a",
+  "checkpoint_step": 9378,
+  "samples": 50000,
+  "data_config": {
+    "input_size": [
+      3,
+      224,
+      224
+    ],
+    "interpolation": "bicubic",
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "crop_pct": 0.9,
+    "crop_mode": "center"
+  },
+  "gate": null,
+  "git": {
+    "git_commit": "bd654780f11c4d3a5814e62c2ef5d087c808e715",
+    "git_dirty": true,
+    "git_branch": "prototype-baseline",
+    "git_worktree": "C:\\Users\\Van Le\\cs604-project\\cs604-prototype-baseline"
+  },
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "results": {
+    "crop_0.875": {
+      "crop_pct": 0.875,
+      "acc_plain": 0.74418,
+      "acc_flip": 0.74252,
+      "acc_mean_logits": 0.74638,
+      "acc_mean_probs": 0.74678,
+      "loss_plain": 1.2853577007293702,
+      "loss_mean_probs": 1.271250647125244,
+      "elapsed_sec": 101.3679919000715
+    },
+    "crop_0.9": {
+      "crop_pct": 0.9,
+      "acc_plain": 0.73966,
+      "acc_flip": 0.74022,
+      "acc_mean_logits": 0.7432,
+      "acc_mean_probs": 0.74342,
+      "loss_plain": 1.3017421885681153,
+      "loss_mean_probs": 1.2867023722839355,
+      "elapsed_sec": 103.14822029997595
+    },
+    "crop_0.95": {
+      "crop_pct": 0.95,
+      "acc_plain": 0.7355,
+      "acc_flip": 0.73468,
+      "acc_mean_logits": 0.73854,
+      "acc_mean_probs": 0.73866,
+      "loss_plain": 1.3269181462097168,
+      "loss_mean_probs": 1.3109284997558595,
+      "elapsed_sec": 103.48316400009207
+    },
+    "crop_1": {
+      "crop_pct": 1.0,
+      "acc_plain": 0.72766,
+      "acc_flip": 0.72882,
+      "acc_mean_logits": 0.73106,
+      "acc_mean_probs": 0.73134,
+      "loss_plain": 1.3583996978759765,
+      "loss_mean_probs": 1.342007466278076,
+      "elapsed_sec": 105.11817899998277
+    },
+    "all_crops_flip_mean_probs": {
+      "crop_pct": [
+        0.875,
+        0.9,
+        0.95,
+        1.0
+      ],
+      "acc": 0.7514199614524841
+    }
+  }
+}

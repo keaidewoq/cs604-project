@@ -1,0 +1,17 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+crop0.9: 433 s
+crop0.9: 1711 s
+crop0.9/plain                               62.716  (even 63.048, odd 62.384)
+crop0.9/flip                                62.794  (even 63.172, odd 62.416)
+crop0.9/plain+flip                          62.886  (even 63.280, odd 62.492)
+crop0.9/cam_m0.5/zoom                       59.912  (even 60.140, odd 59.684)
+crop0.9/cam_m0.5/plain+zoom                 63.636  (even 63.984, odd 63.288)
+crop0.9/cam_m0.5/4pass                      63.740  (even 64.072, odd 63.408)
+crop0.9/cam_m0.7/zoom                       62.382  (even 62.736, odd 62.028)
+crop0.9/cam_m0.7/plain+zoom                 63.818  (even 64.116, odd 63.520)
+crop0.9/cam_m0.7/4pass                      63.896  (even 64.224, odd 63.568)
+crop0.9/cam_m0.9/zoom                       63.028  (even 63.288, odd 62.768)
+crop0.9/cam_m0.9/plain+zoom                 63.520  (even 63.868, odd 63.172)
+crop0.9/cam_m0.9/4pass                      63.600  (even 64.024, odd 63.176)
+crop0.9+crop0.9/4pass_flips                 62.888  (even 63.276, odd 62.500)
+wrote C:\Users\Van Le\cs604-project\cs604-outputs\af_res_screen_448\analysis\tta_sweep_448\crop09_min8.json

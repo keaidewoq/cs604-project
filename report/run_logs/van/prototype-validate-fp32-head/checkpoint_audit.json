@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "optimizer_steps": 0,
+  "optimizer_state_empty": true,
+  "baseline_equals_best": true,
+  "weights_identical_between_precision_runs": true,
+  "prototype_file_unchanged": true,
+  "head_matches_normalized_prototypes": true,
+  "internal_accuracy": 0.439,
+  "correct_images": 21950,
+  "val_images": 50000
+}

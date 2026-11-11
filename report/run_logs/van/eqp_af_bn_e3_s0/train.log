@@ -1,0 +1,81 @@
+device=NVIDIA A100-SXM4-40GB mode=adaptformer trainable=11,352,589 (11.678%), backbone 3,672,588 (4.27% of the pretrained backbone, head excluded)
+step 2050 loss 5.0348 57.6 img/s
+step 2100 loss 5.0215 432.0 img/s
+step 2150 loss 5.1243 434.0 img/s
+step 2200 loss 5.0823 437.5 img/s
+step 2250 loss 5.1435 435.1 img/s
+step 2300 loss 5.1068 425.4 img/s
+step 2350 loss 5.1016 438.6 img/s
+step 2400 loss 5.2233 431.9 img/s
+step 2450 loss 5.1179 421.1 img/s
+step 2500 loss 5.1561 426.8 img/s
+saved checkpoint step=2500 -> last.pt (resume_step_002500.pt)
+step 2550 loss 5.0892 341.6 img/s
+step 2600 loss 5.1448 441.5 img/s
+step 2650 loss 5.1142 431.9 img/s
+step 2700 loss 5.1523 437.3 img/s
+step 2750 loss 5.1392 431.8 img/s
+step 2800 loss 5.0992 422.7 img/s
+step 2850 loss 5.1680 433.4 img/s
+step 2900 loss 5.1382 426.7 img/s
+step 2950 loss 5.1205 427.4 img/s
+step 3000 loss 5.0514 425.2 img/s
+saved checkpoint step=3000 -> last.pt (resume_step_003000.pt)
+step 3050 loss 5.1335 366.5 img/s
+step 3100 loss 5.0322 428.7 img/s
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+validation top1=75.43% loss=1.1787
+saved checkpoint step=3126 -> best.pt (best_step_003126.pt)
+saved checkpoint step=3126 -> last.pt (resume_step_003126.pt)
+step 3150 loss 4.6614 111.0 img/s
+step 3200 loss 4.2969 440.4 img/s
+step 3250 loss 4.4199 440.0 img/s
+step 3300 loss 4.3838 443.1 img/s
+step 3350 loss 4.4355 441.5 img/s
+step 3400 loss 4.5013 440.8 img/s
+step 3450 loss 4.4487 439.3 img/s
+step 3500 loss 4.5648 441.9 img/s
+saved checkpoint step=3500 -> last.pt (resume_step_003500.pt)
+step 3550 loss 4.5598 382.8 img/s
+step 3600 loss 4.5479 441.4 img/s
+step 3650 loss 4.5916 441.4 img/s
+step 3700 loss 4.5900 442.0 img/s
+step 3750 loss 4.6184 441.8 img/s
+step 3800 loss 4.6343 440.8 img/s
+step 3850 loss 4.5957 442.4 img/s
+step 3900 loss 4.6135 442.6 img/s
+step 3950 loss 4.6778 440.2 img/s
+step 4000 loss 4.5679 443.8 img/s
+saved checkpoint step=4000 -> last.pt (resume_step_004000.pt)
+step 4050 loss 4.6678 394.2 img/s
+step 4100 loss 4.6460 441.3 img/s
+step 4150 loss 4.6228 435.7 img/s
+step 4200 loss 4.6737 434.9 img/s
+step 4250 loss 4.6216 435.4 img/s
+step 4300 loss 4.6633 433.0 img/s
+step 4350 loss 4.6563 438.9 img/s
+step 4400 loss 4.5964 434.0 img/s
+step 4450 loss 4.7057 438.0 img/s
+step 4500 loss 4.6346 434.8 img/s
+saved checkpoint step=4500 -> last.pt (resume_step_004500.pt)
+step 4550 loss 4.6483 388.3 img/s
+step 4600 loss 4.6126 438.6 img/s
+step 4650 loss 4.5593 437.1 img/s
+evaluated 6400/50000 images
+evaluated 12800/50000 images
+evaluated 19200/50000 images
+evaluated 25600/50000 images
+evaluated 32000/50000 images
+evaluated 38400/50000 images
+evaluated 44800/50000 images
+evaluated 50000/50000 images
+validation top1=76.77% loss=1.1945
+saved checkpoint step=4689 -> best.pt (best_step_004689.pt)
+saved checkpoint step=4689 -> last.pt (resume_step_004689.pt)

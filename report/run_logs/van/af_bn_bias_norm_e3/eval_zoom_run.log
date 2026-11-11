@@ -1,0 +1,14 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+crop0.9: 231 s
+crop0.75: 462 s
+crop0.9/plain                               76.762  (even 76.972, odd 76.552)
+crop0.9/flip                                76.798  (even 76.896, odd 76.700)
+crop0.9/plain+flip                          77.040  (even 77.200, odd 76.880)
+crop0.75/plain                              77.436  (even 77.656, odd 77.216)
+crop0.75/flip                               77.672  (even 77.796, odd 77.548)
+crop0.75/plain+flip                         77.690  (even 77.872, odd 77.508)
+crop0.75/cam_m0.7/zoom                      76.734  (even 76.776, odd 76.692)
+crop0.75/cam_m0.7/plain+zoom                78.476  (even 78.540, odd 78.412)
+crop0.75/cam_m0.7/4pass                     78.572  (even 78.624, odd 78.520)
+crop0.9+crop0.75/4pass_flips                78.424  (even 78.588, odd 78.260)
+wrote ..\cs604-outputs\af_bn_bias_norm_e3\analysis\eval_zoom.json

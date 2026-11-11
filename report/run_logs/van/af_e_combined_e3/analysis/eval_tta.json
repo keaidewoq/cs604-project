@@ -1,0 +1,89 @@
+{
+  "checkpoint": "C:\\Users\\Van Le\\cs604-project\\cs604-outputs\\af_e_combined_e3\\best.pt",
+  "checkpoint_sha256": "2aa36372b87456f6ac1397c3834d0a445e6c8a16330d39700a49e71d520b25f3",
+  "checkpoint_step": 4689,
+  "samples": 50000,
+  "data_config": {
+    "input_size": [
+      3,
+      336,
+      336
+    ],
+    "interpolation": "bicubic",
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "crop_pct": 0.9,
+    "crop_mode": "center"
+  },
+  "gate": {
+    "reference": 0.76258,
+    "reproduced": 0.76258,
+    "default_crop_pct": 0.9
+  },
+  "git": {
+    "git_commit": "bc3e3a350150eef387275b08f5d645923b90e8a5",
+    "git_dirty": true,
+    "git_branch": "prototype-baseline",
+    "git_worktree": "C:\\Users\\Van Le\\cs604-project\\cs604-prototype-baseline"
+  },
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "results": {
+    "crop_0.7": {
+      "crop_pct": 0.7,
+      "acc_plain": 0.76732,
+      "acc_flip": 0.7674,
+      "acc_mean_logits": 0.76916,
+      "acc_mean_probs": 0.76922,
+      "loss_plain": 1.1963259126281738,
+      "loss_mean_probs": 1.1748254208374023,
+      "elapsed_sec": 485.00280790007673
+    },
+    "crop_0.75": {
+      "crop_pct": 0.75,
+      "acc_plain": 0.76952,
+      "acc_flip": 0.76888,
+      "acc_mean_logits": 0.7711,
+      "acc_mean_probs": 0.77126,
+      "loss_plain": 1.188862540435791,
+      "loss_mean_probs": 1.1658457955932617,
+      "elapsed_sec": 475.8316069000866
+    },
+    "crop_0.8": {
+      "crop_pct": 0.8,
+      "acc_plain": 0.76802,
+      "acc_flip": 0.76914,
+      "acc_mean_logits": 0.772,
+      "acc_mean_probs": 0.77192,
+      "loss_plain": 1.1928546114349365,
+      "loss_mean_probs": 1.1674142876434326,
+      "elapsed_sec": 477.8460021999199
+    },
+    "crop_0.9": {
+      "crop_pct": 0.9,
+      "acc_plain": 0.76258,
+      "acc_flip": 0.76304,
+      "acc_mean_logits": 0.76532,
+      "acc_mean_probs": 0.76526,
+      "loss_plain": 1.2261467901611327,
+      "loss_mean_probs": 1.1987881364440918,
+      "elapsed_sec": 473.9091807999648
+    },
+    "all_crops_flip_mean_probs": {
+      "crop_pct": [
+        0.7,
+        0.75,
+        0.8,
+        0.9
+      ],
+      "acc": 0.7822799682617188
+    }
+  }
+}
