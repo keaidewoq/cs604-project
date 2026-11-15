@@ -175,7 +175,10 @@ our changes highlighted.}
 
 \subsection{Full fine-tuning recipe}
 \todo{Diagnosis; prototype cosine head \citep{mensink2013ncm,snell2017protonet} (why not LP-FT); layer-wise LR decay 0.75;
-schedule and regularisation (details in Appendix).}
+schedule and regularisation (details in Appendix). Untuned settings follow the MAE ViT-B fine-tuning recipe
+\citep{he2022mae}: label smoothing 0.1 \citep{szegedy2016inception}, drop path 0.1 \citep{huang2016stochdepth},
+AdamW weight decay 0.05 \citep{loshchilov2019adamw}, no decay on norms and biases \citep{he2019bagoftricks};
+gradient clipping at norm 1.0 as in ViT fine-tuning \citep{dosovitskiy2021vit}.}
 
 \subsection{Spending compute on pixels, not epochs}
 \todo{Small subjects (12 vs 35 patches); trade-off against epochs.}
@@ -185,7 +188,7 @@ schedule and regularisation (details in Appendix).}
 latency cost of the branch that cannot be merged.}
 
 \subsection{Prediction-time extensions}
-\todo{Zoom second view; kNN re-ranking, score $= \log p + 20 \times$ mean of the
+\todo{Zoom second view from a class activation map \citep{zhou2016cam}; kNN re-ranking, score $= \log p + 20 \times$ mean of the
 top-3 cosines over the top-5 list; settings fixed on half of the classes.}
 
 \subsection{Parameter accounting}
