@@ -121,21 +121,23 @@ epochs (4.1 vs 7.7).
 \todo{ViT \citep{dosovitskiy2021vit}, AugReg \citep{steiner2022augreg}.}
 
 \paragraph{Full fine-tuning recipes.}
-\todo{LP-FT \citep{kumar2022lpft}, layer-wise LR decay \citep{clark2020electra,bao2022beit},
-cosine and margin heads \citep{wang2018cosface}, resolution \citep{touvron2019fixres}.
+\todo{LP-FT \citep{kumar2022lpft}, layer-wise LR decay \citep{bao2022beit,he2022mae},
+cosine and margin heads \citep{wang2018cosface}, class-prototype classifiers
+\citep{mensink2013ncm,snell2017protonet}. An alternative is to start each class weight from
+the mean feature of that class, as in weight imprinting \citep{qi2018imprinting}. Resolution \citep{touvron2019fixres}.
 Pros and cons.}
 
 \paragraph{Parameter-efficient fine-tuning.}
 \todo{BitFit \citep{zaken2022bitfit}, prefix tuning and VPT \citep{li2021prefix,jia2022vpt},
 adapters \citep{houlsby2019adapter}, AdaptFormer \citep{chen2022adaptformer},
 LoRA \citep{hu2022lora}, DoRA \citep{liu2024dora}, AdaLoRA \citep{zhang2023adalora},
-SSF \citep{lian2022ssf}, GPS \citep{zhang2024gps}, surgical FT \citep{lee2023surgical}.
+GPS \citep{zhang2024gps}, surgical FT \citep{lee2023surgical}.
 Pros and cons; Table~\ref{tab:related}.}
 
 \paragraph{Prediction-time methods.}
-\todo{Test-time augmentation; attention-guided zoom for fine-grained recognition
+\todo{Test-time augmentation \citep{krizhevsky2012imagenet}; attention-guided zoom for fine-grained recognition
 \citep{fu2017racnn,hu2019wsdan}; kNN and memory-based classification
-\citep{nakata2022knn}.}
+\citep{nakata2022knn,wu2018instance,khandelwal2020knnlm}.}
 
 \todo{Gap: methods are usually compared at equal parameters; we compare at equal
 wall-clock and treat the head, resolution and prediction as part of the method.}
@@ -150,7 +152,14 @@ wall-clock and treat the head, resolution and prediction as part of the method.}
 % Each subsection: What we did -> Why (evidence or hypothesis) -> What we rejected.
 
 \subsection{Problem setup and budget}
-\todo{ViT-B/16 augreg2, 10,000 classes, 450k training images, 2 h $\times$ 48 GB
+\paragraph{Dataset.} We use the CS604 course project dataset \citep{cs604data}, an anonymised
+fine-grained image classification dataset with 10,000 classes. It provides 450,000 labelled
+training images (45 per class), a validation set of 50,000 images (5 per class) and a test set
+of 100,000 images (10 per class). Validation and test labels are not available to us, so both
+sets are scored only on the evaluation server (Section~\ref{sec:setup}). Class names are
+anonymised, so no class semantics or hierarchy is available.
+
+\todo{ViT-B/16 (augreg2) \citep{steiner2022augreg} pretrained on ImageNet-21k \citep{deng2009imagenet}, loaded via timm \citep{rw2019timm} on PyTorch \citep{paszke2019pytorch} -- 2 h $\times$ 48 GB
 (144-minute runs), metrics.}
 
 \subsection{Overview}
@@ -165,7 +174,7 @@ our changes highlighted.}
 % \end{figure}
 
 \subsection{Full fine-tuning recipe}
-\todo{Diagnosis; prototype cosine head (why not LP-FT); layer-wise LR decay 0.75;
+\todo{Diagnosis; prototype cosine head \citep{mensink2013ncm,snell2017protonet} (why not LP-FT); layer-wise LR decay 0.75;
 schedule and regularisation (details in Appendix).}
 
 \subsection{Spending compute on pixels, not epochs}
