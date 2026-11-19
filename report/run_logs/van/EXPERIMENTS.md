@@ -1189,7 +1189,7 @@ falls the same way (6 epochs: 1.302 at 0.9, 1.220 at 0.65).
   Not adopted: inference latency is reported, and 0.7 + flip gets most of it.
 - Group repo (`van-dev`, commits `f01bcde`, `575ee88`, not pushed): `src.predict`
   gets opt-in `--crop_pct` and `--tta_flip` (default output byte-identical to
-  before), and `van_colab_launcher.ipynb` writes a second submission with crop
+  before), and `colab_van_train-one-config.ipynb` writes a second submission with crop
   0.7 + flip to `tta_crop070_flip/`.
 
 ## Base-model screen: class-prototype accuracy (2026-10-03 to 2026-10-04)

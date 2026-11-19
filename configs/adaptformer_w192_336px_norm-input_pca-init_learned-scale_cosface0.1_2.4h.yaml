@@ -2,7 +2,7 @@
 # Brought onto main from origin/van-448-finals for the final report.
 # The filename states the config. inherits: paths point at the renamed files.
 # Van's AdaptFormer (Task 2) for the 2.4 h budget on a 40 GB A100
-# (Colab: notebooks/van_colab_launcher.ipynb, METHOD = "van_adaptformer_final").
+# (Colab: notebooks/colab_van_train-one-config.ipynb, METHOD = "adaptformer_w192_336px_norm-input_pca-init_learned-scale_cosface0.1_2.4h").
 # Tuned on a laptop on a fixed 5-image/class holdout at 336 px (report/progress_log.md,
 # Van, 2026-10-09): 76.26% after 3 epochs, 77.13% with crop 0.75 + flip.
 # vs a plain AdaptFormer control (residual input, Kaiming init, fixed scale, no margin):

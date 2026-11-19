@@ -277,7 +277,7 @@ symptom points to one change below, so this is the motivation for the recipe:
 ### 3.4 Spending the budget on pixels
 
 **Looking at the data first** (Van's data inspection, no training;
-`notebooks/dataset_inspection.ipynb` on the `dataset-inspection` branch). On a sample of
+`notebooks/colab_look-at-images_crops-sizes-zoom.ipynb` on the `dataset-inspection` branch). On a sample of
 training and validation images, the notebook compares image size, shape, brightness and
 colour between the two splits. It also shows each candidate setting visually: random
 training crops at several minimum areas, the same field of view at 224 to 512 px, and

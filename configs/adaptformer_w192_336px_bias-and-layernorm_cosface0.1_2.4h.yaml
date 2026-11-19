@@ -2,7 +2,7 @@
 # Brought onto main from origin/van-448-finals for the final report.
 # The filename states the config. inherits: paths point at the renamed files.
 # Van's AdaptFormer (Task 2) + trainable biases and LayerNorm weights, for the 2.4 h budget on
-# a 40 GB A100 (Colab: notebooks/van_colab_launcher.ipynb, METHOD = "van_adaptformer_bias_final").
+# a 40 GB A100 (Colab: notebooks/colab_van_train-one-config.ipynb, METHOD = "adaptformer_w192_336px_bias-and-layernorm_cosface0.1_2.4h").
 # Same as adaptformer_w192_336px_norm-input_pca-init_learned-scale_cosface0.1_2.4h.yaml plus adapter_train_bias / adapter_train_norm.
 # Laptop holdout (5 images/class, 336 px, report/progress_log.md, Van, 2026-10-11):
 # 76.76% after 3 epochs vs 76.26% without them (+0.50); 78.48% vs 77.95% with crop 0.75 + zoom.

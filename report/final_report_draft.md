@@ -474,7 +474,7 @@ finals trained on), with the same protocol: synthetic inputs already on the GPU,
 Laptop (RTX 5080) timings from the screening work are not used.
 
 **The two finals, timed in one session (2026-10-28)** with `scripts/van_latency_zoom.py`
-(`notebooks/van_latency_colab.ipynb`); results in `inference_latency_zoom.json` in each run
+(`notebooks/colab_latency_with-zoom_on-checkpoints.ipynb`); results in `inference_latency_zoom.json` in each run
 folder. "Zoom" is the exact submission path of `src.predict --zoom` (plain pass, CAM box,
 crop from the 2× copy, second pass, softmax average).
 

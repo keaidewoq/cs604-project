@@ -1,7 +1,7 @@
 # LoRA + VPT ablation
 
 Branch: `qq_lora_vpt_ablation`. Launcher:
-`notebooks/colab_qq_lora_vpt_ablation.ipynb`.
+`notebooks/colab_lora-r24_336px_vpt-prompt-length-sweep.ipynb`.
 
 This is an experiment implementation, not a recorded GPU result. All arms use
 the existing `lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml` baseline: LoRA r24 on qkv/proj/fc1/fc2,

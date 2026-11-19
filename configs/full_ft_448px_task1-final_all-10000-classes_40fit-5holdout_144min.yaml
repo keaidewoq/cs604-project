@@ -11,7 +11,7 @@
 #
 # Training as in the final: 144 training minutes with the cosine fitted to them. Prototypes are
 # rebuilt at 448 from the 40 fit photos per class, so the head never saw the holdout.
-# Launcher: notebooks/van_colab_launcher_allclass_ft448.ipynb.
+# Launcher: notebooks/colab_full-ft_448px_task1-final_all-10000-classes.ipynb.
 base: full_ft_448px_proto-cosine_llrd0.75_task1-final_fused-adamw_compile_2.4h.yaml         # relative to this file
 base_prototypes: /content/drive/MyDrive/CS604_RUNS/prototypes_448.pt
 pilot:

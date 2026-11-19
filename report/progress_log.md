@@ -16,7 +16,7 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 
 ### 2026-10-06 — Van — full FT recipe tuned on a laptop (`configs/full_ft_224px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml`)
 
-- run_dir: laptop screens in Van's own pipeline (RTX 5080 laptop); the Colab run of this config (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` at f5d654a) is under `CS604_RUNS`, folder name TBC
+- run_dir: laptop screens in Van's own pipeline (RTX 5080 laptop); the Colab run of this config (A100 40 GB, `notebooks/colab_van_train-one-config.ipynb`, branch `van-dev` at f5d654a) is under `CS604_RUNS`, folder name TBC
 - val acc (ours / CodaBench): internal holdout (5 training images/class held out, trained on the other 40) **72.98%** after 3 epochs, **73.97%** after 6 / **CodaBench 0.757** (ID 963899, 2026-10-06; all 45 images/class, 144 training minutes, plain center crop 0.9, no test-time augmentation)
 - trainable % / peak VRAM / GPU-hours: 100% / 5.8 GB at batch 64 / 6 epochs = 2.1 laptop hours (about 0.7 of the 48 GB-hour budget)
 - what changed vs `full_ft_224px_proto-linear-head_backbone-lr1e-5_head-lr1e-3_2.4h.yaml`: prototype-initialized **cosine** head; backbone lr 4e-4 with **layer-wise lr decay 0.75** (block i gets lr x 0.75^(12 - i)); head lr 4e-3; 5% warmup then cosine to zero **fitted to the time limit**; label smoothing 0.1; drop_path 0.1; gradient clipping 1.0; batch 256.
@@ -216,7 +216,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10–08 — Qian — selected-attention internal-validation ablation
 
-- source branch / launcher: `qq_selected_layer_validation` / `notebooks/colab_qq_selected_layer_validation.ipynb`; saved notebook commit `1be03d8`.
+- source branch / launcher: `qq_selected_layer_validation` / `notebooks/colab_last-blocks_qkv-vs-attention_224px_5epoch.ipynb`; saved notebook commit `1be03d8`.
 - purpose: select which attention parameters to adapt while training <5% of backbone parameters, excluding the classifier.
 - data: fixed internal split of the labelled training set, 40 fitting + 5 validation images/class across all 10,000 classes (400,000 fitting / 50,000 holdout); split seed 42. This holdout is distinct from official CodaBench validation. Split manifests and raw run artifacts are retained under Drive `CS604_RUNS/qq_selected_layer_<split-id>/`.
 - shared recipe: `configs/linear_probe_224px_frozen-backbone_5epoch.yaml` (inheriting `shared_vit-b16_augreg2_defaults.yaml`); augreg2 ViT-B/16 at 224; random linear classifier initialization, no prototypes; AdamW LR 1e-3 for all trainable parameters, weight decay 0, batch 64, accumulation 1, 1-epoch warmup followed by cosine decay, BF16, training seed 42, 2 data-loader workers. Each arm completed 5 epochs; no training-minute cutoff. GPU model/session equivalence is not established by the supplied summary.
@@ -427,7 +427,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-14 — Qian — BitFit head, resolution and crop/flip ablations
 
-- run_dir: `CS604_RUNS/qq_bitfit_heads_crop_336_seed42_v1/` and `CS604_RUNS/qq_bitfit_resolution_336_384_448_seed42_v1/` (`qq_bitfit_ablation`; head/crop and resolution Colab launchers, saved commits `9f1f1de` / `166df46`). Full results retained in each run root's CSVs.
+- run_dir: `CS604_RUNS/qq_bitfit_heads_crop_336_seed42_v1/` and `CS604_RUNS/qq_bitfit_resolution_336_384_448_seed42_v1/` (`qq_bitfit_ablation`; launchers `notebooks/colab_bitfit_336px_linear-vs-cosine-head_1k-pilot.ipynb` and `notebooks/colab_bitfit_cosine-head_336-vs-384-vs-448_1k-pilot.ipynb`, saved commits `9f1f1de` / `166df46`). Full results retained in each run root's CSVs.
 - val acc (internal subset / CodaBench): at 336, linear **0.8792** vs cosine **0.8904** with standard crop; cosine crop 0.75 + flip **0.8980**. Resolution comparison at crop 0.75 + flip: 336 / 384 / 448 = **0.8976 / 0.8972 / 0.8990** / not submitted.
 - trainable % / peak VRAM / GPU-hours: ~**0.12%** backbone (classifier excluded). Head ablation: **7.01 GiB**, ~**0.074** wall GPU-hours/arm. Resolution runs (336 / 384 / 448): **7.01 / 8.94 / 11.94 GiB**, **0.0745 / 0.0958 / 0.1323** wall GPU-hours, **4.03 / 5.23 / 7.30** training minutes on A100 40GB.
 - what changed: compared prototype linear/cosine heads at 336, then cosine heads at 336/384/448; same 1,000 classes, 40 fit + 5 holdout images/class, fitting-only prototypes rebuilt per resolution, three epochs/arm, seed 42. Bias/head LR 1e-3, weight decay 0, batch 64, BF16, 5% warmup + cosine. Selected `best.pt` using crop 0.9 without flip; evaluated crop/flip variants on the same holdout.
@@ -452,7 +452,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-16 — Qian — LoRA + VPT ablation (`configs/lora_r24_336px_vpt-prompt-length-sweep.yaml`)
 
-- run_dir: `CS604_RUNS/qq_lora_vpt_336_c1000_seed42_v1/` (`qq_lora_vpt_ablation`).
+- run_dir: `CS604_RUNS/qq_lora_vpt_336_c1000_seed42_v1/` (`qq_lora_vpt_ablation`; launcher `notebooks/colab_lora-r24_336px_vpt-prompt-length-sweep.ipynb`).
 - val acc (ours / CodaBench): baseline **0.9032**; shallow 8/16/32 tokens **0.9040 / 0.9044 / 0.9058**; deep 8 tokens/block **0.9072** / not submitted.
 - trainable % / peak VRAM / GPU-hours: selected deep arm **4.7391%** backbone (head excluded) / **19.97 GiB** / **0.1802 wall GPU-hours** (10.03 training min).
 - what changed: added VPT to LoRA r24 + extras at 336 with a prototype cosine head; 1,000 classes, 40 fit + 5 holdout/class, five epochs, seed 42; pilot-selected prompt LR **3e-4**. Deep gains **0.40 pp** over baseline with **5.4% longer training**; one seed, full-data gain unconfirmed.
@@ -580,7 +580,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-22 — Qian — LoRA vs DoRA (`configs/lora-vs-dora_448px_25pct-full-image_1k-class-ablation.yaml`, `qq_lora_ablation`)
 
-- run_dir: `CS604_RUNS/qq_lora_dora_448_c1000_m64_v2/seed42/`; arms `lora_r24`, `lora_r23`, `dora_r23`.
+- run_dir: `CS604_RUNS/qq_lora_dora_448_c1000_m64_v2/seed42/` (launcher `notebooks/colab_lora-vs-dora_448px_25pct-full-image_1k-pilot.ipynb`); arms `lora_r24`, `lora_r23`, `dora_r23`.
 - val acc (ours / CodaBench): LoRA r24 / LoRA r23 / DoRA r23: **0.9098 / 0.9096 / 0.9070** final holdout / not submitted.
 - trainable % / peak VRAM / GPU-hours: same arm order, **4.9446 / 4.7736 / 4.8698%** backbone (head excluded), **17.29 / 17.28 / 24.97 GiB**; ~**0.20 training GPU-hours/arm** (12 minutes); wall GPU-hours not supplied.
 - what changed: arm E recipe at 448, 25% whole-image/padding, prototype cosine head + extras; fixed 1,000 classes (40 fit + 5 holdout/class), fit-only prototypes, seed 42, BF16, A100 40GB, batch 64 x 4, equal 12-minute budgets. Evaluation: crop 0.9, no flip/zoom. DoRA r23 trails the primary LoRA r24 reference by **0.28 pp**, with **144.5 vs 190.0 img/s** and higher VRAM; one-seed subset screen.
@@ -588,7 +588,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-23 — Qian — LoRA vs AdaLoRA (`configs/adalora-vs-lora-r24_448px_init-rank24_1k-class-ablation.yaml`, `qq_lora_ablation`)
 
-- run_dir: `CS604_RUNS/qq_adalora_448_c1000_seed42_v1/seed42/`; arms `lora_r24`, `adalora_t8`, `adalora_t16`, `adalora_t20`.
+- run_dir: `CS604_RUNS/qq_adalora_448_c1000_seed42_v1/seed42/` (launcher `notebooks/colab_adalora-vs-lora_448px_init-rank24_1k-pilot.ipynb`); arms `lora_r24`, `adalora_t8`, `adalora_t16`, `adalora_t20`.
 - val acc (ours / CodaBench): same arm order, **0.9076 / 0.8792 / 0.8794 / 0.8804** final holdout / not submitted.
 - trainable % / peak VRAM / GPU-hours: allocated backbone **4.9446% LoRA / 4.9459% AdaLoRA**, head excluded; final active AdaLoRA t8/t16/t20 **2.1562 / 3.4531 / 4.1434%**. Peak **17.29 / 18.79 GiB** (LoRA / AdaLoRA); ~**0.20 training GPU-hours/arm**, 12 minutes each.
 - what changed: PEFT AdaLoRA init rank 24, target averages 8/16/20; same 448px arm E recipe, cosine head + extras, fixed 1,000 classes (40 fit + 5 holdout/class), fit-only prototypes, seed 42, BF16, A100 40GB, batch 64 x 4. Evaluation: crop 0.9, no flip/zoom. All targets reached and masks fixed. Best AdaLoRA (t20) trails LoRA by **2.72 pp**, with **115.0 vs 189.8 img/s** and **2.07 vs 3.42 epochs**; one-seed subset screen.

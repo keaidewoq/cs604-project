@@ -212,7 +212,7 @@ the roughly 16 epochs of the Colab run start to overfit (section 9).
 ## 5. The final Colab run
 
 - Config: `configs/full_ft_224px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml` (all settings below), launcher
-  `notebooks/van_colab_launcher.ipynb` (branch `van-dev`), Colab A100 40 GB.
+  `notebooks/colab_van_train-one-config.ipynb` (branch `van-dev`), Colab A100 40 GB.
 - Data: all 450,000 training images (no holdout).
 - Training: 144 minutes, with the cosine schedule fitted to that limit.
   Expected about 16 epochs at about 830 img/s (throughput measured by
@@ -275,7 +275,7 @@ Both off by default (default output is unchanged):
 
 ### 6.3 Running it on Colab
 
-`notebooks/van_colab_launcher.ipynb` is a copy of `colab_train_one-config.ipynb` with
+`notebooks/colab_van_train-one-config.ipynb` is a copy of `colab_train_one-config.ipynb` with
 `BRANCH`, `METHOD` and `TEAM` set. Prediction finds the run folder training just
 created, writes `val_team_08.txt/.zip` inside that folder (not the shared root),
 also writes a crop 0.7 + flip submission to `tta_crop070_flip/`, then plots the
