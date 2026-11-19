@@ -72,7 +72,7 @@ From report Sections 3.5, 5.3, 5.4 and 6, Table 4 and Figure 5. Holdout runs are
 | P4a | LoRA placement: all 12 blocks vs last 8, equal budget | Holdout, two seeds | 77.26 vs 77.33 (tie) | Verified | Van | eqp_lora42_b4_e3_s0/s1 77.33 / 77.32 vs eqp_lora28_e3_s0/s1 77.23 / 77.28 (+0.07, tie); 4.94% each. Van's RERUNS.md item 3 |
 | P7 | LoRA alone vs AdaptFormer + LoRA, same budget | Holdout | 77.26 vs 77.43 (tie) | Verified | Van | eqp_lora28_e3_s0/s1 77.23 / 77.28 vs eqp_af_lora16_e3_s0/s1 77.44 / 77.41 (+0.17, tie); 4.94% vs 4.96%. RERUNS.md item 1 |
 | P13 | LoRA vs full FT by scale | 1,000-class pilot vs full scale, 336 px | Pilot: LoRA matched or beat full FT. Full scale: full FT +2.2 | To verify |  |  |
-| P14 | LoRA rank: r16 vs r24, all 12 blocks (arm C of the r24 recipe ablation) | 1,000-class pilot, 336 px, 3 epochs, one seed; repeated in the depth-control screen (C16) | 89.84 (r24, 4.65%) vs 89.18 (r16, 3.28%): r24 +0.66. Repeat: r16 89.32, −0.54. Report cites +0.66 | To verify |  | configs/ablation_lora_r24.yaml (CS604_RUNS/ablation_ablation_lora_r24/, arm C); configs/ablation_lora_depth_control.yaml (C16); progress_log 2026-10-12 and 2026-10-19 |
+| P14 | LoRA rank: r16 vs r24, all 12 blocks (arm C of the r24 recipe ablation) | 1,000-class pilot, 336 px, 3 epochs, one seed; repeated in the depth-control screen (C16) | 89.84 (r24, 4.65%) vs 89.18 (r16, 3.28%): r24 +0.66. Repeat: r16 89.32, −0.54. Report cites +0.66 | To verify |  | configs/lora_r24_336px_recipe-ablation_1k-class-pilot.yaml (CS604_RUNS/ablation_ablation_lora_r24/, arm C); configs/lora_r24_336px_spread-vs-fewer-blocks_1k-class-pilot.yaml (C16); progress_log 2026-10-12 and 2026-10-19 |
 
 ### AdaptFormer
 
@@ -130,7 +130,7 @@ These were not run, or the report has no numbers for them. Either find the recor
   **Van:** the probe was a cosine head (started from the prototypes) trained on cached frozen features for 10 epochs (15,630 updates, batch 256, head lr 3e-3, label smoothing 0.1): about 36 s, plus a one-off 412 s feature cache, on the laptop. It was a laptop screen only, never inside a 144-minute clock, and no final used LP-FT. Seed repeat of the LP-FT arm: 71.37 / 71.03 (seed noise 0.33, row F16).
 - [ ] F2 layer decay: no-decay run used the decay-tuned LR, and the 0.75 factor was not tuned. Report wording already says this.
   **Van:** confirmed from the record (`full_lpft_b_nolayerdecay`): same 4e-4 top LR, chosen with decay on, not re-tuned.
-- [ ] Fixed settings (label smoothing, drop path, weight decay, clipping, batch 256) were never ablated. Report cites the MAE recipe; confirm base.yaml matches it.
+- [ ] Fixed settings (label smoothing, drop path, weight decay, clipping, batch 256) were never ablated. Report cites the MAE recipe; confirm shared_vit-b16_augreg2_defaults.yaml matches it.
 - [ ] F4: confirm the five-point LR sweep was run with decay on only, and that Appendix A says so.
   **Van:** confirmed. `full_lpft_a_lr*`, 1 epoch, layer decay 0.75 on in every arm, LP-FT head: 5e-5 66.24, 1e-4 66.82, 2e-4 67.22, **4e-4 67.47**, 8e-4 67.34. Flat between 4e-4 and 8e-4; 4e-4 kept. Numbers now in row F4.
 - [ ] F13 and P12: Van to share run records.

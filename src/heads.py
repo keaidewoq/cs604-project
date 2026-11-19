@@ -68,7 +68,7 @@ def load_prototypes(cfg, model):
     if not path.is_file():
         raise FileNotFoundError(
             f"prototype_file not found: {path}. "
-            "Run: python scripts/build_prototypes.py --config configs/prototype_probe.yaml --output <path>"
+            "Run: python scripts/build_prototypes.py --config configs/class-prototypes_augreg2_224px_cosine-head.yaml --output <path>"
         )
     blob = torch.load(path, map_location="cpu", weights_only=False)
     if isinstance(blob, dict):
@@ -95,7 +95,7 @@ def load_probe_head(cfg, model):
     if not path.is_file():
         raise FileNotFoundError(
             f"probe_head_file not found: {path}. "
-            "Run: python scripts/linear_probe_cached.py --config configs/linear_probe_cached.yaml ..."
+            "Run: python scripts/linear_probe_cached.py --config configs/linear_probe_cached-features_lr-sweep.yaml ..."
         )
     head = model.get_classifier()
     if not isinstance(head, nn.Linear):

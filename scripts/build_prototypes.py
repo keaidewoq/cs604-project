@@ -3,7 +3,7 @@
 Needs the real dataset and a GPU on Colab. Writes a .pt the trainer can load
 via `head_init: prototype` + `prototype_file`.
 
-  python scripts/build_prototypes.py --config configs/prototype_probe.yaml \\
+  python scripts/build_prototypes.py --config configs/class-prototypes_augreg2_224px_cosine-head.yaml \\
       --output /content/drive/MyDrive/CS604_RUNS/prototypes.pt
 """
 
@@ -46,7 +46,7 @@ def _cap_per_class(samples, k, seed):
 @torch.no_grad()
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", default="configs/prototype_probe.yaml")
+    parser.add_argument("--config", default="configs/class-prototypes_augreg2_224px_cosine-head.yaml")
     parser.add_argument("--output", required=True, help="Where to write prototypes.pt")
     parser.add_argument("--data_root", default=None)
     parser.add_argument("--per_class", type=int, default=None, help="Max train images per class")

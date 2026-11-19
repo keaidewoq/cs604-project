@@ -2,7 +2,7 @@
 # Brought onto main from origin/qq_lora_ablation for the final report.
 # The filename states the config. inherits: paths point at the renamed files.
 # Four equal-time subset runs based on the team's strongest PEFT training recipe.
-inherits: lora_r24_336_recipe.yaml
+inherits: lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml
 max_adaptation_pct: 5.0
 prompt_mode: none
 prompt_length: 0

@@ -1,5 +1,0 @@
-# Qian's BitFit @ 336 (CodaBench 0.734 on augreg2) with Van's IN21k-only backbone.
-# One change: model_name. Rebuild prototypes; do not reuse prototypes_336.pt.
-inherits: bitfit_336.yaml
-model_name: vit_base_patch16_224.augreg_in21k
-prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_336_augreg_in21k.pt

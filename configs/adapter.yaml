@@ -1,5 +1,0 @@
-inherits: base.yaml
-method: adapter
-adapter_dim: 64
-lr: 1.0e-3
-epochs: 5

@@ -1,9 +1,0 @@
-# Van's class-mean head (PhD ~43.7% with no training if evaluate_only).
-# 1) python scripts/build_prototypes.py --config configs/prototype_probe.yaml --output .../prototypes.pt
-# 2) python -m src.train --config configs/prototype_probe.yaml
-inherits: linear_probe.yaml
-head_type: cosine
-head_init: prototype
-prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes.pt
-evaluate_before_training: true
-evaluate_only: false

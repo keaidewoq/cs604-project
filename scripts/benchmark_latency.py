@@ -40,7 +40,7 @@ def measure(model, batch, device, warmup, iters):
 
 def main():
     parser = argparse.ArgumentParser(description="Benchmark forward-pass latency.")
-    parser.add_argument("--config", default="configs/linear_probe.yaml")
+    parser.add_argument("--config", default="configs/linear_probe_224px_frozen-backbone_5epoch.yaml")
     parser.add_argument("--warmup", type=int, default=10)
     parser.add_argument("--iters", type=int, default=50)
     parser.add_argument("--pretrained", action="store_true", help="Load pretrained weights (off by default).")

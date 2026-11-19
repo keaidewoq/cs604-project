@@ -1,0 +1,14 @@
+# Qian's prototype-initialized full FT: backbone slow, head fast. No warmup.
+inherits: full_ft_224px_lr1e-4_batch32_2epoch.yaml
+lr: 1.0e-5
+head_lr: 1.0e-3
+epochs: 11
+# Training only: excludes setup, prototypes, validation, and checkpoint saving.
+# Stops at this limit or the epoch ceiling above, whichever comes first.
+max_train_minutes: 144
+batch_size: 32
+grad_accum_steps: 1
+warmup: 0
+head_init: prototype
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes.pt
+evaluate_before_training: true

@@ -1,9 +1,0 @@
-# Full-scale check of pilot arm B (configs/ablation_lora_r24.yaml): lora_r24_336_recipe.yaml
-# (CodaBench 0.785) without the extras, so only the LoRA layers train in the backbone.
-# Pilot: 0.8970 vs 0.8984 (-0.14, a tie) at 4.12% instead of 4.65%. If the tie holds at
-# full scale, the extras (norms, biases, pos_embed, cls_token) are not worth 0.46M params.
-# Trainable backbone: 3.54M / 85.99M = 4.12% (head excluded).
-# Launcher: notebooks/colab_launcher_ana_fullcheck.ipynb (METHOD = "lora_r24_336_no_extras").
-inherits: lora_r24_336_recipe.yaml
-unfreeze_extra: []
-save_resume_state: true   # last.pt also keeps optimizer/schedule state, so a crashed run can resume (src.train --resume)

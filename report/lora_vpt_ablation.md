@@ -4,7 +4,7 @@ Branch: `qq_lora_vpt_ablation`. Launcher:
 `notebooks/colab_qq_lora_vpt_ablation.ipynb`.
 
 This is an experiment implementation, not a recorded GPU result. All arms use
-the existing `lora_r24_336_recipe.yaml` baseline: LoRA r24 on qkv/proj/fc1/fc2,
+the existing `lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml` baseline: LoRA r24 on qkv/proj/fc1/fc2,
 trainable norms/biases/positional embeddings/CLS, prototype cosine head, 336px,
 LoRA/extras LR 3e-4, head LR 3e-3, weight decay 0.05, label smoothing 0.1,
 gradient clipping 1.0 and effective batch 256. Prompt embeddings have their own

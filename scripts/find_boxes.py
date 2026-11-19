@@ -12,7 +12,7 @@ Also measures, for the report:
     crop of the same size vs the whole photo (`--check_per_class` photos per class);
   - an overlay figure of score maps and boxes.
 
-    python scripts/find_boxes.py --config configs/lora_r24_336_no_extras.yaml \\
+    python scripts/find_boxes.py --config configs/lora_r24_336px_qkv-proj-fc_no-extras_proto-cosine_2.4h.yaml \\
         --data_root /content/pilot_data/c1000_h5_s0 --out_dir <folder> [--score proto --smooth ...]
 writes <out_name>.pt, <out_name>_stats.json, <out_name>_overlay.png (out_name: boxes).
 GPU time is printed and saved: report it as data preparation.

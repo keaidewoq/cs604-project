@@ -1,0 +1,42 @@
+# Serial adapters (Houlsby) at 336 with the same setup as lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml,
+# sized to the same budget, so the PEFT method is the main difference.
+# Launcher: notebooks/colab_adapter-and-adaptformer_336px_same-recipe.ipynb (METHOD = "adapter_w96_336px_extras_proto-cosine_2.4h").
+#
+# Trainable backbone: 4.02M / 85.99M = 4.68% (head excluded); LoRA r24 run: 4.65%
+#   24 serial adapters (after attention and after MLP), width 96   3.56M
+#   LayerNorm weights/biases, all Linear biases, pos_embed, cls_token   0.46M
+#
+# Same as the LoRA run: prototype cosine head (prototypes_336.pt), head lr 3e-3,
+# weight decay 0.05 (not on norms, biases or embeddings), label smoothing 0.1,
+# clip 1.0, effective batch 256, 5% warmup + cosine to zero at 144 min.
+# Adapter lr: picked by the pilot below (adapters often want more than LoRA's 3e-4).
+inherits: shared_vit-b16_augreg2_defaults.yaml
+method: adapter
+img_size: 336
+adapter_dim: 96
+adapter_dropout: 0.0
+unfreeze_extra: [norm, bias, pos_embed, cls_token]
+head_type: cosine
+head_init: prototype
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+lr: 1.0e-3            # adapters and extras; replaced by the pilot's choice in best_config.yaml
+head_lr: 3.0e-3       # fixed, as in the LoRA run, so the head is identical across methods
+weight_decay: 0.05
+label_smoothing: 0.1
+clip_grad_norm: 1.0
+batch_size: 128
+grad_accum_steps: 2   # effective batch 256
+num_workers: 8
+epochs: 30            # ceiling only; keep warmup / epochs = 5%
+warmup: 1.5
+max_train_minutes: 144
+schedule_fit_time: true
+
+pilot:
+  num_classes_subset: 1000 # all ~45 images of 1,000 classes
+  holdout_per_class: 5
+  tie_tolerance: 0.003     # within 0.3 point of the best -> take the lower lr
+  sweep:
+    lr: [3.0e-4, 1.0e-3, 3.0e-3]
+  epochs: 3                # pilot-only overrides; the full run keeps the values above
+  warmup: 0.15

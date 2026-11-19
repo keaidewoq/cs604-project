@@ -1,5 +1,0 @@
-inherits: base.yaml
-method: linear_probe
-lr: 1.0e-3
-weight_decay: 0.0
-epochs: 5

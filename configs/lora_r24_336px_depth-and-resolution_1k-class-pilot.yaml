@@ -1,0 +1,74 @@
+# Can LoRA buy more epochs in the same 144 minutes? Two speed-ups of the LoRA r24
+# recipe (CodaBench 0.785), screened at pilot scale before any full run.
+# Run: python scripts/ablation.py --spec configs/lora_r24_336px_depth-and-resolution_1k-class-pilot.yaml --data_root /content/data \
+#        --output_dir /content/drive/MyDrive/CS604_RUNS
+# Launcher: notebooks/colab_lora-r24_336px_depth-and-resolution_1k-pilot.ipynb
+#
+# 1a  first_trainable_block: k. LoRA and unfreeze_extra only in blocks k..11; the
+#     embeddings (pos_embed, cls_token, patch_embed) and blocks 0..k-1 are frozen, so
+#     backward stops at block k. The rank saved below k goes to the blocks above it,
+#     keeping the budget at ~4.7% (A: 4.65%, J: 4.67%, K: 4.70%).
+# 1b  low_res_size: 224. Train at 224 (256 tokens, not 577) for the first
+#     low_res_fraction of training, then finish at 336 (FixRes: the last phase at
+#     the test resolution fixes the train/test size mismatch). Eval is always at 336.
+#
+# CPU step-time check (ViT-B, batch 8): J 1.28x, K 1.50x, L 2.34x, M 3.00x faster than A.
+#
+# Two kinds of arm:
+#   J-M   same 3 epochs as A: the accuracy cost of each change at equal epochs.
+#   *_t   same training minutes as A (epochs is only a ceiling; the cosine is fitted
+#         to the time): what the speed buys. This is the number that predicts the
+#         144-minute full run, where every config is time-limited.
+# Same pilot subset, holdout and heads as lora_r24_336px_recipe-ablation_1k-class-pilot.yaml, so A here should
+# reproduce that spec's A (seed noise ~0.3 points).
+base: lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml          # relative to this file
+base_prototypes: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+pilot:
+  num_classes_subset: 1000
+  holdout_per_class: 5
+  subset_seed: 0
+  epochs: 3
+  warmup: 0.15                          # 5% of 3 epochs, as in the full run
+arms:
+  A_full_recipe: {}                     # must stay first: the *_t arms match its minutes
+  # equal epochs
+  J_blocks4_r40:
+    first_trainable_block: 4
+    lora_rank: 40
+    lora_alpha: 40
+  K_blocks6_r54:
+    first_trainable_block: 6
+    lora_rank: 54
+    lora_alpha: 54
+  L_lowres224:
+    low_res_size: 224
+    low_res_fraction: 0.67              # ~2 of 3 epochs at 224, the last at 336
+  M_blocks4_r40_lowres224:
+    first_trainable_block: 4
+    lora_rank: 40
+    lora_alpha: 40
+    low_res_size: 224
+    low_res_fraction: 0.67
+  # equal training minutes (as many epochs as fit in A's time)
+  J_blocks4_r40_t:
+    first_trainable_block: 4
+    lora_rank: 40
+    lora_alpha: 40
+    epochs: 30
+    warmup: 1.5
+    max_train_minutes: {match: A_full_recipe}
+  L_lowres224_t:
+    low_res_size: 224
+    low_res_fraction: 0.67
+    epochs: 30
+    warmup: 1.5
+    max_train_minutes: {match: A_full_recipe}
+  M_blocks4_r40_lowres224_t:
+    first_trainable_block: 4
+    lora_rank: 40
+    lora_alpha: 40
+    low_res_size: 224
+    low_res_fraction: 0.67
+    epochs: 30
+    warmup: 1.5
+    max_train_minutes: {match: A_full_recipe}

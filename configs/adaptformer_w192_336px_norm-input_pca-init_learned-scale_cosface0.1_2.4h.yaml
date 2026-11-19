@@ -10,7 +10,7 @@
 # Trainable backbone: 12 parallel adapters, width 192 = 3,550,476 params (incl. 12 scales)
 # = 4.13% of the backbone, head excluded.
 # Trains on all 45 images/class; the cosine is fitted to the time limit, `epochs` is a ceiling.
-inherits: base.yaml
+inherits: shared_vit-b16_augreg2_defaults.yaml
 method: van_adaptformer
 img_size: 336
 adapter_dim: 192

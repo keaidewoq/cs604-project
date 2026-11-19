@@ -1,0 +1,11 @@
+# DoRA version of lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml (CodaBench 0.785): identical except
+# lora_dora, so any difference from 0.785 comes from DoRA alone.
+# DoRA (Liu et al., ICML 2024): the adapted weight is split into a direction
+# (updated by LoRA) and a learned magnitude per output row.
+# Trainable backbone: 4.08M / 85.99M = 4.75% (head excluded); +82,944 magnitude params.
+# Pilot (configs/lora_r24_336px_recipe-ablation_1k-class-pilot.yaml, arm I): +0.12 points vs LoRA (a tie), 22% slower.
+# Launcher: notebooks/colab_dora-r24_336px_extras_proto-cosine.ipynb. Merges like LoRA for inference
+# (scripts/latency_merged.py).
+inherits: lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml
+lora_dora: true
+save_resume_state: true   # last.pt also keeps optimizer/schedule state, so a crashed run can resume (src.train --resume)

@@ -226,7 +226,7 @@ the roughly 16 epochs of the Colab run start to overfit (section 9).
 The config file:
 
 ```yaml
-inherits: base.yaml
+inherits: shared_vit-b16_augreg2_defaults.yaml
 method: full_ft
 head_type: cosine
 head_init: prototype
@@ -275,7 +275,7 @@ Both off by default (default output is unchanged):
 
 ### 6.3 Running it on Colab
 
-`notebooks/van_colab_launcher.ipynb` is a copy of `colab_launcher.ipynb` with
+`notebooks/van_colab_launcher.ipynb` is a copy of `colab_train_one-config.ipynb` with
 `BRANCH`, `METHOD` and `TEAM` set. Prediction finds the run folder training just
 created, writes `val_team_08.txt/.zip` inside that folder (not the shared root),
 also writes a crop 0.7 + flip submission to `tta_crop070_flip/`, then plots the

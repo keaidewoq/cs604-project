@@ -4,16 +4,16 @@
 
 The `van` branch's extra experiment lab was **not** git-merged (it is a second framework). What we kept from it: **prototype / cosine head**, **last-N-block tuning**, and a **shared run log** under `report/`.
 
-Default backbone: `vit_base_patch16_224.augreg2_in21k_ft_in1k` (timm). Change `model_name` in `configs/base.yaml` to try the ImageNet-21k-only variant, e.g. `vit_base_patch16_224.augreg_in21k`.
+Default backbone: `vit_base_patch16_224.augreg2_in21k_ft_in1k` (timm). Change `model_name` in `configs/shared_vit-b16_augreg2_defaults.yaml` to try the ImageNet-21k-only variant, e.g. `vit_base_patch16_224.augreg_in21k`.
 
 ## Structure
 
 ```text
-configs/    base.yaml + one file per method / ablation
+configs/    shared_vit-b16_augreg2_defaults.yaml + one file per method / ablation
 src/        data, model, heads, losses, train, predict, utils
 src/peft/   lora, bitfit, last_blocks; adapter / adaptformer stubs
 scripts/    download_data.py, build_prototypes.py, benchmark_latency.py, plot_curves.py
-notebooks/  colab_launcher.ipynb
+notebooks/  colab_train_one-config.ipynb
 report/     progress_log.md + experiment_index.csv (team log)
 outputs/    run dirs (gitignored)
 figures/    plots
@@ -21,18 +21,18 @@ figures/    plots
 
 ## Run on Colab
 
-1. Open `notebooks/colab_launcher.ipynb` on Colab (GPU runtime, 48GB VRAM if you have it).
+1. Open `notebooks/colab_train_one-config.ipynb` on Colab (GPU runtime, 48GB VRAM if you have it).
 2. The notebook clones this repo, installs requirements, mounts Drive, downloads `doem1997/cs604-course-data` to `/content/data`, trains with `output_dir` on Drive, then writes `val_team_xx.txt` / `test_team_xx.txt`.
 
 From the repo root, the same commands are:
 
 ```bash
 python scripts/download_data.py --dest /content/data
-python scripts/build_prototypes.py --config configs/prototype_probe.yaml --output /content/drive/MyDrive/CS604_RUNS/prototypes.pt
-python -m src.train --config configs/prototype_lora_r8.yaml --data_root /content/data --output_dir /content/drive/MyDrive/CS604_RUNS
-python -m src.predict --config configs/lora_r8.yaml --ckpt /path/to/best.pt --split val --team xx
+python scripts/build_prototypes.py --config configs/class-prototypes_augreg2_224px_cosine-head.yaml --output /content/drive/MyDrive/CS604_RUNS/prototypes.pt
+python -m src.train --config configs/lora_r8_224px_proto-cosine-head.yaml --data_root /content/data --output_dir /content/drive/MyDrive/CS604_RUNS
+python -m src.predict --config configs/lora_r8_224px_lr1e-3_5epoch.yaml --ckpt /path/to/best.pt --split val --team xx
 python scripts/plot_curves.py --run_dir outputs/lora_YYYYMMDD_HHMMSS
-python scripts/benchmark_latency.py --config configs/lora_r8.yaml
+python scripts/benchmark_latency.py --config configs/lora_r8_224px_lr1e-3_5epoch.yaml
 ```
 
 Each run folder stores the resolved `config.yaml`, `step_log.csv`, `epoch_log.csv`, `last.pt`, `best.pt` (when val labels exist), and wall-clock / GPU-hour / peak-VRAM stats.
@@ -41,7 +41,7 @@ Submission lines are `image_path class_id`, matching the course label files.
 
 ## Parameter table
 
-Shared defaults live in `configs/base.yaml`. A method file only lists what it **changes**. Blank = inherit from base.
+Shared defaults live in `configs/shared_vit-b16_augreg2_defaults.yaml`. A method file only lists what it **changes**. Blank = inherit from base.
 
 | Parameter | Meaning | base | full_ft | linear_probe | lora_r8 | bitfit | adapter | adaptformer |
 |---|---|---|---|---|---|---|---|---|
@@ -68,11 +68,11 @@ Shared defaults live in `configs/base.yaml`. A method file only lists what it **
 | `adapter_dim` | Bottleneck width | — | | | | | `64` | `64` |
 | `adaptformer_scale` | Parallel FFN scale `s` | — | | | | | | `0.1` |
 
-Extra knobs: `head_type` / `head_init` / `prototype_file` (Van), `head_lr` (Qian: backbone keeps `lr`, classifier uses `head_lr`), `last_n_blocks`, `evaluate_before_training`, `first_trainable_block` (LoRA and `unfreeze_extra` only from that block up; backward stops there), `low_res_size` / `low_res_fraction` (progressive resizing: train at the low size first, finish at `img_size`). Screened in `configs/ablation_lora_depth_res.yaml`. Training pretrained weights directly (`src/peft/selected.py`, alone with `method: selected` or next to LoRA): `unfreeze_modules` / `unfreeze_modules_file` (whole layers at full rank), `sparse_mask_file` (GPS-style masked entries), `unfreeze_lr` (their own lr). `scripts/select_params.py` picks them by fine-tuned angle or gradient; compared in `configs/ablation_param_selection.yaml`.
+Extra knobs: `head_type` / `head_init` / `prototype_file` (Van), `head_lr` (Qian: backbone keeps `lr`, classifier uses `head_lr`), `last_n_blocks`, `evaluate_before_training`, `first_trainable_block` (LoRA and `unfreeze_extra` only from that block up; backward stops there), `low_res_size` / `low_res_fraction` (progressive resizing: train at the low size first, finish at `img_size`). Screened in `configs/lora_r24_336px_depth-and-resolution_1k-class-pilot.yaml`. Training pretrained weights directly (`src/peft/selected.py`, alone with `method: selected` or next to LoRA): `unfreeze_modules` / `unfreeze_modules_file` (whole layers at full rank), `sparse_mask_file` (GPS-style masked entries), `unfreeze_lr` (their own lr). `scripts/select_params.py` picks them by fine-tuned angle or gradient; compared in `configs/param-selection_336px_same-budget_1k-class-pilot.yaml`.
 
-Experiment recipes: `configs/full_ft_proto.yaml` (Qian’s prototype-initialized full FT), `augreg_in21k.yaml` (Van’s stronger 21k-only prototype backbone). Team numbers live in `report/experiment_index.csv`.
+Experiment recipes: `configs/full_ft_224px_proto-linear-head_backbone-lr1e-5_head-lr1e-3_2.4h.yaml` (Qian’s prototype-initialized full FT), `class-prototypes_augreg-in21k_224px_cosine-head.yaml` (Van’s stronger 21k-only prototype backbone). Team numbers live in `report/experiment_index.csv`.
 
-On Colab, `colab_launcher.ipynb` also prints the **resolved** config for your chosen `METHOD` as a table before training. After a run, add a line to `report/experiment_index.csv` and a note in `report/progress_log.md`.
+On Colab, `colab_train_one-config.ipynb` also prints the **resolved** config for your chosen `METHOD` as a table before training. After a run, add a line to `report/experiment_index.csv` and a note in `report/progress_log.md`.
 
 ## Add a method or an ablation
 
@@ -80,7 +80,7 @@ On Colab, `colab_launcher.ipynb` also prints the **resolved** config for your ch
 
 1. Add `src/peft/<name>.py` with `apply_<name>(model, cfg)`.
 2. Register it in `src/peft/__init__.py` (`build_peft`).
-3. Add `configs/<name>.yaml` with `inherits: base.yaml` and `method: <name>`.
+3. Add `configs/<name>.yaml` with `inherits: shared_vit-b16_augreg2_defaults.yaml` and `method: <name>`.
 
 `apply_method` already freezes the backbone and leaves the 10k-class head trainable. Your file only needs to attach modules / unfreeze extra tensors.
 

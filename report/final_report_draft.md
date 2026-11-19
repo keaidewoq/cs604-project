@@ -663,8 +663,8 @@ they don't replace it. Deadline: all runs finished by **2026-10-30**.
 **Experiments, ranked by story fixed per GPU-hour:**
 
 1. **[READY TO RUN]** **Controlled method comparison** (fixes a–d). Spec
-   `configs/ablation_peft_controlled.yaml`, shared recipe `configs/peft_controlled_336.yaml`,
-   launcher `notebooks/colab_launcher_ana_peft_controlled.ipynb`. All 10,000 classes, 5
+   `configs/peft_336px_controlled-comparison_all-10000-classes.yaml`, shared recipe `configs/peft_336px_shared-recipe_proto-cosine_no-extras.yaml`,
+   launcher `notebooks/colab_peft_336px_controlled-comparison_all-10000-classes.ipynb`. All 10,000 classes, 5
    per class held out (subset seed 0, the same holdout as the all-class LoRA run), 336 px,
    prototype cosine head from the fit images, head lr 3e-3, 20 training minutes each
    (~1 epoch), plain crop 0.9, no extras. Each method keeps its earlier lr.

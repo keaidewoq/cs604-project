@@ -1,0 +1,48 @@
+# Taxonomy-aware label smoothing (src/losses.py, `neighbour_smoothing`): spread the smoothing
+# share of the target over the true class's relatives instead of evenly over all 10,000 classes.
+# Pilot scale; base = LoRA r24 without extras (CodaBench 0.784, 4.12%), so only the target differs.
+# Launcher: notebooks/colab_lora-r24_336px_neighbour-smoothing_1k-pilot.ipynb
+#
+# Why: class IDs follow the taxonomy (prototypes_336.pt: neighbouring IDs cosine 0.80 vs 0.28 for
+# random pairs; for half the classes the most similar class is within 5 IDs), and the model's
+# mistakes are mostly look-alike relatives.
+#
+# The pilot's 1,000 classes are 100 blocks of 10 consecutive IDs (`class_block: 10`), not a
+# random 1,000, so each class's relatives are trained alongside it as in the full dataset.
+# Its pilot root (c1000_h5_s0_b10) and therefore its A differ from the earlier ablations.
+#
+#   A        uniform label smoothing 0.1 (the recipe)
+#   ID       0.1 onto the 10 classes within 5 IDs, closer IDs weighted more
+#   PROTO    0.1 onto the 10 most similar prototypes (no ID order assumed)
+#   ID_MIX   0.05 uniform + 0.05 onto ID neighbours
+#   ID_02    0.2 onto ID neighbours (stronger)
+#
+# Read final_val_acc (top-1) and final_val_acc_near5 (prediction within 5 IDs of the label,
+# roughly "right genus"). val_loss is not comparable across arms (different targets).
+base: lora_r24_336px_qkv-proj-fc_no-extras_proto-cosine_2.4h.yaml       # relative to this file
+base_prototypes: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+pilot:
+  num_classes_subset: 1000
+  holdout_per_class: 5
+  subset_seed: 0
+  class_block: 10
+  epochs: 3
+  warmup: 0.15                          # 5% of 3 epochs, as in the full run
+arms:
+  A_uniform_smoothing: {}
+  ID_neighbour_smoothing:
+    label_smoothing: 0.0
+    neighbour_smoothing: 0.1
+    neighbour_source: id
+  PROTO_neighbour_smoothing:
+    label_smoothing: 0.0
+    neighbour_smoothing: 0.1
+    neighbour_source: proto
+  ID_MIX_half_uniform_half_neighbours:
+    label_smoothing: 0.05
+    neighbour_smoothing: 0.05
+    neighbour_source: id
+  ID_02_stronger_neighbour_smoothing:
+    label_smoothing: 0.0
+    neighbour_smoothing: 0.2
+    neighbour_source: id

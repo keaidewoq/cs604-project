@@ -1,9 +1,9 @@
-"""Choose which pretrained weights to train, for the arms in configs/ablation_param_selection.yaml.
+"""Choose which pretrained weights to train, for the arms in configs/param-selection_336px_same-budget_1k-class-pilot.yaml.
 
 angle     Partial fine-tuning (Ye et al., 2023): rank layers by the fine-tuned angle
           arccos(<W_pre, W_ft> / (|W_pre| |W_ft|)) between the pretrained weights and a
           full fine-tuning run. For hard datasets the paper tunes the LARGEST angles.
-    python scripts/select_params.py angle --config configs/lora_r24_336_recipe.yaml \\
+    python scripts/select_params.py angle --config configs/lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml \\
         --ckpt <full FT run>/last.pt --out_dir <folder>
   writes angles.csv (every matrix, for the report), selected_layer.yaml (the paper's
   rule: whole ATTN / FFN layers, top angle first, within --layer_budget) and
@@ -12,7 +12,7 @@ angle     Partial fine-tuning (Ye et al., 2023): rank layers by the fine-tuned a
 gradient  GPS (Zhang et al., CVPR 2024): for every output neuron of every Linear in the
           blocks (and the patch embedding), keep the top-K input connections by the
           magnitude of the loss gradient over --max_batches training batches.
-    python scripts/select_params.py gradient --config configs/lora_r24_336_recipe.yaml \\
+    python scripts/select_params.py gradient --config configs/lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml \\
         --data_root /content/pilot_data/c1000_h5_s0 --prototype_file <pilot prototypes> \\
         --k 42 10 --out_dir <folder>
   writes gps_mask_k<K>.pt for each K. GPS scores with a supervised contrastive loss

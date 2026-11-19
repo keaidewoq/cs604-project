@@ -10,7 +10,7 @@ Writes into a run folder under `output_dir`: the sweep + per-epoch curves,
 model as a starting head for fine-tuning, i.e. LP-FT), and `{split}_team_{team}.txt`
 plus a CodaBench-ready zip.
 
-  python scripts/linear_probe_cached.py --config configs/linear_probe_cached.yaml \\
+  python scripts/linear_probe_cached.py --config configs/linear_probe_cached-features_lr-sweep.yaml \\
       --data_root /content/data --output_dir /content/drive/MyDrive/CS604_RUNS --team 08
 """
 
@@ -190,7 +190,7 @@ def write_submission(run_dir, split, team, paths, preds):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", default="configs/linear_probe_cached.yaml")
+    parser.add_argument("--config", default="configs/linear_probe_cached-features_lr-sweep.yaml")
     parser.add_argument("--team", required=True, help="Team id used in the filename, e.g. 08")
     parser.add_argument("--data_root", default=None)
     parser.add_argument("--output_dir", default=None)

@@ -1,0 +1,6 @@
+inherits: shared_vit-b16_augreg2_defaults.yaml
+method: adaptformer
+adapter_dim: 64
+adaptformer_scale: 0.1
+lr: 1.0e-3
+epochs: 5

@@ -1,6 +1,0 @@
-inherits: base.yaml
-method: full_ft
-lr: 1.0e-4
-epochs: 2
-batch_size: 32
-grad_accum_steps: 2

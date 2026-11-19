@@ -13,7 +13,7 @@ Round 1's files (from before rounds existed) are box_sweep.csv / .json / _overla
 
 The bar to clear is the centred crop of the same size: in round 1 it beat every box finder.
 
-    python scripts/box_sweep.py --config configs/lora_r24_336_no_extras.yaml \\
+    python scripts/box_sweep.py --config configs/lora_r24_336px_qkv-proj-fc_no-extras_proto-cosine_2.4h.yaml \\
         --data_root /content/pilot_data/c1000_h5_s0 --out_dir <folder> [--round round2]
 then rebuild the boxes with the winner: python scripts/find_boxes.py ... <its flags>
 """

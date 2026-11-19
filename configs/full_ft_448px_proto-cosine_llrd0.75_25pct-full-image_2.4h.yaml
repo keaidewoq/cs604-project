@@ -1,0 +1,34 @@
+# Full fine-tune at 448, using Van's layer-decay recipe (0.819 at 336 with zoom)
+# and the training view from Qian's LoRA run (0.810 at 448).
+#
+# Changes from configs/full_ft_336px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml on ana-branch:
+#   img_size 448
+#   full_image_probability 0.25 (75% random crop, 25% whole image with padding)
+#   prototypes_448.pt, already built for the pretrained backbone
+#   batch 64 x 4 (effective batch still 256). LoRA at 448 used 34 GB at batch 128;
+#   full fine-tune stores a gradient for every weight, so 128 may not fit in 40 GB.
+#
+# Score afterwards with crop 0.75 and zoom, no flip:
+#   python -m src.predict --config <run>/config.yaml --ckpt <run>/last.pt \
+#       --split val --team 08 --crop_pct 0.75 --zoom
+inherits: shared_vit-b16_augreg2_defaults.yaml
+method: full_ft
+img_size: 448
+full_image_probability: 0.25
+head_type: cosine
+head_init: prototype
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_448.pt
+lr: 4.0e-4
+layer_decay: 0.75
+head_lr: 4.0e-3
+weight_decay: 0.05
+label_smoothing: 0.1
+drop_path_rate: 0.1
+clip_grad_norm: 1.0
+batch_size: 64
+grad_accum_steps: 4
+num_workers: 8
+epochs: 30
+warmup: 1.5
+max_train_minutes: 144
+schedule_fit_time: true

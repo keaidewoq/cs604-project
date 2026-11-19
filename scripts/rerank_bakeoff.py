@@ -291,7 +291,7 @@ def main():
         for name, fn in methods.items():
             preds, scores, info = held_out(fn)
             right = preds == y
-            row = {"base": base, "method": name}
+            row = {"shared_vit-b16_augreg2_defaults": base, "method": name}
             for h in (0, 1):
                 row[f"acc_half{h}"] = round(float(right[half == h].float().mean()), 4)
             row["acc"] = round(float(right.float().mean()), 4)
@@ -311,7 +311,7 @@ def main():
         # balancing alone, Van's way (top-100 probabilities)
         pb, _ = van_balance.sinkhorn(vals.exp(), ids, C, per_class)
         acc_b = float((pb == y).float().mean())
-        results.append({"base": base, "method": "balancing alone (Van, top-100)", "acc": round(acc_b, 4),
+        results.append({"shared_vit-b16_augreg2_defaults": base, "method": "balancing alone (Van, top-100)", "acc": round(acc_b, 4),
                         "gain_points": round(100 * (acc_b - float(right0.float().mean())), 2)})
         print(f"[bakeoff] {base:5s} balancing alone  acc {acc_b:.4f}")
         # linear re-ranker refit on the whole holdout, for applying elsewhere
@@ -322,7 +322,7 @@ def main():
 
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    fields = ["base", "method", "acc", "gain_points", "acc_balanced", "gain_balanced_points", "fixes", "breaks",
+    fields = ["shared_vit-b16_augreg2_defaults", "method", "acc", "gain_points", "acc_balanced", "gain_balanced_points", "fixes", "breaks",
               "acc_half0", "acc_half1", "chosen"]
     with (out / "bakeoff.csv").open("w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore")

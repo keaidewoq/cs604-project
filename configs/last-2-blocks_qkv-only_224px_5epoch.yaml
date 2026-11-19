@@ -1,7 +1,7 @@
 # Original filename: qq_qkv_last2.yaml
 # Brought onto main from origin/qq_selected_layer_validation for the final report.
 # The filename states the config. inherits: paths point at the renamed files.
-inherits: linear_probe.yaml
+inherits: linear_probe_224px_frozen-backbone_5epoch.yaml
 method: last_blocks
 last_n_blocks: 2
 train_scope: qkv

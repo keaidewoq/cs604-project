@@ -1,6 +1,6 @@
 """Pilot sweep: short runs on a class subset to pick parameters before a full run.
 
-python scripts/pilot_sweep.py --config configs/lora_r16_336.yaml \
+python scripts/pilot_sweep.py --config configs/lora_r16_336px_qkv-proj-fc_lr-sweep.yaml \
     --data_root /content/data --output_dir /content/drive/MyDrive/CS604_RUNS
 
 Reads the `pilot:` block of the method config:

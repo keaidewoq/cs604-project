@@ -433,7 +433,7 @@ controls:
    **Is it really sibling-aware? [PENDING: Anastasia's rerun]** `scripts/rerank_knn.py` now
    writes `fixes_by_distance.json`, which splits the fixes of the submitted setting by how far
    the original wrong guess was from the truth. To get it, open
-   `notebooks/colab_launcher_ana_allclass_holdout.ipynb` and Run all. Training is reused;
+   `notebooks/colab_lora-r24_336px_all-10000-classes_topk-and-knn.ipynb` and Run all. Training is reused;
    only data download (~15 min) and re-ranking (~15–20 min) run.
    - The test: compare `sibling_share_of_fixes` with `sibling_share_of_errors` (~34%, the
      share of errors whose guess is within 5 IDs).
@@ -583,7 +583,7 @@ On CodaBench the screen predicted each step: full FT 75.7 (224) → 80.7 (336) �
 
 ### 4.5 Task 2: controlled comparison of PEFT methods
 
-**[PENDING 30 Oct]** Main Task 2 table, from `configs/ablation_peft_controlled.yaml`:
+**[PENDING 30 Oct]** Main Task 2 table, from `configs/peft_336px_controlled-comparison_all-10000-classes.yaml`:
 10,000-class holdout (5 per class, subset seed 0), 336 px, one recipe (prototype cosine
 head, head lr 3e-3, 20 training minutes each, plain crop 0.9, no extras), each method at
 its earlier lr. Mean ± spread over 3 seeds for A and C.

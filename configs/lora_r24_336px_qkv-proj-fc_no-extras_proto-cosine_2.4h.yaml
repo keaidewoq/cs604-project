@@ -1,0 +1,9 @@
+# Full-scale check of pilot arm B (configs/lora_r24_336px_recipe-ablation_1k-class-pilot.yaml): lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml
+# (CodaBench 0.785) without the extras, so only the LoRA layers train in the backbone.
+# Pilot: 0.8970 vs 0.8984 (-0.14, a tie) at 4.12% instead of 4.65%. If the tie holds at
+# full scale, the extras (norms, biases, pos_embed, cls_token) are not worth 0.46M params.
+# Trainable backbone: 3.54M / 85.99M = 4.12% (head excluded).
+# Launcher: notebooks/colab_full-scale_gps-and-lora-no-extras.ipynb (METHOD = "lora_r24_336px_qkv-proj-fc_no-extras_proto-cosine_2.4h").
+inherits: lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml
+unfreeze_extra: []
+save_resume_state: true   # last.pt also keeps optimizer/schedule state, so a crashed run can resume (src.train --resume)

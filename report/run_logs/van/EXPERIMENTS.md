@@ -1142,7 +1142,7 @@ re-predicted with `--crop_pct 0.7 --tta_flip` **0.773** (ID 964799), +1.6
 points, in line with the holdout estimate (+1.51 at 12 epochs).
 
 **Stage 6 (2026-10-07): the recipe at 336 px.** A teammate's A100 run of the
-group config at 336 px (`full_ft_336_llrd.yaml`, ~8.5 epochs in 144 min) scored
+group config at 336 px (`full_ft_336px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml`, ~8.5 epochs in 144 min) scored
 0.807 plain / 0.813 with crop 0.7 + flip on CodaBench, +5.0 over 224, but the
 crop gain was only +0.6 and that run had no holdout. `full_proto_336_len3`
 (commit `5661383`): the `full_proto_headlr10x` recipe with `image_size: 336`,

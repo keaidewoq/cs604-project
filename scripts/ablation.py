@@ -1,6 +1,6 @@
 """Ablation at pilot scale: named arms, each one change from a base config.
 
-python scripts/ablation.py --spec configs/ablation_lora_r24.yaml \\
+python scripts/ablation.py --spec configs/lora_r24_336px_recipe-ablation_1k-class-pilot.yaml \\
     --data_root /content/data --output_dir /content/drive/MyDrive/CS604_RUNS
 
 The spec file gives the base config, the pilot subset (as in pilot_sweep.py) and
@@ -91,7 +91,7 @@ def clean_probe(base_cfg, pilot_root, out_dir, feature_dir):
     if done.is_file() and Path(done.read_text().strip()).is_file():
         print(f"[ablation] reusing {done.read_text().strip()}")
         return Path(done.read_text().strip())
-    probe = load_config(ROOT / "configs" / "linear_probe_cached.yaml")
+    probe = load_config(ROOT / "configs" / "linear_probe_cached-features_lr-sweep.yaml")
     for key in ("model_name", "pretrained", "num_classes", "img_size", "num_workers", "bf16", "seed"):
         if key in base_cfg:
             setattr(probe, key, base_cfg.get(key))
@@ -140,7 +140,7 @@ def main():
 
     spec_path = (ROOT / args.spec) if not Path(args.spec).is_absolute() else Path(args.spec)
     spec = yaml.safe_load(spec_path.read_text())
-    base_path = spec_path.parent / spec["base"]
+    base_path = spec_path.parent / spec["shared_vit-b16_augreg2_defaults"]
     base = load_config(base_path)
     base_d = {k: v for k, v in base.to_dict().items() if k != "pilot"}
     pilot = spec["pilot"]
@@ -209,7 +209,7 @@ def main():
         w.writeheader()
         w.writerows(results)
     (out_dir / "ablation_summary.json").write_text(json.dumps(
-        {"spec": str(spec_path), "base": str(base_path), "pilot_data": info, "heads": heads,
+        {"spec": str(spec_path), "shared_vit-b16_augreg2_defaults": str(base_path), "pilot_data": info, "heads": heads,
          "pilot_overrides": run_overrides, "results": results}, indent=2))
 
     print("\n[ablation] results (pilot holdout, final epoch)")

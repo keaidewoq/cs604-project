@@ -1,0 +1,17 @@
+# Ana's cached-feature linear probe (not a trainer method; run the script).
+# python scripts/linear_probe_cached.py --config configs/linear_probe_cached-features_lr-sweep.yaml --team 08 [--img_size 336]
+# Launcher: notebooks/colab_linear-probe_cached-features.ipynb
+# Writes probe_head.pt (raw-feature linear head, usable as a starting head for fine-tuning, i.e. LP-FT).
+inherits: shared_vit-b16_augreg2_defaults.yaml
+epochs: 30                 # head epochs on cached features
+batch_size: 4096           # head batch (features, not images)
+lr_sweep: [1.0e-3, 3.0e-3, 1.0e-2, 3.0e-2]   # each scored on the holdout; best one retrains on all
+lr_schedule: onecycle      # only onecycle for now
+warmup: 9.0                # warmup epochs (OneCycle's default 30% of 30)
+weight_decay: 1.0e-4
+label_smoothing: 0.1
+standardise_features: true # z-score with fit-image stats; folded into probe_head.pt
+holdout_per_class: 5
+feature_dir: /content/features   # local disk; ~0.7GB per backbone/res for train
+feature_batch_size: 256
+# feature_workers: 12            # defaults to all CPUs

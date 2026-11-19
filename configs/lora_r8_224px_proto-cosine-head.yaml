@@ -1,0 +1,6 @@
+# LoRA on top of the prototype cosine head (Van's main PEFT combo).
+inherits: lora_r8_224px_lr1e-3_5epoch.yaml
+head_type: cosine
+head_init: prototype
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes.pt
+evaluate_before_training: true

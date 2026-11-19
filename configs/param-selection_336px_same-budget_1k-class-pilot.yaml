@@ -1,0 +1,90 @@
+# Same budget (~4.0M trainable, ~4.6%), different ways to choose WHICH parameters to train.
+# Pilot scale, same subset / holdout / heads as lora_r24_336px_recipe-ablation_1k-class-pilot.yaml and lora_r24_336px_depth-and-resolution_1k-class-pilot.yaml.
+# Launcher: notebooks/colab_param-selection_336px_1k-pilot.ipynb (it runs the three phases below).
+#
+# Phase 1: python scripts/ablation.py --spec configs/param-selection_336px_same-budget_1k-class-pilot.yaml ... \
+#            --only A_full_recipe F_full_ft_llrd F_full_ft_flat S0_attn_block0 S5_attn_block5 S11_attn_block11
+# Phase 2: python scripts/select_params.py angle    (Y arms, from F_full_ft_flat's checkpoint)
+#          python scripts/select_params.py gradient (G arms, on the pilot fit images)
+#          both with --out_dir <CS604_RUNS>/ablation_ablation_param_selection
+# Phase 3: the same ablation command without --only (finished arms are reused)
+#
+# Rules compared (all keep the recipe's head, extras, lr 3e-4 for LoRA/extras, 3 epochs):
+#   A  uniform low rank        LoRA r24 everywhere                                    4.65%
+#   F  everything (ceiling)    full FT; _llrd = Van's recipe, _flat = one lr 3e-5     100%
+#   S  by depth (Lee et al.)   block i's attention (qkv + proj) at full rank,         4.61%
+#      surgical fine-tuning    LoRA r8 on all other layers; i = 0 / 5 / 11
+#   Y  by fine-tuned angle     angles from F_full_ft_flat (one lr for every layer: LLRD would
+#      (Ye et al.)             shrink early-layer angles by construction). Largest angles,
+#                              as the paper does for hard datasets.
+#                              _layer: the paper's unit (a whole ATTN or FFN layer); one ATTN
+#                              layer (2.36M) fits, plus LoRA r8 as in S                   ~4.6%
+#                              _matrix: finer than the paper, single matrices up to 3.54M,
+#                              no LoRA                                                    ~4.6%
+#   G  by gradient (GPS,       top-K input connections per output neuron by |gradient| on
+#      Zhang et al.)           100 batches of fit images; no LoRA. K=42 matches the budget
+#                              (4.63%); K=10 is GPS's own value for NABirds (~1.5%).
+#                              GPS scores with a supervised contrastive loss because its head
+#                              starts random; ours starts from prototypes, so cross-entropy.
+#
+# unfreeze_lr (pretrained weights): 3e-5 for whole matrices, the full-FT pilot's best
+# (1e-5 and 3e-5 tied, 1e-4 was 2.6 points worse). 1e-4 for G's sparse entries, a guess:
+# GPS reports no lr, and a few weights per neuron likely need more than whole matrices.
+# Sweep the winner's unfreeze_lr before any full run.
+#
+# Read: S0 vs S5 vs S11 says WHERE (the depth screen predicts S0); Y vs S says whether a
+# full FT run is a better guide than depth; G vs Y_matrix says unstructured vs whole
+# matrices; everything vs A says full rank somewhere vs low rank everywhere.
+base: lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml          # relative to this file
+base_prototypes: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+pilot:
+  num_classes_subset: 1000
+  holdout_per_class: 5
+  subset_seed: 0
+  epochs: 3
+  warmup: 0.15                          # 5% of 3 epochs, as in the full run
+arms:
+  A_full_recipe: {}
+  F_full_ft_llrd:                       # configs/full_ft_336px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml (CodaBench 0.807 at full scale)
+    method: full_ft
+    lr: 4.0e-4
+    layer_decay: 0.75
+    head_lr: 4.0e-3
+    drop_path_rate: 0.1
+  F_full_ft_flat:                       # source of the Y angles
+    method: full_ft
+    lr: 3.0e-5
+    head_lr: 3.0e-3
+  S0_attn_block0:
+    unfreeze_modules: [blocks.0.attn.qkv, blocks.0.attn.proj]
+    unfreeze_lr: 3.0e-5
+    lora_rank: 8
+    lora_alpha: 8
+  S5_attn_block5:
+    unfreeze_modules: [blocks.5.attn.qkv, blocks.5.attn.proj]
+    unfreeze_lr: 3.0e-5
+    lora_rank: 8
+    lora_alpha: 8
+  S11_attn_block11:
+    unfreeze_modules: [blocks.11.attn.qkv, blocks.11.attn.proj]
+    unfreeze_lr: 3.0e-5
+    lora_rank: 8
+    lora_alpha: 8
+  # phase 3 (need the files phase 2 writes)
+  Y_layer:
+    unfreeze_modules_file: "{out_dir}/selected_layer.yaml"
+    unfreeze_lr: 3.0e-5
+    lora_rank: 8
+    lora_alpha: 8
+  Y_matrix:
+    method: selected
+    unfreeze_modules_file: "{out_dir}/selected_matrix.yaml"
+    unfreeze_lr: 3.0e-5
+  G_gps_k42:
+    method: selected
+    sparse_mask_file: "{out_dir}/gps_mask_k42.pt"
+    unfreeze_lr: 1.0e-4
+  G_gps_k10:
+    method: selected
+    sparse_mask_file: "{out_dir}/gps_mask_k10.pt"
+    unfreeze_lr: 1.0e-4

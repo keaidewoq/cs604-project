@@ -1,7 +1,0 @@
-inherits: base.yaml
-method: lora
-lora_rank: 8
-lora_alpha: 16
-lora_dropout: 0.1
-lr: 1.0e-3
-epochs: 5

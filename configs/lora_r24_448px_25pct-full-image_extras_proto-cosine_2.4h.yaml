@@ -1,0 +1,23 @@
+# Full-data version of arm E from qq_lora_ablation (91.22% internal subset).
+# Same required backbone, LoRA/extras, augmentation, optimizer and effective batch.
+inherits: lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml
+img_size: 448
+full_image_probability: 0.25
+max_adaptation_pct: 5.0
+prompt_mode: none
+prompt_length: 0
+lora_dora: false
+cosine_scale: 20.0
+# Reuse the existing all-data, pretrained-backbone prototypes at 448.
+# Never use the ablation subset file prototypes_fit_448.pt.
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_448.pt
+# Prototype extraction / labeled evaluation use the same 0.9 crop as the screen.
+eval_crop_pct: 0.9
+# Time-only warmup/cosine matches arm E, extended from 12 to 144 minutes.
+epochs: null
+max_train_minutes: 144
+time_warmup_fraction: 0.05
+warmup: 0.0
+schedule_fit_time: false
+# Launcher prediction defaults (passed to the separate zoom script):
+# scripts/predict_zoom.py --crop_pct 0.75 --zoom_mass 0.7, no flip.

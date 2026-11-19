@@ -38,7 +38,7 @@ from src.utils import (
 
 def parse_args():
     p = argparse.ArgumentParser(description="Fine-tune a ViT with a method config.")
-    p.add_argument("--config", default=None, help="Path to a method YAML (e.g. configs/lora_r8.yaml)")
+    p.add_argument("--config", default=None, help="Path to a method YAML (e.g. configs/lora_r8_224px_lr1e-3_5epoch.yaml)")
     p.add_argument("--resume", default=None, metavar="RUN_DIR",
                    help="Continue a crashed run from RUN_DIR/last.pt (uses RUN_DIR/config.yaml; --config not needed)")
     p.add_argument("--data_root", default=None)

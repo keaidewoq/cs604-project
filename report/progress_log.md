@@ -19,7 +19,7 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 - run_dir: laptop screens in Van's own pipeline (RTX 5080 laptop); the Colab run of this config (A100 40 GB, `notebooks/van_colab_launcher.ipynb`, branch `van-dev` at f5d654a) is under `CS604_RUNS`, folder name TBC
 - val acc (ours / CodaBench): internal holdout (5 training images/class held out, trained on the other 40) **72.98%** after 3 epochs, **73.97%** after 6 / **CodaBench 0.757** (ID 963899, 2026-10-06; all 45 images/class, 144 training minutes, plain center crop 0.9, no test-time augmentation)
 - trainable % / peak VRAM / GPU-hours: 100% / 5.8 GB at batch 64 / 6 epochs = 2.1 laptop hours (about 0.7 of the 48 GB-hour budget)
-- what changed vs `full_ft_proto.yaml`: prototype-initialized **cosine** head; backbone lr 4e-4 with **layer-wise lr decay 0.75** (block i gets lr x 0.75^(12 - i)); head lr 4e-3; 5% warmup then cosine to zero **fitted to the time limit**; label smoothing 0.1; drop_path 0.1; gradient clipping 1.0; batch 256.
+- what changed vs `full_ft_224px_proto-linear-head_backbone-lr1e-5_head-lr1e-3_2.4h.yaml`: prototype-initialized **cosine** head; backbone lr 4e-4 with **layer-wise lr decay 0.75** (block i gets lr x 0.75^(12 - i)); head lr 4e-3; 5% warmup then cosine to zero **fitted to the time limit**; label smoothing 0.1; drop_path 0.1; gradient clipping 1.0; batch 256.
 - findings (one change at a time, 3 epochs): without layer decay 63.1% (vs 69.8%); head lr 10x the backbone +1.5 points; prototype start beats first training a linear probe (LP-FT) by 1.6–2.0 points; crop scale, colour jitter and head lr 30x no difference; seed-to-seed spread 0.33 points.
 - trainer additions (all off by default, so existing configs run exactly as before): `layer_decay`, `drop_path_rate`, `clip_grad_norm`, `schedule_fit_time` (with `max_train_minutes`, the cosine reaches zero at the time limit instead of being cut off mid-decay).
 - next: fill in epochs reached, peak VRAM, GPU-hours and latency from the run folder. Re-predict the same `last.pt` with a center crop of 0.7 plus flip averaging (`--crop_pct 0.7 --tta_flip`), which added +1.5 to +1.9 points on the internal holdout; no retraining needed.
@@ -29,7 +29,7 @@ One short note per run. After CodaBench, also add a row to `experiment_index.csv
 ### Qian — full FT CodaBench (`qq_branch`)
 
 - Official backbone `vit_base_patch16_224.augreg2_in21k_ft_in1k`, batch 32, bf16, AdamW, no scheduler.
-- **Two LRs:** backbone `1e-5`, head `1e-3` (now `configs/full_ft_proto.yaml` + `head_lr` in the trainer).
+- **Two LRs:** backbone `1e-5`, head `1e-3` (now `configs/full_ft_224px_proto-linear-head_backbone-lr1e-5_head-lr1e-3_2.4h.yaml` + `head_lr` in the trainer).
 - 120 min → **CodaBench 0.610**. 144 min (~2.4 GPU-hours on A100) → **0.613**.
 - Same + class-mean head init → **0.621**. Latency ~**7.15 ms/image** (batch 1, A100).
 - Peak PyTorch alloc ~**3.35 GiB**. Submission name she used: `val_team_08.txt`.
@@ -154,7 +154,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-05 — Qian — Prototype-initialized full fine-tuning (shared trainer)
 
-- branch / config: `qq_branch_v2` / `configs/full_ft_proto.yaml`; launcher: `notebooks/colab_launcher_qq.ipynb`
+- branch / config: `qq_branch_v2` / `configs/full_ft_224px_proto-linear-head_backbone-lr1e-5_head-lr1e-3_2.4h.yaml`; launcher: `notebooks/colab_qq_train-one-config.ipynb`
 - run_dir: `full_ft_20261005_074553_id962394` under Drive `CS604_RUNS`; renamed after submission. The latency JSON retains the original checkpoint path; it refers to this same run’s `last.pt`.
 - CodaBench top-1 accuracy: **0.663 (66.3%)**; submission ID: **962394**
 - backbone / head: `vit_base_patch16_224.augreg2_in21k_ft_in1k` at 224px / linear classifier initialized from normalized training-class prototypes
@@ -168,7 +168,7 @@ Frozen features + linear probe, internal holdout accuracy:
 - loss curves: saved in the run’s `figures/` folder (confirmed by Qian); raw training losses are retained in the CSV logs.
 - result: **+4.2 percentage points** over the previous prototype full-FT result (0.621). This run uses the shared trainer's cosine schedule; multiple implementation/runtime differences prevent attributing the gain to one change.
 
-### 2026-10-06 — Anastasia — full FT @ 336, backbone-LR pilot (`configs/full_ft_336.yaml`)
+### 2026-10-06 — Anastasia — full FT @ 336, backbone-LR pilot (`configs/full_ft_336px_backbone-lr-sweep_head-lr1e-3.yaml`)
 
 - run_dir: `CS604_RUNS/pilot_full_ft_336_20261006_013706`
 - val acc (ours / CodaBench): pilot holdout only (1,000-class subset, 5/class held out, subset seed 0), not comparable to full-scale or CodaBench numbers / not submitted
@@ -183,11 +183,11 @@ Frozen features + linear probe, internal holdout accuracy:
 
 - results: 1e-5 and 3e-5 tied (0.26 points, inside the 0.3 tie tolerance), so the pilot chose 1e-5; 1e-4 was 2.6 points worse. All runs still improving at epoch 3, no early dip. Without layer decay, higher lrs hurt, consistent with Van's −6.7 points for 4e-4 without layer decay.
 - note: this pilot ran with `num_workers: 2` and was data-loading bound (the head-init test below ran the same data 2× faster with all CPU workers).
-- next: superseded by Van's layer-decay recipe (4e-4 top lr is safe only with layer decay). Use `configs/full_ft_336_llrd.yaml` for the 336 vs 224 comparison.
+- next: superseded by Van's layer-decay recipe (4e-4 top lr is safe only with layer decay). Use `configs/full_ft_336px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml` for the 336 vs 224 comparison.
 
 ### 2026-10-06 — Anastasia — head initialisation test, full FT @ 336 (pilot scale)
 
-- run_dir: launcher cell "Head initialisation test" (`colab_launcher.ipynb`, `ana-branch`), same pilot subset and holdout as the LR pilot above
+- run_dir: launcher cell "Head initialisation test" (`colab_train_one-config.ipynb`, `ana-branch`), same pilot subset and holdout as the LR pilot above
 - val acc (ours / CodaBench): pilot holdout only (1,000 classes, 5/class) / not submitted
 - trainable % / peak VRAM / GPU-hours: 100% / TBC / ~0.4 (4 arms × 5.7 min)
 - what changed: only the starting head. Backbone lr 1e-5 (from the pilot), head lr 1e-3, 3 epochs, no layer decay. Prototype and probe heads built from the pilot's fit images only, so the holdout stays clean. One seed per arm.
@@ -201,11 +201,11 @@ Frozen features + linear probe, internal holdout accuracy:
 
 - results: **LP-FT is about 2.2 points worse** than random or prototype starts, despite starting 13 points higher. This independently confirms Van's finding (prototype beats LP-FT by 1.6–2.0 points at full scale, 224, with layer decay) in a different setting (336, no layer decay, lr 1e-5). Lowering the head lr (D) does not help, so the head is not being disrupted; more likely the confident probe head gives small gradients and the backbone adapts less (Van's explanation). Random and prototype tie at this scale (0.06 points, within seed noise), likely because a 100× head lr lets a random head catch up within 3 epochs on 1,000 classes; at 10,000 classes Qian saw prototype ahead (0.613 → 0.621 on CodaBench).
 - speed: 5.7 min per arm vs ~11.5 min for the same data in the LR pilot; the only difference is `num_workers` (all CPUs vs 2), so full FT at 336 is data-loading bound with 2 workers.
-- next: keep the prototype head for full FT; drop LP-FT (`probe_head.pt` stays as the frozen baseline only). Run `configs/full_ft_336_llrd.yaml` (Van's recipe at 336, 8 workers) and compare with Van's 0.757 at 224.
+- next: keep the prototype head for full FT; drop LP-FT (`probe_head.pt` stays as the frozen baseline only). Run `configs/full_ft_336px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml` (Van's recipe at 336, 8 workers) and compare with Van's 0.757 at 224.
 
-### 2026-10-06 — Anastasia — full FT @ 336 with Van's recipe (`configs/full_ft_336_llrd.yaml`)
+### 2026-10-06 — Anastasia — full FT @ 336 with Van's recipe (`configs/full_ft_336px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml`)
 
-- run_dir: `CS604_RUNS/full_ft_20261006_122039` (launcher `notebooks/colab_launcher_ana_ft336.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/full_ft_20261006_122039` (launcher `notebooks/colab_full-ft_336px_llrd0.75_proto-cosine.ipynb`, `ana-branch`)
 - val acc (ours / CodaBench): no internal holdout (trained on all 45 images/class) / **0.807** plain center crop 0.9; **0.813** with crop 0.7 + flip TTA
 - trainable % / peak VRAM / GPU-hours: 100% / 20.05 GB / 2.40 (144.0 training minutes, time limit reached; A100 40 GB)
 - what changed vs Van's `full_ft_224px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml` (0.757): img_size 224 → **336**; batch 256 × 1 → 128 × 2 (same effective batch 256, half the activation memory); prototypes rebuilt at 336 (`prototypes_336.pt`). Everything else identical: prototype cosine head, lr 4e-4 with layer decay 0.75, head lr 4e-3, label smoothing 0.1, drop_path 0.1, clip 1.0, 5% warmup + cosine fitted to 144 min.
@@ -219,7 +219,7 @@ Frozen features + linear probe, internal holdout accuracy:
 - source branch / launcher: `qq_selected_layer_validation` / `notebooks/colab_qq_selected_layer_validation.ipynb`; saved notebook commit `1be03d8`.
 - purpose: select which attention parameters to adapt while training <5% of backbone parameters, excluding the classifier.
 - data: fixed internal split of the labelled training set, 40 fitting + 5 validation images/class across all 10,000 classes (400,000 fitting / 50,000 holdout); split seed 42. This holdout is distinct from official CodaBench validation. Split manifests and raw run artifacts are retained under Drive `CS604_RUNS/qq_selected_layer_<split-id>/`.
-- shared recipe: `configs/linear_probe.yaml` (inheriting `base.yaml`); augreg2 ViT-B/16 at 224; random linear classifier initialization, no prototypes; AdamW LR 1e-3 for all trainable parameters, weight decay 0, batch 64, accumulation 1, 1-epoch warmup followed by cosine decay, BF16, training seed 42, 2 data-loader workers. Each arm completed 5 epochs; no training-minute cutoff. GPU model/session equivalence is not established by the supplied summary.
+- shared recipe: `configs/linear_probe_224px_frozen-backbone_5epoch.yaml` (inheriting `shared_vit-b16_augreg2_defaults.yaml`); augreg2 ViT-B/16 at 224; random linear classifier initialization, no prototypes; AdamW LR 1e-3 for all trainable parameters, weight decay 0, batch 64, accumulation 1, 1-epoch warmup followed by cosine decay, BF16, training seed 42, 2 data-loader workers. Each arm completed 5 epochs; no training-minute cutoff. GPU model/session equivalence is not established by the supplied summary.
 - selective scopes: QKV includes weights and biases; complete attention includes QKV and the output projection. MLPs and all LayerNorms remain frozen in the selective arms. The 7,690,000-parameter classifier is trained in every arm and excluded from the backbone cap; backbone denominator is 85,798,656.
 
 | Arm | Run folder | Best / final holdout top-1 | Best epoch | Trainable backbone % | Peak VRAM (GiB) | Training minutes | Wall GPU-hours |
@@ -238,7 +238,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-08 — Qian — last-block attention, prototype head (final all-data run)
 
-- config / run: `configs/lastblock_attention.yaml` on `qq_branch_v2`; launcher `notebooks/colab_launcher_qq.ipynb`; `CS604_RUNS/last_blocks_20261008_123344/last.pt`.
+- config / run: `configs/last_1block_attention_224px_proto-linear-head_2.4h.yaml` on `qq_branch_v2`; launcher `notebooks/colab_qq_train-one-config.ipynb`; `CS604_RUNS/last_blocks_20261008_123344/last.pt`.
 - CodaBench: **0.668 (66.8%)**, submission **969549**, confirmed to use this checkpoint; standard launcher evaluation, no TTA. No internal holdout in this run.
 - design: train final-block QKV and attention output projection plus the prototype-initialized linear classifier; remaining backbone frozen. **2.753386% backbone trainable**, classifier excluded; 10,052,368 trainable parameters including classifier.
 - recipe: augreg2 ViT-B/16 at 224; batch 64, accumulation 1; AdamW LR 1e-3, weight decay 0; BF16, seed 42; 5% time-based warmup + cosine decay. Reused all-training-data prototypes.
@@ -246,9 +246,9 @@ Frozen features + linear probe, internal holdout accuracy:
 - latency: **7.693 ms/image** at batch 1; **0.289 ms/image** at batch 64, synthetic forward-only BF16 (30 warmups, 200 iterations).
 - loss: epoch-average training loss 3.165 → 1.325 over complete epochs 1–5; partial epoch 6: 1.157. Raw logs retained; plots saved in `figures/`.
 - comparison: **+0.5 percentage points** over Qian's 66.3% full-FT reference, with fewer trainable backbone parameters and lower measured peak VRAM. Training recipes differ, so this is not an isolated adaptation-method comparison. Scope selection used random-head internal validation; this final run used prototypes.
-### 2026-10-07 — Anastasia — LoRA r24 + extras @ 336 with Van'srecipe (`configs/lora_r24_336_recipe.yaml`)
+### 2026-10-07 — Anastasia — LoRA r24 + extras @ 336 with Van'srecipe (`configs/lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml`)
 
-- run_dir: `CS604_RUNS/lora_20261007_051926` (launcher `notebooks/colab_launcher_ana_lora336.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/lora_20261007_051926` (launcher `notebooks/colab_lora-r24_336px_extras_proto-cosine.ipynb`, `ana-branch`)
 - val acc (ours / CodaBench): no internal holdout (trained on all 45 images/class) / **0.785** plain center crop 0.9; **0.793**with crop 0.7 + flip TTA
 - trainable % / peak VRAM / GPU-hours: **4.65% of the backbone** (4.00M / 85.99M, head excluded) / 19.40 GB / 2.40 (144.0 training min, time limit reached; A100 40 GB)
 - what changed vs the 0.717 LoRA r16 run: rank 16 → 24; also trained LayerNorms, all biases, pos_embed and cls_token (0.46M, noweight decay); prototype cosine head (`prototypes_336.pt`) instead of a linear-probe head; head lr 1e-4 → 3e-3 (10× the LoRA lr); effective batch 128 → 256; weight decay 1e-4 → 0.05. Unchanged: LoRA on qkv/proj/fc1/fc2, LoRA lr 3e-4, alpha = rank, label smoothing 0.1, 5% warmup + cosine fitted to 144 min.
@@ -259,7 +259,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-09 — Qian — prefix tuning ablation test
 
-- run_dir: `CS604_RUNS/qq_prefix_ablation_336_seed42_v1/runs/screen/` (`qq_prefix_tuning_ablation`; `colab_launcher_qq.ipynb`).
+- run_dir: `CS604_RUNS/qq_prefix_ablation_336_seed42_v1/runs/screen/` (`qq_prefix_tuning_ablation`; `colab_qq_train-one-config.ipynb`).
 - val acc (internal): best **0.71688** (`all_p50`). All arms' best accuracy occurred at epoch 5; one seed, convergence unconfirmed.
 - trainable % / peak VRAM / GPU-hours: selected arm **1.071792%** backbone (classifier excluded) / **7.97 GiB** / **1.188 wall GPU-hours**, including **64.80 training minutes** on A100 40GB. All six runs below.
 - what changed: frozen augreg2 at 336 with fit-only prototype linear head; 40 fit + 5 holdout images/class, seed 42. Five epochs/arm; AdamW prefix/head LR 1e-3, weight decay 0, batch 64, BF16, 5% warmup + cosine. Compared placements at length 5, then lengths 20/50 at all blocks. `all_p50` adds **8.36 points** over baseline; its **0.04-point** lead over `all_p5` is inconclusive with one seed.
@@ -274,16 +274,16 @@ Frozen features + linear probe, internal holdout accuracy:
 | All blocks, length 20 | 0.71634 | 0.428717 | 7.90 | 65.40 | 1.202 |
 | All blocks, length 50 | **0.71688** | 1.071792 | 7.97 | 64.80 | 1.188 |
 
-### 2026-10-10 — Qian — configs/prefix_tuning_336.yaml
+### 2026-10-10 — Qian — prefix tuning, length 50, all blocks @ 336 (`configs/prefix_336px_len50_all-blocks_linear-proto-head_2.4h.yaml`)
 
 - run_dir: `CS604_RUNS/prefix_20261010_000404_id974631` (`last.pt`; `qq_branch_v2`).
 - val acc (ours / CodaBench): **0.71688** (selection ablation, `all_p50`) / **0.721** (final run), submission **974631**.
 - trainable % / peak VRAM / GPU-hours: **1.071792%** backbone (classifier excluded) / **7.97 GiB** / **2.402807 wall GPU-hours**; 144 training minutes on A100 40GB. Latency: **9.644 ms/image**, batch 1, BF16 synthetic forward-only.
 - what changed: final prefix-tuning run at 336, all blocks with length 50; prototype-initialized linear head using `prototypes_336.pt`; batch 64, prefix/head LR 1e-3, weight decay 0, seed 42; 5% time warmup + cosine, no epoch ceiling.
 
-### 2026-10-09 — Anastasia — Adapter w96 + extras @ 336 with Van's recipe (`configs/adapter_w96_336_recipe.yaml`)
+### 2026-10-09 — Anastasia — Adapter w96 + extras @ 336 with Van's recipe (`configs/adapter_w96_336px_extras_proto-cosine_2.4h.yaml`)
 
-- run_dir: `CS604_RUNS/adapter_20261009_131150`; lr pilot `CS604_RUNS/pilot_adapter_336_20261009_125653` (launcher `notebooks/colab_launcher_ana_peft336.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/adapter_20261009_131150`; lr pilot `CS604_RUNS/pilot_adapter_336_20261009_125653` (launcher `notebooks/colab_adapter-and-adaptformer_336px_same-recipe.ipynb`, `ana-branch`)
 - val acc (ours / CodaBench): no internal holdout (trained on all 45 images/class) / **0.776** plain center crop 0.9; **0.785** with crop 0.7 + flip TTA
 - trainable % / peak VRAM / GPU-hours: **4.68% of the backbone** (4.02M / 85.99M, head excluded) / 15.54 GB / 2.40 (144.0 training min, time limit reached; A100 40 GB)
 - what it is: 24 serial bottleneck adapters (after attention and after the MLP in all 12 blocks, 768 → 96 → 768, ReLU, up-projection zero-initialised) plus LayerNorms, all biases, pos_embed and cls_token (no weight decay), sized to the LoRA r24 budget. Same setup as the LoRA r24 run: prototype cosine head, head lr 3e-3, weight decay 0.05, label smoothing 0.1, clip 1.0, effective batch 256, 5% warmup + cosine fitted to 144 min.
@@ -292,10 +292,10 @@ Frozen features + linear probe, internal holdout accuracy:
 - cost: fastest training of all 336 runs: **~951 s/epoch (~473 img/s)** vs 1,017 s full FT and 1,272 s LoRA; lowest peak VRAM (15.54 vs 20.05 GB full FT). Adapters cannot be merged into the weights: latency **11.60 ms/image at batch 1 (+46% vs full FT's 7.94)**, 0.73 ms/image at batch 64 (+15%). LoRA, once merged, has no extra latency (7.68 ms), so Adapter is cheaper to train but slower to run.
 - next: AdaptFormer covered by Van's run (0.779 / 0.790, 4.13%). Try Van's CosFace margin (0.1) on LoRA r24; measure merged-LoRA latency.
 
-### 2026-10-12 — Anastasia — LoRA r24 recipe ablation + DoRA, pilot scale (`configs/ablation_lora_r24.yaml`)
+### 2026-10-12 — Anastasia — LoRA r24 recipe ablation + DoRA, pilot scale (`configs/lora_r24_336px_recipe-ablation_1k-class-pilot.yaml`)
 
-- run_dir: `CS604_RUNS/ablation_ablation_lora_r24/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_ablation.ipynb`, `ana-branch`); arms A–F on 2026-10-11, G–I on 2026-10-12
-- setup: one change at a time from `lora_r24_336_recipe.yaml`; 1,000-class pilot subset (seed 0), 40 fit images/class, 3 epochs (5% warmup + cosine), scored on a labelled 5/class holdout; one seed per arm. Both starting heads rebuilt from the fit images only (pilot-class prototypes recomputed; linear probe trained on the same images), so no head has seen the holdout. Not ablated: batch 256 and weight decay 0.05 (kept in all arms).
+- run_dir: `CS604_RUNS/ablation_ablation_lora_r24/` (`scripts/ablation.py`, launcher `notebooks/colab_lora-r24_336px_recipe-ablation_1k-pilot.ipynb`, `ana-branch`); arms A–F on 2026-10-11, G–I on 2026-10-12
+- setup: one change at a time from `lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml`; 1,000-class pilot subset (seed 0), 40 fit images/class, 3 epochs (5% warmup + cosine), scored on a labelled 5/class holdout; one seed per arm. Both starting heads rebuilt from the fit images only (pilot-class prototypes recomputed; linear probe trained on the same images), so no head has seen the holdout. Not ablated: batch 256 and weight decay 0.05 (kept in all arms).
 
 | Arm | Change | Holdout top-1 | vs A (points) | Backbone trainable | Pilot min |
 |---|---|---:|---:|---:|---:|
@@ -314,20 +314,20 @@ Frozen features + linear probe, internal holdout accuracy:
 - limitations: pilot scale (absolute accuracies inflated by the easier 1,000-class task; use for direction and ranking); one seed per arm; G's best epoch (0.8588) was slightly above its final (0.8572).
 - next: report the head start × head lr table and the A/H/D split; final PEFT model stays LoRA r24 (optionally without extras, 4.12%).
 
-### 2026-10-13 — Anastasia — DoRA r24 + extras @ 336 with Van's recipe (`configs/lora_r24_336_dora.yaml`)
+### 2026-10-13 — Anastasia — DoRA r24 + extras @ 336 with Van's recipe (`configs/lora_r24_336px_dora_extras_proto-cosine_2.4h.yaml`)
 
-- run_dir: `CS604_RUNS/lora_20261012_130611` (launcher `notebooks/colab_launcher_ana_dora336.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/lora_20261012_130611` (launcher `notebooks/colab_dora-r24_336px_extras_proto-cosine.ipynb`, `ana-branch`)
 - val acc (ours / CodaBench): no internal holdout / **0.783** plain (submission 983071); **0.793** with crop 0.7 + flip (submission 983064)
 - trainable % / peak VRAM / GPU-hours: **4.75% of the backbone** (4.08M / 85.99M, head excluded; +82,944 magnitude params vs LoRA) / **28.06 GB** / 2.40 (144.0 training min, time limit reached; A100 40 GB)
-- what changed vs `lora_r24_336_recipe.yaml` (0.785): only `lora_dora: true`. DoRA (Liu et al., ICML 2024) splits each adapted weight into a direction (updated by LoRA) and a learned per-output magnitude, closer to how full FT updates weights.
+- what changed vs `lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml` (0.785): only `lora_dora: true`. DoRA (Liu et al., ICML 2024) splits each adapted weight into a direction (updated by LoRA) and a learned per-output magnitude, closer to how full FT updates weights.
 - results: **tie with LoRA** (−0.2 plain, ±0 with crop + flip), matching the pilot (arm I: +0.12). DoRA trained **25% slower** (~1,585 vs ~1,272 s/epoch) and reached only **~5.45 epochs** vs ~6.8, so it matched LoRA with ~20% fewer epochs, but at a fixed 144-min budget the slowdown cancels the per-epoch gain. Peak memory +45% (28.06 vs 19.40 GB): each step builds the full adapted weight of all 48 layers to compute its norms. Crop + flip added +1.0, the largest TTA gain so far. Consistent with the ablation: rank 24 already gives LoRA enough capacity, and the head setup, not the adapter, limits accuracy here.
 - cost: latency measured **unmerged 23.14–24.36 ms/image at batch 1** (1.41 ms/image at batch 64), the slowest of all runs, because every forward pass recomputes the weight norms of all 48 layers. **Merged** (`scripts/latency_merged.py`, same A100 session): **7.71 ms at batch 1, 0.649 ms at batch 64**, identical to a plain ViT-B with the same head (7.71 / 0.651 ms), so DoRA, like LoRA, has no inference cost once merged. (A second merged-latency session on the LoRA r24 checkpoint gave 8.35 ms vs 8.20 ms plain; the first gave 7.68 vs 7.58. Merged stays within ~0.15 ms of plain both times.)
 - next: final PEFT model stays LoRA r24 (same accuracy, faster and lighter to train).
 
-### 2026-10-16 — Anastasia — LoRA from block k up + progressive resizing, pilot scale (`configs/ablation_lora_depth_res.yaml`)
+### 2026-10-16 — Anastasia — LoRA from block k up + progressive resizing, pilot scale (`configs/lora_r24_336px_depth-and-resolution_1k-class-pilot.yaml`)
 
-- run_dir: `CS604_RUNS/ablation_ablation_lora_depth_res/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_depth_res.ipynb`, `ana-branch`)
-- setup: same pilot as the r24 ablation (1,000 classes, 40 fit / 5 holdout per class, prototype heads rebuilt from fit images), A = `lora_r24_336_recipe.yaml`. Two new opt-in options: `first_trainable_block: k` (LoRA only in blocks k..11; norms, biases, `pos_embed` and `cls_token` below k frozen, so backward stops at block k) and `low_res_size: 224` / `low_res_fraction: 0.67` (train at 224 for the first 67% of progress, then 336; eval and inference at 336). J–M: same 3 epochs as A (accuracy cost). `*_t` arms: same training minutes as A (5.75 min, via `max_train_minutes: {match: A_full_recipe}`), i.e. what the speed-up buys under a time budget.
+- run_dir: `CS604_RUNS/ablation_ablation_lora_depth_res/` (`scripts/ablation.py`, launcher `notebooks/colab_lora-r24_336px_depth-and-resolution_1k-pilot.ipynb`, `ana-branch`)
+- setup: same pilot as the r24 ablation (1,000 classes, 40 fit / 5 holdout per class, prototype heads rebuilt from fit images), A = `lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml`. Two new opt-in options: `first_trainable_block: k` (LoRA only in blocks k..11; norms, biases, `pos_embed` and `cls_token` below k frozen, so backward stops at block k) and `low_res_size: 224` / `low_res_fraction: 0.67` (train at 224 for the first 67% of progress, then 336; eval and inference at 336). J–M: same 3 epochs as A (accuracy cost). `*_t` arms: same training minutes as A (5.75 min, via `max_train_minutes: {match: A_full_recipe}`), i.e. what the speed-up buys under a time budget.
 
 | Arm | Change | Holdout top-1 | vs A | Trainable | Epochs | Speed-up | Peak VRAM |
 |---|---|---:|---:|---:|---:|---:|---:|
@@ -341,13 +341,13 @@ Frozen features + linear probe, internal holdout accuracy:
 | M_t | M, A's minutes | 0.8872 | −1.14 | 4.67% | 7 | 2.33× | 13.59 GB |
 
 - results: **neither speed-up helps, even at equal compute.** All seven arms lost 0.9–1.6 points (beyond ~0.3 seed noise, all in the same direction). Extra epochs bought almost nothing (L 3 epochs 0.8866 vs L_t 6 epochs 0.8898; M_t with 7 epochs still −1.1), so at pilot scale LoRA plateaus within ~3 epochs and the time budget is not the bottleneck. Training at 224 costs ~1.2 points and a final phase at 336 doesn't recover it. The speed-ups and VRAM savings are real on the A100 (J 13.6 GB, K 10.6 GB vs 19.4 GB), useful only on a memory-limited GPU.
-- caveat on interpretation: J and K also froze `pos_embed` + `cls_token` (~0.44M, most of A's extras) and concentrated the same budget in fewer blocks, so their loss does **not** show that the early blocks specifically matter. The param-selection pilot (next entry) found no depth effect, which points to concentration rather than depth. A control run (`configs/ablation_lora_depth_control.yaml`: fixed r24 on fewer blocks, and J with `pos_embed` trainable) is set up to separate the two; results in the 2026-10-19 depth-controls entry.
+- caveat on interpretation: J and K also froze `pos_embed` + `cls_token` (~0.44M, most of A's extras) and concentrated the same budget in fewer blocks, so their loss does **not** show that the early blocks specifically matter. The param-selection pilot (next entry) found no depth effect, which points to concentration rather than depth. A control run (`configs/lora_r24_336px_spread-vs-fewer-blocks_1k-class-pilot.yaml`: fixed r24 on fewer blocks, and J with `pos_embed` trainable) is set up to separate the two; results in the 2026-10-19 depth-controls entry.
 - limitations: pilot scale (1,000 classes may plateau sooner than 10,000); one seed per arm.
 - next: keep A as the LoRA submission; no lr / `low_res_fraction` sweep or full run.
 
-### 2026-10-17 — Anastasia — parameter-selection pilot: depth, fine-tuned angle, gradient at equal budget (`configs/ablation_param_selection.yaml`)
+### 2026-10-17 — Anastasia — parameter-selection pilot: depth, fine-tuned angle, gradient at equal budget (`configs/param-selection_336px_same-budget_1k-class-pilot.yaml`)
 
-- run_dir: `CS604_RUNS/ablation_ablation_param_selection/` (`scripts/ablation.py` + `scripts/select_params.py`, launcher `notebooks/colab_launcher_ana_param_selection.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/ablation_ablation_param_selection/` (`scripts/ablation.py` + `scripts/select_params.py`, launcher `notebooks/colab_param-selection_336px_1k-pilot.ipynb`, `ana-branch`)
 - question: at a fixed budget of ~4.6% of the backbone, which parameters should be trained? Same pilot as above (1,000 classes, 40 fit / 5 holdout per class, 3 epochs, one seed per arm). Directly trained pretrained weights use their own `unfreeze_lr` (3e-5 for whole matrices, 1e-4 for GPS entries; the latter a guess, not swept).
 - arms: **A** LoRA r24 everywhere (current recipe). **F** full FT at pilot scale, Van's LLRD recipe (`F_llrd`) and one flat lr 3e-5 (`F_flat`). **S0 / S5 / S11** (surgical, Lee et al. ICLR 2023): block *i*'s full attention (qkv + proj, 2.36M) + LoRA r8 elsewhere. **Y** (partial FT, Ye et al. 2023): rank matrices by angle between pretrained and `F_flat` weights; `Y_layer` = top whole attention layer + LoRA r8, `Y_matrix` = top single matrices filled to budget, no LoRA. **G** (GPS, Zhang et al. CVPR 2024): top-K weights per output neuron by accumulated gradient on fit images (cross-entropy, not GPS's contrastive loss, since the head starts from prototypes), K = 42 and K = 10. Y and G selections use only fit images (no holdout leakage).
 
@@ -368,11 +368,11 @@ Frozen features + linear probe, internal holdout accuracy:
 - angles (`F_flat`, degrees between pretrained and fine-tuned weights, `angles.csv`): all 49 matrices between 0.79° (`patch_embed`, the lowest) and 1.22° (`blocks.11.attn.qkv`). `qkv` (0.92 → 1.22) and `fc1` (0.90 → 1.16) rise steadily with depth; `proj` and `fc2` are mostly flat (block-0 `proj` outlier at 1.16°). Full FT changes every layer a little and the high-level layers most.
 - results: **spreading the budget beats concentrating it.** The two best ways to spend ~4.6% (LoRA everywhere, GPS) touch every layer; one full-rank attention block costs ~1 point at any depth, and the most concentrated arm (`Y_matrix`) loses 2.6. **Depth makes no difference** (S0 ≈ S5 ≈ S11, within noise), so the early-layer hypothesis from Lee et al. is not supported here; with the angles (patch embedding moved least), iNat vs ImageNet is not a low-level appearance shift. How much a layer moves under full FT doesn't predict how useful it is to tune at a fixed budget. G_k10 is the best accuracy per parameter (−1.0 at 1.51%), but GPS saves parameters, not compute: full gradients are still computed and masked (20.37 GB, no speed-up).
 - caveat: **full FT does not beat LoRA at pilot scale** (−0.4), unlike full scale (0.807 vs 0.785). The pilot (40k images, 1,000 classes, 3 epochs) can rank PEFT variants but can't show the capacity limit that makes full FT win at 450k images; all "vs F" conclusions are pilot-only. Consistent with a data-size crossover, but the settings also differ in class count and epochs. Angle comparisons across matrix types are weaker than within a type (angle is relative to ‖W‖). Pilot angles come from 3 epochs at lr 3e-5, so all changes are small.
-- next: depth-control run (`configs/ablation_lora_depth_control.yaml`) to test "spread vs concentrated" directly (C16_all vs J24_embed at ~3.2%) and the `pos_embed` confound (J40 vs J40_embed); results in the 2026-10-19 depth-controls entry. Angle-vs-depth figure for the report.
+- next: depth-control run (`configs/lora_r24_336px_spread-vs-fewer-blocks_1k-class-pilot.yaml`) to test "spread vs concentrated" directly (C16_all vs J24_embed at ~3.2%) and the `pos_embed` confound (J40 vs J40_embed); results in the 2026-10-19 depth-controls entry. Angle-vs-depth figure for the report.
 
 ### 2026-10-11 — Qian — BitFit ablation test
 
-- run_dir: `CS604_RUNS/qq_bitfit_ablation_336_subset_seed42_v2/` (`qq_bitfit_ablation`; `colab_launcher_qq.ipynb`). Selected arm reused from `runs/pilot/all_biases_lr0.001/seed42/`; other arms under `runs/screen/`.
+- run_dir: `CS604_RUNS/qq_bitfit_ablation_336_subset_seed42_v2/` (`qq_bitfit_ablation`; `colab_qq_train-one-config.ipynb`). Selected arm reused from `runs/pilot/all_biases_lr0.001/seed42/`; other arms under `runs/screen/`.
 - val acc (internal subset / CodaBench): **0.8810** (`all_biases`) / not submitted. All arms' best accuracy occurred at epoch 3; one seed, convergence unconfirmed.
 - trainable % / peak VRAM / GPU-hours: selected arm **0.119683%** backbone (classifier excluded) / **7.01 GiB** / **0.074 wall GPU-hours**, including **4.02 training minutes** on A100-SXM4-40GB.
 - what changed: augreg2 at 336, fit-only prototype linear head; same 1,000-class subset, 40 fit + 5 holdout images/class, seed 42. Three epochs/arm; AdamW bias/head LR 1e-3, weight decay 0, batch 64, BF16, 5% warmup + cosine. Compared bias scopes after an all-bias LR pilot; matching pilot run reused. All biases adds **6.18 points** over head-only and **0.64 points** over attention biases. Subset scores are not directly comparable to full-scale results.
@@ -386,14 +386,14 @@ Frozen features + linear probe, internal holdout accuracy:
 | MLP biases + head | 0.8722 | 0.053590 | 6.63 | 3.85 | 0.071 |
 | LayerNorm biases + head | 0.8724 | 0.022329 | 6.97 | 3.90 | 0.072 |
 
-### 2026-10-11 — Qian — configs/bitfit_336.yaml
+### 2026-10-11 — Qian — BitFit, all biases, linear prototype head @ 336 (`configs/bitfit_336px_all-biases_linear-proto-head_2.4h.yaml`)
 
 - run_dir: `CS604_RUNS/bitfit_20261011_024724` (`last.pt`; `qq_branch_v2`).
 - val acc (CodaBench): **0.734**, submission **976355**.
 - trainable % / peak VRAM / GPU-hours: **0.119683%** backbone (102,912 biases; classifier excluded) / **7.01 GiB** / **2.402 wall GPU-hours**; 144 training minutes on A100 40GB. Latency: **7.403 ms/image** at batch 1, **0.641 ms/image** at batch 64, BF16 synthetic forward-only.
 - what changed: final all-bias BitFit at 336 on all 450,000 training images; prototype linear head using `prototypes_336.pt`; bias/head LR 1e-3, weight decay 0, batch 64, seed 42; 5% time warmup + cosine, no epoch ceiling.
 
-### 2026-10-10 — Wenqi — last-block attention @ 336 (`configs/lastblock_attention_336.yaml`)
+### 2026-10-10 — Wenqi — last-block attention @ 336 (`configs/last_1block_attention_336px_proto-linear-head_2.4h.yaml`)
 
 - run_dir: `CS604_RUNS/last_blocks_20261010_022115`; submission file `val_team_08.txt`
 - val acc (ours / CodaBench): no internal holdout / **0.679260** (macro F1 0.673014)
@@ -436,7 +436,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-15 — Qian — BitFit cosine head @ 448
 
-- run_dir: `CS604_RUNS/bitfit_20261015_015001/last.pt` (`qq_branch_v2`; `configs/bitfit_cosine_448.yaml`).
+- run_dir: `CS604_RUNS/bitfit_20261015_015001/last.pt` (`qq_branch_v2`; `configs/bitfit_448px_all-biases_cosine-head_2.4h.yaml`).
 - val acc (CodaBench): **0.762**, submission **988896**; crop 0.75 + horizontal-flip TTA. No internal holdout.
 - trainable % / peak VRAM / GPU-hours: **0.119318%** backbone (102,912 biases; classifier excluded) / **11.95 GiB** / **2.401 wall GPU-hours**; 144 training minutes on A100 40GB. Single-view latency: **7.787 ms/image** at batch 1, **1.179 ms/image** at batch 64, BF16 synthetic forward-only; excludes flip TTA and preprocessing.
 - what changed: full-data BitFit at 448 with prototype cosine head (initial scale 20), all-data `prototypes_448.pt`; all 450,000 training images, bias/head LR 1e-3, weight decay 0, batch 64, seed 42, BF16, 5% time warmup + cosine. Reached epoch 6 before the time limit.
@@ -444,7 +444,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-16 — Qian — last-block attention, cosine head @ 448
 
-- run_dir: `CS604_RUNS/last_blocks_20261015_120404/last.pt` (`qq_branch_v2`; `configs/lastblock_attention_cosine_448.yaml`).
+- run_dir: `CS604_RUNS/last_blocks_20261015_120404/last.pt` (`qq_branch_v2`; `configs/last_1block_attention_448px_cosine-head_2.4h.yaml`).
 - val acc (CodaBench): **0.685**, submission **990367**; crop 0.75 + horizontal-flip TTA per launcher. No internal holdout.
 - trainable % / peak VRAM / GPU-hours: **2.738970%** backbone (2,362,368 parameters; classifier excluded) / **2.23 GiB** / **2.402 wall GPU-hours**; 144 training minutes on A100 40GB. Single-view latency: **8.681 ms/image** at batch 1, **1.166 ms/image** at batch 64, BF16 synthetic forward-only; excludes flip TTA and preprocessing.
 - what changed: final-block QKV + output projection only, prototype cosine head (initial scale 20), `prototypes_448.pt`, all 450,000 training images at 448; attention/head LR 1e-4 / 3e-3, weight decay 0.05 (excluding biases/norms), label smoothing 0.1, clipping 1.0, batch 64 × accumulation 4, seed 42, BF16, 5% time warmup + cosine. Reached epoch 7 before the time limit.
@@ -458,7 +458,7 @@ Frozen features + linear probe, internal holdout accuracy:
 - what changed: added VPT to LoRA r24 + extras at 336 with a prototype cosine head; 1,000 classes, 40 fit + 5 holdout/class, five epochs, seed 42; pilot-selected prompt LR **3e-4**. Deep gains **0.40 pp** over baseline with **5.4% longer training**; one seed, full-data gain unconfirmed.
 - next: train **LoRA + VPT-Deep, 8 tokens/block at 336**, from pretrained weights on all **450,000 images for 144 training minutes**, using fresh all-data prototypes and prompt LR **3e-4**; evaluate on CodaBench.
 
-### 2026-10-16 — Qian — LoRA + VPT-Deep (`configs/lora_vpt_deep_336.yaml`)
+### 2026-10-16 — Qian — LoRA + VPT-Deep (`configs/lora_r24_336px_vpt-deep-8_extras_proto-cosine_2.4h.yaml`)
 
 - run_dir: `CS604_RUNS/lora_vpt_deep_336_seed42/lora_20261016_050840/last.pt` (`qq_branch_v2`).
 - val acc (ours / CodaBench): no internal holdout / **0.793**, submission **992462**; crop 0.75 + horizontal-flip TTA.
@@ -472,12 +472,12 @@ Frozen features + linear probe, internal holdout accuracy:
 - val acc (ours / CodaBench): A/B/C/D/E final holdout **0.9082 / 0.9058 / 0.9058 / 0.9094 / 0.9122** / not submitted. Evaluation: crop 0.9, no flip or zoom.
 - trainable % / peak VRAM / GPU-hours: selected E **4.9446%** backbone (head excluded) / **33.90 GiB** / **0.2183 wall GPU-hours**, excluding prototype extraction; 12 training min, 3.48 epochs on A100 40GB.
 - what changed: LoRA r24 + extras, no VPT; 1,000 classes, 40 fit + 5 holdout/class, fitting-only prototypes per resolution, seed 42. Equal 12-minute arms: 336/384 with current crops or 75% crop + 25% whole-image/padding, then 448 with the mixture. E gains **+0.28 pp** over matching 384 and **+0.40 pp** over the 336 baseline. One seed; full-data gain unconfirmed.
-- next: `qq_branch_v2`, `configs/lora_r24_crop_pad_448.yaml`: fresh pretrained weights, all **450,000 images**, **144 training minutes**, reuse all-data `prototypes_448.pt`; predict with **crop 0.75 + autozoom (mass 0.7), no flip** via `scripts/predict_zoom.py`.
+- next: `qq_branch_v2`, `configs/lora_r24_448px_25pct-full-image_extras_proto-cosine_2.4h.yaml`: fresh pretrained weights, all **450,000 images**, **144 training minutes**, reuse all-data `prototypes_448.pt`; predict with **crop 0.75 + autozoom (mass 0.7), no flip** via `scripts/predict_zoom.py`.
 
-### 2026-10-19 — Anastasia — LoRA depth controls: fixed rank on fewer blocks, `pos_embed` control, spread vs concentrated (`configs/ablation_lora_depth_control.yaml`)
+### 2026-10-19 — Anastasia — LoRA depth controls: fixed rank on fewer blocks, `pos_embed` control, spread vs concentrated (`configs/lora_r24_336px_spread-vs-fewer-blocks_1k-class-pilot.yaml`)
 
-- run_dir: `CS604_RUNS/ablation_ablation_lora_depth_control/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_depth_control.ipynb`, `ana-branch`)
-- setup: same pilot as the depth/res and param-selection screens (1,000 classes, 40 fit / 5 holdout per class, prototype heads rebuilt from fit images, 3 epochs, one seed per arm); A = `lora_r24_336_recipe.yaml`. New opt-in option `keep_embed_trainable` (with `first_trainable_block > 0`, `pos_embed` + `cls_token` still train; costs the speed-up, since backward then runs through every block). J40 and C16 rerun here so every comparison is within one session.
+- run_dir: `CS604_RUNS/ablation_ablation_lora_depth_control/` (`scripts/ablation.py`, launcher `notebooks/colab_lora-r24_336px_spread-vs-fewer-blocks_1k-pilot.ipynb`, `ana-branch`)
+- setup: same pilot as the depth/res and param-selection screens (1,000 classes, 40 fit / 5 holdout per class, prototype heads rebuilt from fit images, 3 epochs, one seed per arm); A = `lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml`. New opt-in option `keep_embed_trainable` (with `first_trainable_block > 0`, `pos_embed` + `cls_token` still train; costs the speed-up, since backward then runs through every block). J40 and C16 rerun here so every comparison is within one session.
 
 | Arm | Change | Holdout top-1 | vs A | Trainable | Peak VRAM | Training min |
 |---|---|---:|---:|---:|---:|---:|
@@ -493,12 +493,12 @@ Frozen features + linear probe, internal holdout accuracy:
 
 - results: **J's loss is about one third frozen embeddings, two thirds dropping the early blocks' capacity.** Training `pos_embed` + `cls_token` recovers 0.36 of J40's 0.96 points (J40_embed) and 0.26 of J24's 1.56 (J24_embed). **Spreading the budget beats concentrating it, confirmed directly:** at the same ~3.2–3.3%, r16 in all 12 blocks (C16, −0.54) beats r24 in blocks 4–11 with embeddings (J24_embed, −1.30) by **0.76 points**. Extra rank helps when the blocks are fixed (r40 over r24 in blocks 4–11: +0.60 frozen, +0.70 with embeddings). Reproducibility: J40 −0.96 here vs −0.92 in the depth/res screen; C16 −0.54 here vs C −0.66 in the r24 ablation, both within ~0.1 point.
 - consistent with the earlier screens: with LoRA in every block, the extras were worth only +0.14 (r24 ablation, arm B), but once blocks 0–3 are frozen, `pos_embed` alone is worth ~0.3–0.4, so early-block LoRA appears to compensate for frozen embeddings. Together with the param-selection pilot (no depth effect for one full-rank block), the evidence favours "spread capacity across all layers" over "early layers matter".
-- decision for the full-scale J run (`configs/lora_r40_blocks4_336.yaml`): **keep embeddings frozen.** J40_embed is over the 5% cap and gives up most of the speed-up (5.08 vs 4.43 training min, 17.4 vs 13.6 GB), and the full run's question is whether J's speed-up buys accuracy when epochs are limited.
+- decision for the full-scale J run (`configs/lora_r40_336px_blocks4-11_extras_proto-cosine_2.4h.yaml`): **keep embeddings frozen.** J40_embed is over the 5% cap and gives up most of the speed-up (5.08 vs 4.43 training min, 17.4 vs 13.6 GB), and the full run's question is whether J's speed-up buys accuracy when epochs are limited.
 - limitations: pilot scale; one seed per arm.
 
-### 2026-10-19 — Anastasia — GPS k42 @ 336, full scale (`configs/gps_k42_336.yaml`)
+### 2026-10-19 — Anastasia — GPS k42 @ 336, full scale (`configs/gps_top42-weights_336px_extras_proto-cosine_2.4h.yaml`)
 
-- run_dir: `CS604_RUNS/selected_20261019_072529`; mask `CS604_RUNS/gps_336/gps_mask_k42.pt` (launcher `notebooks/colab_launcher_ana_fullcheck.ipynb`, `METHOD = "gps_k42_336"`, `ana-branch`)
+- run_dir: `CS604_RUNS/selected_20261019_072529`; mask `CS604_RUNS/gps_336/gps_mask_k42.pt` (launcher `notebooks/colab_full-scale_gps-and-lora-no-extras.ipynb`, `METHOD = "gps_top42-weights_336px_extras_proto-cosine_2.4h"`, `ana-branch`)
 - val acc (ours / CodaBench): no internal holdout / **0.779** plain; crop 0.7 + flip not submitted (TTA added +0.6 to +1.0 on every other 336 run)
 - trainable % / peak VRAM / GPU-hours: **4.63% of the backbone** (3.98M / 85.99M, head excluded; only masked entries counted) / **20.37 GB** / 2.40 (144.0 training min, time limit reached; A100 40 GB)
 - what it is: full-scale check of pilot arm G_gps_k42 (−0.52 vs LoRA A). GPS (Zhang et al., CVPR 2024): for every output neuron of every block Linear and the patch embedding, only the top 42 input connections by gradient magnitude train (mask from 400 batches = 51,200 training images, ~5/class, through the prototype head, cross-entropy); all other entries stay at their pretrained values. No LoRA. Plus the recipe's extras (norms, biases, pos_embed, cls_token). Sparse entries at `unfreeze_lr` 1e-4 (the pilot's value, not swept), extras at 3e-4; otherwise the LoRA r24 recipe (prototype cosine head, head lr 3e-3, batch 256, wd 0.05 off for these tensors, label smoothing 0.1, 5% warmup + cosine fitted to 144 min).
@@ -507,19 +507,19 @@ Frozen features + linear probe, internal holdout accuracy:
 - results: **0.6 points below LoRA r24** (0.779 vs 0.785), just above Adapter (0.776) and 2.8 below full FT (0.807). **The pilot predicted this:** −0.52 on the pilot, −0.6 at full scale. So the pilot ranked GPS correctly even though GPS is the arm most like full FT, where the pilot failed (pilot −0.4 vs LoRA, full scale +2.2). Despite ~28% more epochs than LoRA (8.7 vs 6.8) and a train loss as low as full FT's, it scored lower, so its limit is what the sparse entries can express, not training time, the same conclusion as the depth/res screen. Under the 5% cap, LoRA r24 everywhere stays the best way to spend the budget.
 - next: full-scale checks of B (`lora_r24_336_no_extras`) and J (`lora_r40_blocks4_336`).
 
-### 2026-10-20 — Anastasia — LoRA r24 without extras @ 336, full scale (`configs/lora_r24_336_no_extras.yaml`)
+### 2026-10-20 — Anastasia — LoRA r24 without extras @ 336, full scale (`configs/lora_r24_336px_qkv-proj-fc_no-extras_proto-cosine_2.4h.yaml`)
 
-- run_dir: `CS604_RUNS/lora_20261020_062136` (launcher `notebooks/colab_launcher_ana_fullcheck.ipynb`, `METHOD = "lora_r24_336_no_extras"`, `ana-branch`). A first attempt crashed during epoch 6 (5 epochs, ~1,187 s/epoch) before resume support existed; this is a clean rerun from scratch.
+- run_dir: `CS604_RUNS/lora_20261020_062136` (launcher `notebooks/colab_full-scale_gps-and-lora-no-extras.ipynb`, `METHOD = "lora_r24_336px_qkv-proj-fc_no-extras_proto-cosine_2.4h"`, `ana-branch`). A first attempt crashed during epoch 6 (5 epochs, ~1,187 s/epoch) before resume support existed; this is a clean rerun from scratch.
 - val acc (ours / CodaBench): no internal holdout / **0.784** plain; crop 0.7 + flip not submitted
 - trainable % / peak VRAM / GPU-hours: **4.12% of the backbone** (3.54M / 85.99M, head excluded) / **19.30 GB** / 2.40 (144.0 training min, time limit reached; A100 40 GB)
-- what changed vs `lora_r24_336_recipe.yaml` (0.785): only `unfreeze_extra: []`, so LayerNorms, biases, `pos_embed` and `cls_token` stay frozen and only the LoRA layers train in the backbone. Full-scale check of pilot arm B.
+- what changed vs `lora_r24_336px_qkv-proj-fc_extras_proto-cosine_2.4h.yaml` (0.785): only `unfreeze_extra: []`, so LayerNorms, biases, `pos_embed` and `cls_token` stay frozen and only the LoRA layers train in the backbone. Full-scale check of pilot arm B.
 - results: **tie with LoRA r24** (0.784 vs 0.785, −0.1, inside ~0.3 seed noise), matching the pilot (arm B: −0.14). The extras (0.46M, 0.53% of the backbone) add nothing measurable when LoRA covers every block, even at 336 px where `pos_embed` is resampled from 224. They do matter once early blocks are frozen (depth-control pilot: ~0.3–0.4), so early-block LoRA appears to make up for frozen embeddings. **Leaner equivalent LoRA: 4.12% instead of 4.65% at the same accuracy.**
 - pilot vs full scale so far: DoRA (pilot +0.12 → full −0.2), GPS (−0.52 → −0.6), B (−0.14 → −0.1) agree; full FT vs LoRA (pilot −0.4 → full +2.2) does not. The pilot ranks PEFT variants reliably but cannot predict PEFT vs full FT.
-- cost: **~7.3 epochs** (7 full + 28% of the 8th) at **~1,185 s/epoch (~380 img/s)**, 7% faster per epoch than LoRA r24 with extras (~1,272 s, ~6.8 epochs): without the extras, nothing trainable sits outside the LoRA branches. Peak VRAM 19.30 vs 19.40 GB. So the extra 0.5 epoch also bought nothing measurable, consistent with GPS and the time-matched pilot arms. Latency **unmerged 15.37 ms/image at batch 1** (1.07 ms at batch 64); merged latency TBC via `colab_launcher_ana_lora_merge_latency.ipynb` (`RUN_NAME = "lora_20261020_062136"`), expected ≈ plain ViT as for LoRA r24 (7.68–8.35 ms).
+- cost: **~7.3 epochs** (7 full + 28% of the 8th) at **~1,185 s/epoch (~380 img/s)**, 7% faster per epoch than LoRA r24 with extras (~1,272 s, ~6.8 epochs): without the extras, nothing trainable sits outside the LoRA branches. Peak VRAM 19.30 vs 19.40 GB. So the extra 0.5 epoch also bought nothing measurable, consistent with GPS and the time-matched pilot arms. Latency **unmerged 15.37 ms/image at batch 1** (1.07 ms at batch 64); merged latency TBC via `colab_lora_merged-latency.ipynb` (`RUN_NAME = "lora_20261020_062136"`), expected ≈ plain ViT as for LoRA r24 (7.68–8.35 ms).
 
-### 2026-10-20 — Anastasia — random vs aimed training crops, pilot scale (`configs/ablation_train_crops.yaml`)
+### 2026-10-20 — Anastasia — random vs aimed training crops, pilot scale (`configs/lora_r24_336px_no-extras_random-vs-aimed-crops_1k-class-pilot.yaml`)
 
-- run_dir: `CS604_RUNS/ablation_ablation_train_crops/` (`scripts/ablation.py` + `scripts/find_boxes.py`, launcher `notebooks/colab_launcher_ana_train_crops.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/ablation_ablation_train_crops/` (`scripts/ablation.py` + `scripts/find_boxes.py`, launcher `notebooks/colab_lora-r24_336px_random-vs-aimed-crops_1k-pilot.ipynb`, `ana-branch`)
 - question: today's training crops (timm RandomResizedCrop, 8–100% of the photo) can show little or none of a small organism. Do crops aimed at the organism help? Base = LoRA r24 without extras (CodaBench 0.784, 4.12%); same pilot as the other ablations (1,000 classes, 40 fit / 5 holdout per class, 3 epochs, one seed per arm). Only the training crop differs.
 - boxes: DDT class co-localization (Wei et al., IJCAI 2017 / Pattern Recognition 2019) on the pretrained backbone, nothing trained: per class, the first principal component of the final patch tokens of its 40 fit images gives a score map per image; sign by the boundary prior (photo edges score lower); box = largest positive blob + 10% margin; no box if no blob of 4+ patches or the box covers over 80% of the photo. Fit images only. **10.2 min on the A100** for 40,000 images (data preparation, outside the training budget, like prototype building).
 
@@ -535,7 +535,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-21 — Anastasia — box-quality sweep: which box finder finds the organism? (no training; `scripts/box_sweep.py`)
 
-- run_dir: `CS604_RUNS/ablation_ablation_train_crops/box_sweep.{csv,json}`, `box_sweep_overlay.png` (launcher `notebooks/colab_launcher_ana_box_sweep.ipynb`, part 1 only, `ana-branch`)
+- run_dir: `CS604_RUNS/ablation_ablation_train_crops/box_sweep.{csv,json}`, `box_sweep_overlay.png` (launcher `notebooks/colab_box-finder_which-finds-the-organism.ipynb`, part 1 only, `ana-branch`)
 - setup: 7 box-finding variants (`src/boxes.py`) on 200 of the pilot's 1,000 classes (8,000 fit photos), pretrained backbone, nothing trained. Each scored by pretrained prototype-head top-1 on up to 5 box crops per class, against crops of the same size placed at random or in the centre. 12.0 min of features + 1.2 min of checks on the A100.
 
 | Variant | Photos with box | Median box area | Box | Random | Centre | Whole | Box − random |
@@ -571,7 +571,7 @@ Frozen features + linear probe, internal holdout accuracy:
 - results: **class IDs are ordered by relatedness**, smoothly decaying with distance, as in iNaturalist 2021, whose IDs follow the taxonomy (kingdom → … → genus → species). Neighbouring IDs are very likely the same genus. Consistent with a teammate's observation that the model's mistakes are often look-alike relatives. The dataset's sizes also match iNat21: 450,000 + 50,000 = the 500,000-image "train_mini" (50 per class); test 100,000 = iNat21's validation size (10 per class). So models trained on iNat21 (e.g. BioCLIP, iNat21 checkpoints) would likely have seen our training and validation photos: avoid them.
 - caveat: prototypes measure visual similarity under the pretrained backbone, so this shows IDs track visual relatedness; the taxonomic reading rests on iNat21's documented ID order.
 
-### 2026-10-19 — Qian — LoRA r24 crop/padding @ 448 (`configs/lora_r24_crop_pad_448.yaml`)
+### 2026-10-19 — Qian — LoRA r24 crop/padding @ 448 (`configs/lora_r24_448px_25pct-full-image_extras_proto-cosine_2.4h.yaml`)
 
 - run_dir: `CS604_RUNS/lora_r24_crop_pad_448_seed42/lora_20261019_014714/last.pt` (`qq_branch_v2`).
 - val acc (CodaBench):  **0.810**, submission **1002095**; crop 0.75 + autozoom (mass 0.7), no flip.
@@ -596,7 +596,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-25 — Anastasia — error analysis: where do the errors come from? (no training; `scripts/error_analysis.py`)
 
-- run_dir: `CS604_RUNS/error_analysis/` (`summary.json`, `topk.png`, `errors_{lora,full_ft}.csv`, `gallery_*.png`; launcher `notebooks/colab_launcher_ana_error_analysis.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/error_analysis/` (`summary.json`, `topk.png`, `errors_{lora,full_ft}.csv`, `gallery_*.png`; launcher `notebooks/colab_error-analysis_where-errors-come-from.ipynb`, `ana-branch`)
 - setup: two pilot checkpoints scored on their own untouched holdout (1,000 random classes × 5 photos = 5,000): `lora` = `A_random_crops` of the training-crop pilot (LoRA r24, no extras, 4.12%), `full_ft` = `F_full_ft_llrd` of the parameter-selection pilot (Van's LLRD recipe). Same classes and fit photos, so errors compare photo by photo. Eval crop 0.9, no TTA. Full-scale checkpoints were not used: they trained on these photos.
 
 | | top-1 | top-2 | top-3 | top-5 | top-10 | errors | answer was 2nd guess | answer in top 5 | guess within 5 IDs |
@@ -619,7 +619,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-25 — Anastasia — what causes the errors? (no training; `scripts/error_causes.py`)
 
-- run_dir: `CS604_RUNS/error_causes/` (`causes.json`, `causes_per_error.csv`, `classes.csv`, `causes_<cause>.png`; launcher `notebooks/colab_launcher_ana_error_causes.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/error_causes/` (`causes.json`, `causes_per_error.csv`, `classes.csv`, `causes_<cause>.png`; launcher `notebooks/colab_error-causes.ipynb`, `ana-branch`)
 - setup: the pilot LoRA checkpoint of the error analysis (`A_random_crops`, LoRA r24 no extras) embeds the pilot's 40,000 fit photos and 5,000 holdout photos; each of its 511 errors is tested for four causes (can overlap), and each flag is compared with the same flag among correctly classified photos.
 
 | Cause | Detected when | Share of errors | Among correct photos | Over-represented |
@@ -637,9 +637,9 @@ Frozen features + linear probe, internal holdout accuracy:
   - **two looks** is real but a minority: ripe yellow vs dried black fruit (9591), adult moth vs hairy caterpillar (1020), museum specimen vs live animal (4813), flowering vs leaf-only plant (6793, 6988).
 - results: the two main problems are **(1) photos showing a part, life stage, season or scale the class's ~40 training photos barely cover** and **(2) look-alike siblings**, overlapping on 16% of errors. Classes with two clear looks in training account for only ~10% of errors, and mislabelled training photos were not evident. More of the dataset helps the first (the full-scale runs train on 45 photos per class, the pilot on 40); better-generalising features (resolution, a stronger backbone) and multi-view prediction (zoom, crops) target it directly; taxonomy-aware smoothing, zoom on the deciding detail and margins between relatives target the second.
 
-### 2026-10-25 — Anastasia — taxonomy-aware label smoothing, pilot scale (`configs/ablation_taxonomy_smoothing.yaml`)
+### 2026-10-25 — Anastasia — taxonomy-aware label smoothing, pilot scale (`configs/lora_r24_336px_no-extras_neighbour-smoothing_1k-class-pilot.yaml`)
 
-- run_dir: `CS604_RUNS/ablation_ablation_taxonomy_smoothing/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_taxonomy_smoothing.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/ablation_ablation_taxonomy_smoothing/` (`scripts/ablation.py`, launcher `notebooks/colab_lora-r24_336px_neighbour-smoothing_1k-pilot.ipynb`, `ana-branch`)
 - setup: base LoRA r24 without extras (4.12%); 3 epochs; **the pilot's 1,000 classes are 100 blocks of 10 consecutive class IDs** (`class_block: 10`, pilot root `c1000_h5_s0_b10`), so each class's relatives are trained alongside it as in the full dataset; 40 fit / 5 holdout photos per class; one seed per arm. Only the training target differs (`src/losses.py`, `neighbour_smoothing`). `near5`: prediction within 5 IDs of the label.
 
 | Arm | Smoothing | Top-1 | vs A | near5 | Errors on relatives |
@@ -655,9 +655,9 @@ Frozen features + linear probe, internal holdout accuracy:
 - val_loss is not comparable across arms (different targets).
 - next: not promoted to a full run. The opposite direction, pushing relatives apart (an extra margin or harder weighting on neighbouring classes), targets the sibling problem directly and is untested.
 
-### 2026-10-26 — Anastasia — sibling margin: push relatives apart, pilot scale (`configs/ablation_sibling_margin.yaml`)
+### 2026-10-26 — Anastasia — sibling margin: push relatives apart, pilot scale (`configs/lora_r24_336px_no-extras_sibling-margin_1k-class-pilot.yaml`)
 
-- run_dir: `CS604_RUNS/ablation_ablation_sibling_margin/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_sibling_margin.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/ablation_ablation_sibling_margin/` (`scripts/ablation.py`, launcher `notebooks/colab_lora-r24_336px_sibling-margin_1k-pilot.ipynb`, `ana-branch`)
 - setup: same class-block subset as the taxonomy smoothing pilot (100 blocks of 10 consecutive IDs, `c1000_h5_s0_b10`); base LoRA r24 without extras (4.12%); 3 epochs; one seed per arm. CosFace margins on the cosine head, training only (`src/losses.py`): `cosine_margin` (Van's key and loss; identical output to her `CosineMarginLoss`) makes the true class beat every class by m; `sibling_margin` adds a further margin against the true class's 10 neighbours within 5 IDs only. Error split: relatives = guess within 5 IDs, far = beyond.
 
 | Arm | Margin | Top-1 | vs A | near5 | Errors on relatives | Far errors (share of photos) |
@@ -674,9 +674,9 @@ Frozen features + linear probe, internal holdout accuracy:
 - with the taxonomy smoothing pilot this closes the loss-design route for siblings at this budget: **pulling relatives together ties, pushing them apart hurts.** Reshaping the objective does not give the features what they need to tell siblings apart; that points to information (more pixels on the deciding detail: resolution, zoom) or better features (backbone), not a different loss.
 - next: no full run for any margin arm.
 
-### 2026-10-26 — Anastasia — LoRA no extras on all 10,000 classes with a labelled holdout; top-k and kNN re-ranking (`configs/allclass_holdout_lora_no_extras.yaml`)
+### 2026-10-26 — Anastasia — LoRA no extras on all 10,000 classes with a labelled holdout; top-k and kNN re-ranking (`configs/lora_r24_336px_no-extras_all-10000-classes_40fit-5holdout_144min.yaml`)
 
-- run_dir: `CS604_RUNS/ablation_allclass_holdout_lora_no_extras/runs/A_all_classes_144min/lora_20261026_123804`; analysis `CS604_RUNS/allclass_holdout_analysis/{errors,rerank}/` (launcher `notebooks/colab_launcher_ana_allclass_holdout.ipynb`, `ana-branch`)
+- run_dir: `CS604_RUNS/ablation_allclass_holdout_lora_no_extras/runs/A_all_classes_144min/lora_20261026_123804`; analysis `CS604_RUNS/allclass_holdout_analysis/{errors,rerank}/` (launcher `notebooks/colab_lora-r24_336px_all-10000-classes_topk-and-knn.ipynb`, `ana-branch`)
 - setup: LoRA r24 without extras (4.12%), the full-run recipe and **144 training minutes**, on **all 10,000 classes with 5 photos per class held out** (50,000 labelled holdout photos never trained on; 40 per class, 400,000, for training; split seed 0). Prototypes rebuilt from the 40 fit photos per class. The first full-scale model with a labelled holdout (the CodaBench runs train on all 45 photos and val labels are hidden).
 - holdout top-1 **0.778** (CodaBench 0.784 for the same recipe trained on all 45 photos per class): the holdout tracks CodaBench closely, slightly lower with 40 instead of 45 photos per class.
 
@@ -692,7 +692,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-27 — Anastasia — kNN re-ranking on CodaBench (`scripts/predict_rerank.py`)
 
-- run_dir: `CS604_RUNS/rerank_submission/val/` (launcher `notebooks/colab_launcher_ana_rerank_submission.ipynb`, `ana-branch`); checkpoint `CS604_RUNS/lora_20261020_062136` (LoRA r24 without extras, full scale); bank `CS604_RUNS/rerank_submission/bank_lora_20261020_062136.pt` (features of all 450,000 training photos from that checkpoint).
+- run_dir: `CS604_RUNS/rerank_submission/val/` (launcher `notebooks/colab_knn_codabench-submission.ipynb`, `ana-branch`); checkpoint `CS604_RUNS/lora_20261020_062136` (LoRA r24 without extras, full scale); bank `CS604_RUNS/rerank_submission/bank_lora_20261020_062136.pt` (features of all 450,000 training photos from that checkpoint).
 - what: the model's top 5 classes re-scored as `log p + 20 * knn`, knn = mean of the 3 best cosines between the photo and the candidate's own training photos. K = 5, m = 3, beta = 20 fixed in advance on the all-class holdout (2026-10-26), not tuned on CodaBench. Plain and re-ranked predictions from the same pass, submitted together.
 - val acc (CodaBench): **0.7982 re-ranked** vs **0.7842 plain** (same pass): **+1.40 points**, in line with the holdout's +1.29. The plain file reproduces this checkpoint's earlier 0.784, so the pipeline is unchanged apart from re-ranking. F1 macro 0.7952 vs 0.7813; precision 0.8201 vs 0.8068.
 - trainable % / peak VRAM / GPU-hours: unchanged (4.12% of the backbone; no training). Extra at prediction: the bank (450,000 × 768 features, ~0.7 GB in fp16, built once in ~15 min) and the re-ranking step, **0.0295 ms per photo** at batch 128 (`rerank_stats.json`; A100, excluding the forward pass), negligible next to the forward pass (merged LoRA ≈ plain ViT-B, 7.7–8.4 ms at batch 1 in other sessions; this checkpoint's merged latency is still TBC). Re-ranking changed **3,785 of 50,000 predictions (7.6%)**; the net +1.40 points = 700 more correct. Stored training-photo features are a lookup memory, not trained parameters.
@@ -708,7 +708,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-27 — Anastasia — kNN re-ranking on top of Van's full FT 448 + zoom (`scripts/predict_rerank.py --zoom`)
 
-- run_dir: `CS604_RUNS/rerank_submission_van/full_ft_20261017_122237/val/` (launcher `notebooks/colab_launcher_ana_rerank_van.ipynb`: clones `van-dev` for Van's code, adds only `scripts/predict_rerank.py` from `ana-branch`); checkpoint Van's full FT at 448 `CS604_RUNS/full_ft_20261017_122237` (Task 1); bank: features of all 450,000 training photos from that checkpoint (plain view, 448 px).
+- run_dir: `CS604_RUNS/rerank_submission_van/full_ft_20261017_122237/val/` (launcher `notebooks/colab_knn_on-van-448px-zoom.ipynb`: clones `van-dev` for Van's code, adds only `scripts/predict_rerank.py` from `ana-branch`); checkpoint Van's full FT at 448 `CS604_RUNS/full_ft_20261017_122237` (Task 1); bank: features of all 450,000 training photos from that checkpoint (plain view, 448 px).
 - what: Van's crop 0.9 + zoom prediction (the script's zoom-only output is identical, prediction for prediction, to `src.predict --zoom` at crop 0.9 and 0.75 in a CPU check), then the top 5 classes of those zoom probabilities re-scored with `log p + 20 * knn` (mean of the 3 best cosines to the candidate's training photos). K = 5, m = 3, beta = 20 fixed from Ana's all-class holdout (LoRA at 336, no zoom), not re-tuned for this model.
 - val acc (CodaBench), same pass: **0.8407 zoom + kNN** vs **0.8322 zoom only**: **+0.85 points** on top of Van's best result without balancing; the zoom-only file reproduces her 0.832 (ID 1004167). F1 macro 0.8381 vs 0.8292; precision 0.8585 vs 0.8503. **Team best without class-count balancing.** Balancing (0.845 on Van's full FT) is excluded by team decision: it relies on knowing how many photos each class has, which a deployed model would not know.
 - the gain is smaller than on Ana's LoRA at 336 (+1.40 without zoom): zoom already fixes some of the same near misses, the model is stronger (fewer errors left to fix), and beta was not tuned for zoom-averaged scores at 448. The beta 10 / 40 files from the same pass were not submitted.
@@ -716,7 +716,7 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-27 — Anastasia — which re-ranker is best? (no training of the model; `scripts/rerank_bakeoff.py`)
 
-- run_dir: `CS604_RUNS/rerank_bakeoff/` (`bakeoff.csv`, `bakeoff.json`, `linear_reranker.json`; launcher `notebooks/colab_launcher_ana_rerank_bakeoff.ipynb`, `ana-branch`); 17.7 min after the data download.
+- run_dir: `CS604_RUNS/rerank_bakeoff/` (`bakeoff.csv`, `bakeoff.json`, `linear_reranker.json`; launcher `notebooks/colab_knn_which-reranker-is-best.ipynb`, `ana-branch`); 17.7 min after the data download.
 - setup: the all-class holdout checkpoint (LoRA r24 no extras, 144 min on 40 photos per class of all 10,000 classes) on its 50,000 held-out photos; bank = its 400,000 training photos. Candidates = the model's top 5, from the plain view and from Van's zoom (crop 0.75 for both views). Every re-ranker chooses its setting (or is trained) on one half of the holdout classes and is scored on the other, then swapped. "+ balancing" = Van's class-count balancing (`src/van_balance.py`, ported unchanged; Sinkhorn to 5 photos per class) applied to the re-ranker's candidate scores.
 
 | Re-ranker (added to log p) | plain: acc (gain) | + balancing | zoom: acc (gain) | + balancing |
@@ -744,23 +744,23 @@ Frozen features + linear probe, internal holdout accuracy:
 
 ### 2026-10-27 — Anastasia — merged-LoRA latency, third session (`scripts/latency_merged.py`)
 
-- run: `colab_launcher_ana_lora_merge_latency.ipynb` on `lora_20261007_051926` (LoRA r24 + extras; RUN_NAME was not switched to the no-extras run, so this times the with-extras checkpoint). A100-SXM4-40GB, bf16, synthetic 336 px, 30 warm-ups + 200 iterations; `inference_latency_merged.json` in that run folder.
+- run: `colab_lora_merged-latency.ipynb` on `lora_20261007_051926` (LoRA r24 + extras; RUN_NAME was not switched to the no-extras run, so this times the with-extras checkpoint). A100-SXM4-40GB, bf16, synthetic 336 px, 30 warm-ups + 200 iterations; `inference_latency_merged.json` in that run folder.
 - batch 1: **merged 7.78 ms = plain ViT-B with the same head 7.78 ms**; unmerged 14.24 ms. Batch 64: merged 0.647, plain 0.648, unmerged 1.066 ms/image. Merging is exact: 0 LoRA layers left, fp32 max logit difference 1.5e-5, fp32 top-1 agreement 100% (bf16 96.5% on 256 synthetic images, from bf16 rounding of near-ties).
 - third session agreeing with the first two (7.68 / 8.35 ms merged vs 7.58 / 8.20 plain): merged LoRA costs nothing at inference. Once merged, LoRA r24 without extras is the same plain ViT-B, so its latency is taken as this 7.78 ms (CSV rows for 0.784 and the kNN 0.7982, which adds 0.03 ms of re-ranking).
 
 ### 2026-10-28 — Wenqi — kNN re-ranking on Van's AdaptFormer + LoRA at 448 (`scripts/predict_rerank.py --zoom`)
 
-- run_dir: `CS604_RUNS/rerank_submission_van/van_adaptformer_20261021_083823/val/` (launcher `notebooks/colab_launcher_ana_rerank_van.ipynb`, `RUN_NAME = van_adaptformer_20261021_083823`: clones `van-dev`, adds only `scripts/predict_rerank.py` from `ana-branch`); checkpoint `CS604_RUNS/van_adaptformer_20261021_083823/last.pt` (Task 2: AdaptFormer width 192 + biases/LayerNorms + LoRA r16 on qkv, 448 px); bank `bank_van_adaptformer_20261021_083823.pt` (features of all 450,000 training photos from that checkpoint, plain view).
+- run_dir: `CS604_RUNS/rerank_submission_van/van_adaptformer_20261021_083823/val/` (launcher `notebooks/colab_knn_on-van-448px-zoom.ipynb`, `RUN_NAME = van_adaptformer_20261021_083823`: clones `van-dev`, adds only `scripts/predict_rerank.py` from `ana-branch`); checkpoint `CS604_RUNS/van_adaptformer_20261021_083823/last.pt` (Task 2: AdaptFormer width 192 + biases/LayerNorms + LoRA r16 on qkv, 448 px); bank `bank_van_adaptformer_20261021_083823.pt` (features of all 450,000 training photos from that checkpoint, plain view).
 - what: crop 0.9 + zoom, then the top 5 classes of those zoom probabilities re-scored with `log p + 20 * knn` (mean of the 3 best cosines to the candidate's training photos). K = 5, m = 3, beta = 20, the same settings as the 0.8407 full fine-tune file. Not retuned on this checkpoint. Submitted `val_team_08.zip` only (`val_team_08.txt` = zoom + kNN, beta 20). The plain, zoom-only, beta 10 and beta 40 zips from the same pass were not submitted.
 - val acc (CodaBench): **0.8308**. F1 macro 0.8271, F1 micro 0.8308, precision 0.8489, recall 0.8308. Scored 21:59 SGT on 2026-10-28. Against this checkpoint's earlier crop 0.9 + zoom score (**0.822**): **+0.88 points**. The zoom-only file from this pass was not sent to CodaBench; re-ranking changed **2,580 of 50,000** predictions relative to that pass's zoom output (`rerank_stats.json`, `zoom_knn_b20`).
 - trainable % / peak VRAM / GPU-hours: no new training. Same checkpoint as the 0.822 run (4.94% of the backbone, head excluded; peak 14.66 GB; 144 training minutes). Extra at prediction: the bank (~0.7 GB fp16, 450,000 × 768, built once) and the re-ranking step, **0.0621 ms per photo** at batch 64 (`rerank_stats.json`; excludes the two zoom forward passes). Zoom latency of this 448 checkpoint is still not measured.
 - comparison: the gain matches the full fine-tune's (+0.85, 0.8322 → 0.8407) more closely than the plain LoRA gain at 336 (+1.40). Full fine-tune remains ahead by 1.0 point (0.8407 vs 0.8308). This is the best under-5% score without class-count balancing. Beta 10 would have changed 1,672 zoom predictions and beta 40 would have changed 3,781; neither was submitted.
 
-### 2026-11-01 — Anastasia — layer decay + high lr vs one flat low lr, everything else identical (`configs/ablation_layer_decay.yaml`)
+### 2026-11-01 — Anastasia — layer decay + high lr vs one flat low lr, everything else identical (`configs/full_ft_336px_layer-decay-4e-4_vs_flat-lr3e-5_1k-pilot.yaml`)
 
-- run_dir: `CS604_RUNS/ablation_ablation_layer_decay/` (`scripts/ablation.py`, launcher `notebooks/colab_launcher_ana_layer_decay.ipynb`, `ana-branch`); A100 (a first attempt on a T4 ran out of memory on the first batch)
+- run_dir: `CS604_RUNS/ablation_ablation_layer_decay/` (`scripts/ablation.py`, launcher `notebooks/colab_full-ft_336px_layer-decay-vs-flat-lr_1k-pilot.ipynb`, `ana-branch`); A100 (a first attempt on a T4 ran out of memory on the first batch)
 - question: is Van's layer-wise lr decay better than fine-tuning every block at one low lr, when each uses a good lr? Van removed layer decay only at 4e-4 (−6.7 on her holdout); the 3-epoch parameter-selection pilot then had `F_llrd` and `F_flat` tie (0.8960 vs 0.8956), but those arms also differed in head lr and drop_path.
-- setup: full FT at 336 (`full_ft_336_llrd.yaml`), same 1,000-class pilot (40 fit / 5 holdout per class, subset seed 0), **9 epochs** (about the full 336 run's epoch count), 5% warmup + cosine over the epochs (no time budget), two seeds per arm. **Only `lr` and `layer_decay` differ** (checked by merging the arm configs): A = layer decay 0.75, top lr 4e-4 (bottom 9.5e-6); B = no layer decay, lr 3e-5 everywhere (best of the 1e-5 / 3e-5 / 1e-4 no-decay sweep, 2026-10-06). Shared: prototype cosine head from the pilot's fit images, head lr 4e-3, drop_path 0.1, label smoothing 0.1, clip 1.0, batch 128 × 2.
+- setup: full FT at 336 (`full_ft_336px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml`), same 1,000-class pilot (40 fit / 5 holdout per class, subset seed 0), **9 epochs** (about the full 336 run's epoch count), 5% warmup + cosine over the epochs (no time budget), two seeds per arm. **Only `lr` and `layer_decay` differ** (checked by merging the arm configs): A = layer decay 0.75, top lr 4e-4 (bottom 9.5e-6); B = no layer decay, lr 3e-5 everywhere (best of the 1e-5 / 3e-5 / 1e-4 no-decay sweep, 2026-10-06). Shared: prototype cosine head from the pilot's fit images, head lr 4e-3, drop_path 0.1, label smoothing 0.1, clip 1.0, batch 128 × 2.
 
 | Arm | Layer decay | lr | Seed | Holdout top-1 | Final loss | Wall min |
 |---|---|---|---:|---:|---:|---:|

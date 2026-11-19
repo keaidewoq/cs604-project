@@ -1,0 +1,5 @@
+# Van's stronger no-train prototype backbone (IN21k only, no IN1k fine-tune).
+# Rebuild prototypes after switching model_name.
+inherits: class-prototypes_augreg2_224px_cosine-head.yaml
+model_name: vit_base_patch16_224.augreg_in21k
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_augreg_in21k.pt

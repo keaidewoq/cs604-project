@@ -150,7 +150,7 @@ CodaBench, 336 px, plain crop 0.9, 144 min:
 
 - Context: an early LoRA r16 with a weak head recipe scored 71.7; the shared recipe added ~6.8 pp.
 - 77.6–78.5 is within ~1 pp, close to seed noise. Methods differ in head type, learning rate and epochs reached, so this is an observed pipeline ranking, not a controlled causal one.
-- **Placeholder:** controlled comparison on the all-class holdout (`configs/ablation_peft_controlled.yaml`: same head, 20 min, plain crop, with seeds for LoRA and AdaptFormer), due 2026-10-30. Replace or annotate this slide's ranking with it when it lands.
+- **Placeholder:** controlled comparison on the all-class holdout (`configs/peft_336px_controlled-comparison_all-10000-classes.yaml`: same head, 20 min, plain crop, with seeds for LoRA and AdaptFormer), due 2026-10-30. Replace or annotate this slide's ranking with it when it lands.
 
 **GRAPH REQUIRED:** scatter, x = trainable backbone % (log scale), y = Top-1, one label per method, 336 plain only. **TABLE REQUIRED:** the table above. Latencies come from different sessions (batch-1 variation ~1 ms).
 
@@ -368,7 +368,7 @@ CodaBench confirmations:
 
 1. **Paired error comparison** (fixed / broken / shared) between models on the same holdout: **script ready** (`scripts/paired_compare.py`). Do not imply resolution causality unless recipes match.
 2. **McNemar + bootstrap intervals** (by photo and by class) for small differences: covered by the same script. Image-level uncertainty does not measure seed variation.
-3. **Controlled PEFT comparison** on the all-class holdout (`configs/ablation_peft_controlled.yaml`), with seeds for LoRA and AdaptFormer: ready to run, due 2026-10-30.
+3. **Controlled PEFT comparison** on the all-class holdout (`configs/peft_336px_controlled-comparison_all-10000-classes.yaml`), with seeds for LoRA and AdaptFormer: ready to run, due 2026-10-30.
 4. **Equal-parameter controls at 4.94%** (AdaptFormer width 224 + biases/norms; LoRA r28 + biases/norms): Van, in his holdout setup.
 5. **Per-class recall and confusion:** macro recall, class-level distribution, look-alike examples.
 6. **End-to-end latency and memory** under one protocol: done for the two finals (Van, 2026-10-28); other models are from earlier sessions.
