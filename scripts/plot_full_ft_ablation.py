@@ -1,7 +1,9 @@
 """Slide figure: Van's full-FT recipe ablation (Van holdout, 3 epochs, one change at a time).
 
-One control; "- remove layer decay" is tested against the control, the "+" rows build on the
-row above. Numbers from report/presentation_storyboard.md (slide 6) / progress_log.md (2026-10-06).
+One control; each "+" row builds on the row above. Van's "no layer decay" arm is left out: it
+kept every layer at 4e-4 instead of tuning a flat lr, and a tuned flat lr (3e-5) ties layer decay
+(progress_log.md, 2026-11-01). Numbers from report/presentation_storyboard.md (slide 6) /
+progress_log.md (2026-10-06).
 
     python scripts/plot_full_ft_ablation.py --out figures/full_ft_ablation
 writes <out>.png and <out>.svg.
@@ -23,16 +25,14 @@ RECIPE = ("#e1f5ee", "#1d9e75")
 
 # (label, top-1, change vs the reference row, style)
 ROWS = [
-    ("Control (LP-FT start, layer decay)", 69.83, None, NEUTRAL),
-    ("− remove layer decay", 63.12, 63.12 - 69.83, REMOVED),
+    ("Control (LP-FT start, lr 4e-4)", 69.83, None, NEUTRAL),
     ("+ head lr 10× backbone", 71.37, 71.37 - 69.83, RECIPE),
     ("+ prototype head start", 72.98, 72.98 - 71.37, RECIPE),
     ("+ train 6 epochs (not 3)", 73.97, 73.97 - 72.98, NEUTRAL),
     ("+ train 12 epochs", 74.49, 74.49 - 73.97, NEUTRAL),
 ]
-AXIS_START, AXIS_END = 60, 77
-GAP_AFTER = 1          # dashed rule after this row: removal above, build-up below
-BAR_H, ROW_STEP, GAP = 0.62, 1.0, 0.45
+AXIS_START, AXIS_END = 66, 77
+BAR_H, ROW_STEP = 0.62, 1.0
 
 
 def main():
@@ -46,10 +46,7 @@ def main():
     ax.set_facecolor(PAGE)
     ax.set_xlim(AXIS_START, AXIS_END)
 
-    ys, y = [], 0.0
-    for i in range(len(ROWS)):
-        ys.append(-y)
-        y += ROW_STEP + (GAP if i == GAP_AFTER else 0)
+    ys = [-i * ROW_STEP for i in range(len(ROWS))]
     ax.set_ylim(ys[-1] - 0.6, 0.6)
 
     # round the bar ends by the same number of pixels in x and y
@@ -66,12 +63,8 @@ def main():
         text = f"{acc:.1f}" if delta is None else f"{acc:.1f} ({delta:+.1f})".replace("-", "−")
         ax.text(acc + 0.3, y, text, va="center", ha="left", color=INK)
 
-    rule_y = (ys[GAP_AFTER] + ys[GAP_AFTER + 1]) / 2
-    ax.plot([-0.28, 0.95], [rule_y, rule_y], transform=ax.get_yaxis_transform(), clip_on=False,
-            color=RULE, lw=0.8, ls=(0, (4, 4)))
-
     ax.set_yticks(ys, [r[0] for r in ROWS])
-    ax.set_xticks(range(AXIS_START, AXIS_END, 4))
+    ax.set_xticks(range(AXIS_START, AXIS_END, 2))
     ax.tick_params(axis="y", length=0, pad=10)
     ax.tick_params(axis="x", length=0, pad=8)
     for side in ("top", "right", "bottom"):
@@ -79,8 +72,8 @@ def main():
     ax.spines["left"].set_color(RULE)
     ax.spines["left"].set_linewidth(0.8)
 
-    fig.text(0.5, 0.03, f"Van holdout, top-1 %, one seed (spread 0.33 pp) · axis starts at {AXIS_START} "
-             "· ties: crop scale, colour jitter, head lr 30×", ha="center", va="bottom",
+    fig.text(0.5, 0.03, f"Van holdout, top-1 %, one seed (spread 0.33 pp), layer decay 0.75 throughout "
+             f"· axis starts at {AXIS_START} · ties: crop scale, colour jitter, head lr 30×", ha="center", va="bottom",
              fontsize=11, color=INK_2)
 
     out = Path(args.out)

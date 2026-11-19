@@ -1,0 +1,241 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{iclr2026_conference,times}
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{subcaption}
+\usepackage{wrapfig}
+
+% Placeholder marker for sections not written yet. Remove before submission.
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\graphicspath{{../../figures/}{../slide-images/}}
+
+\title{Where the Accuracy Comes From: Recipe, Resolution, \\
+Parameter Placement and Prediction-Time Re-ranking \\
+for Adapting ViT-B/16 to 10,000 Fine-Grained Classes}
+
+\author{Anastasia Frances Frederica, Le Thi Hong Van, Liu Wenqi \& Xu Qianqian \\
+CS604 Team 08 \\
+Singapore Management University
+}
+
+\iclrfinalcopy % Show author names (course report, not an anonymous submission).
+\begin{document}
+
+\maketitle
+
+% ---------------------------------------------------------------------------
+\begin{abstract}
+\todo{About 200 words: problem, three RQs, key numbers (full FT 84.07\%, AF + LoRA
+at 4.94\% 83.08\%, zoom + kNN +2.0 pp on the holdout without retraining, +0.93 on
+Phase 2), one-line lesson.}
+\end{abstract}
+
+% ---------------------------------------------------------------------------
+\section{Introduction}
+\label{sec:intro}
+
+A pretrained Vision Transformer (ViT) is rarely used as it is: it is adapted to the task
+at hand. We study this adaptation in a setting that is hard on two counts. The task is
+fine-grained classification over 10,000 classes with only 45 training images per class,
+where closely related classes share shape, colour and texture (inter-class similarity) and
+images of one class vary in pose, life stage, lighting and background (intra-class
+variation). The compute is also fixed: every training run must fit in 2 hours on 48\,GB of
+GPU memory, starting from one ViT-B/16 checkpoint with 86M parameters.
+
+Two practical tensions motivate the project. First, full fine-tuning gives the model the
+most freedom, but every new task then needs its own 86M-parameter copy and the memory to
+train it. Parameter-efficient fine-tuning (PEFT) freezes the backbone and trains small
+modules instead, typically under 5\% of the parameters. What matters is how much accuracy
+that costs. Second, PEFT methods are usually compared by how many parameters they train.
+Our budget, however, is set in wall-clock time, and inference cost is set by latency, so
+training fewer parameters only helps if it also saves time, memory or latency. A third
+question follows once a model is trained: its remaining errors are costly to fix by
+retraining, so we ask whether they can be reduced more cheaply.
+
+Our first experiment reframed the project. Fine-tuning all 86M weights for the full
+budget reached 61.3\% top-1, \emph{below} a linear probe trained on frozen features
+(62.5\%). Giving every weight freedom to change did not help. The limit was \emph{how}
+the weights were changed: the head's starting point, the learning rate of each block and
+the input resolution. We therefore treat adaptation as a joint design problem, in which
+these choices and the prediction procedure count as much as the adaptation method. A
+second consequence is that any comparison between full fine-tuning and PEFT needs a
+strong full fine-tuning baseline. Comparing against the 61.3\% run would flatter PEFT.
+
+We ask three research questions:
+\begin{itemize}
+  \item[\textbf{RQ1}] \textbf{Full fine-tuning versus PEFT under a fixed budget.} With the
+  same 2-hour budget and the same prediction pipeline, how much accuracy does a PEFT
+  method training under 5\% of the backbone give up relative to a well-tuned full
+  fine-tune, and which costs does it actually reduce: trainable parameters, training
+  memory, training time or inference latency?
+  \item[\textbf{RQ2}] \textbf{Spending a fixed PEFT budget.} With the trainable share held
+  below 5\%, how much does accuracy depend on the choice of method, on \emph{where} the
+  parameters sit in the network, and on \emph{what kind} of capacity they add?
+  \item[\textbf{RQ3}] \textbf{What limits the adapted model.} What kinds of error remain
+  after adaptation, and can prediction-time steps that train nothing reduce them?
+\end{itemize}
+
+Our contributions are as follows.
+\begin{itemize}
+  \item \textbf{A strong full fine-tuning baseline under the budget}
+  (Sections~\ref{sec:method} and~\ref{sec:results}). A prototype-initialised cosine head
+  and layer-wise learning-rate decay raise full fine-tuning from 66.3\% to 75.7\% at
+  224\,px. Spending the budget on resolution rather than epochs raises it to 82.5\% at
+  448\,px. At equal compute, 448\,px beats 224\,px even though it fits about half as many
+epochs (4.1 vs 7.7).
+  \item \textbf{A controlled study of how to spend a PEFT budget.} \emph{Which} parameters
+  are trained matters more than \emph{how many}. BitFit reaches 73.4\% with 0.12\% of the
+  backbone, while last-block attention reaches 67.9\% with 2.75\%. Cheap biases and
+  LayerNorms in every block help. Once every block can adapt, placement barely matters,
+  and LoRA is the efficient way to add capacity. The resulting AdaptFormer + LoRA design
+  trains 4.94\% of the backbone and finishes within 1.0 percentage point (pp) of full
+  fine-tuning (83.08\% vs 84.07\%). It saves training memory (14.66 vs 17.80\,GB) but no
+  training time (both complete 5.5 epochs), and is slower at inference (11.27 vs 8.47\,ms
+  per image).
+  \item \textbf{An error analysis that motivates two training-free extensions.} About half
+  of the remaining errors confuse look-alike relatives and about half involve
+  appearances unlike any training image of the class. In 64\% of errors the true class is
+  still in the top five. An attention-guided zoom (a second, closer view) and kNN
+  re-ranking of the top five against individual training images together add
+  +2.0\,pp on our holdout. With settings fixed in advance, the kNN gain held on the
+  hidden Phase~2 test set (+0.93\,pp).
+  \item \textbf{An analysis of training dynamics and overfitting} for both final systems
+  (Section~\ref{sec:results}). \todo{one-sentence finding once the loss and
+  train-vs-holdout curves are in.}
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Pretrained Vision Transformers and transfer.}
+\todo{ViT \citep{dosovitskiy2021vit}, AugReg \citep{steiner2022augreg}.}
+
+\paragraph{Full fine-tuning recipes.}
+\todo{LP-FT \citep{kumar2022lpft}, layer-wise LR decay \citep{bao2022beit,he2022mae},
+cosine and margin heads \citep{wang2018cosface}, class-prototype classifiers
+\citep{mensink2013ncm,snell2017protonet}. An alternative is to start each class weight from
+the mean feature of that class, as in weight imprinting \citep{qi2018imprinting}. Resolution \citep{touvron2019fixres}.
+Pros and cons.}
+
+\paragraph{Parameter-efficient fine-tuning.}
+\todo{BitFit \citep{zaken2022bitfit}, prefix tuning and VPT \citep{li2021prefix,jia2022vpt},
+adapters \citep{houlsby2019adapter}, AdaptFormer \citep{chen2022adaptformer},
+LoRA \citep{hu2022lora}, DoRA \citep{liu2024dora}, AdaLoRA \citep{zhang2023adalora},
+GPS \citep{zhang2024gps}, surgical FT \citep{lee2023surgical}.
+Pros and cons; Table~\ref{tab:related}.}
+
+\paragraph{Prediction-time methods.}
+\todo{Test-time augmentation \citep{krizhevsky2012imagenet}; attention-guided zoom for fine-grained recognition
+\citep{fu2017racnn,hu2019wsdan}; kNN and memory-based classification
+\citep{nakata2022knn,wu2018instance,khandelwal2020knnlm}.}
+
+\todo{Gap: methods are usually compared at equal parameters; we compare at equal
+wall-clock and treat the head, resolution and prediction as part of the method.}
+
+% Table 1: method | what trains | mergeable | pros | cons
+% \begin{table}[t] ... \label{tab:related} \end{table}
+
+% ---------------------------------------------------------------------------
+\section{Method}
+\label{sec:method}
+
+% Each subsection: What we did -> Why (evidence or hypothesis) -> What we rejected.
+
+\subsection{Problem setup and budget}
+\paragraph{Dataset.} We use the CS604 course project dataset \citep{cs604data}, an anonymised
+fine-grained image classification dataset with 10,000 classes. It provides 450,000 labelled
+training images (45 per class), a validation set of 50,000 images (5 per class) and a test set
+of 100,000 images (10 per class). Validation and test labels are not available to us, so both
+sets are scored only on the evaluation server (Section~\ref{sec:setup}). Class names are
+anonymised, so no class semantics or hierarchy is available.
+
+\todo{ViT-B/16 (augreg2) \citep{steiner2022augreg} pretrained on ImageNet-21k \citep{deng2009imagenet}, loaded via timm \citep{rw2019timm} on PyTorch \citep{paszke2019pytorch} -- 2 h $\times$ 48 GB
+(144-minute runs), metrics.}
+
+\subsection{Overview}
+\todo{Figure~\ref{fig:pipeline}: three lanes (full FT / PEFT / prediction time),
+our changes highlighted.}
+
+% \begin{figure}[t]
+%   \centering
+%   \includegraphics[width=\linewidth]{pipeline.pdf}
+%   \caption{...}
+%   \label{fig:pipeline}
+% \end{figure}
+
+\subsection{Full fine-tuning recipe}
+\todo{Diagnosis; prototype cosine head \citep{mensink2013ncm,snell2017protonet} (why not LP-FT); layer-wise LR decay 0.75;
+schedule and regularisation (details in Appendix). Untuned settings follow the MAE ViT-B fine-tuning recipe
+\citep{he2022mae}: label smoothing 0.1 \citep{szegedy2016inception}, drop path 0.1 \citep{huang2016stochdepth},
+AdamW weight decay 0.05 \citep{loshchilov2019adamw}, no decay on norms and biases \citep{he2019bagoftricks};
+gradient clipping at norm 1.0 as in ViT fine-tuning \citep{dosovitskiy2021vit}.}
+
+\subsection{Spending compute on pixels, not epochs}
+\todo{Small subjects (12 vs 35 patches); trade-off against epochs.}
+
+\subsection{PEFT design}
+\todo{AF w192 + LoRA + biases/norms + cosine margin at 4.94\%; why AF is kept;
+latency cost of the branch that cannot be merged.}
+
+\subsection{Prediction-time extensions}
+\todo{Zoom second view from a class activation map \citep{zhou2016cam}; kNN re-ranking, score $= \log p + 20 \times$ mean of the
+top-3 cosines over the top-5 list; settings fixed on half of the classes.}
+
+\subsection{Parameter accounting}
+\todo{What counts towards the 5\% budget (head excluded).}
+
+% ---------------------------------------------------------------------------
+\section{Experimental Setup}
+\label{sec:setup}
+\todo{Three-stage protocol (pilot, labelled holdout, CodaBench) and why; hardware,
+bf16, batch sizes, seeds, tie threshold, latency protocol.}
+
+% ---------------------------------------------------------------------------
+\section{Results and Analysis}
+\label{sec:results}
+
+\subsection{Main results}
+\todo{Table: final systems on Phase 1 and Phase 2: top-1, trainable \%, VRAM,
+latency, epochs, GPU-hours.}
+
+\subsection{Full fine-tuning ablations}
+\todo{LP-FT vs prototype; layer decay; resolution at equal compute; waterfall.}
+
+\subsection{PEFT comparisons}
+\todo{Method scorecard, cost table, placement, capacity type, build path.}
+
+\subsection{Training dynamics and overfitting}
+\todo{Loss curves of both finals; train vs holdout curves; overfitting vs
+underfitting; diminishing epochs; loss levels are not comparable across systems.}
+
+\subsection{Error analysis}
+\todo{Example types, cause shares, error rate by flag, top-k.}
+
+\subsection{Prediction-time extensions}
+\todo{Second view, kNN variants, zoom + kNN additivity, Phase 2 transfer and cost.}
+
+% ---------------------------------------------------------------------------
+\section{Discussion and Conclusion}
+\label{sec:conclusion}
+\todo{Answers to RQ1--RQ3; negative results; limitations; recommendations.}
+
+% ---------------------------------------------------------------------------
+\bibliography{refs}
+\bibliographystyle{iclr2026_conference}
+
+\appendix
+\section{Appendix}
+\todo{LR sweep; full FT recipe; head $\times$ layer decay; PEFT tuning grids;
+error-flag definitions; training logs; team contributions.}
+
+\end{document}
