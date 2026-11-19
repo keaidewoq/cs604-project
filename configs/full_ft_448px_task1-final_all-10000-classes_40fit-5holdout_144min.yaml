@@ -1,0 +1,22 @@
+# Original filename: allclass_holdout_full_ft_448.yaml
+# Brought onto main from origin/van-allclass-ft448 for the final report.
+# The filename states the config. inherits: paths point at the renamed files.
+# Van's best full fine-tune (448, Task 1 final recipe) at full length on ALL 10,000 classes,
+# with the same split as allclass_holdout_lora_no_extras.yaml: 5 photos per class held out
+# (50,000 labelled photos never trained on), 40 per class for training (400,000).
+#
+# Why: the CodaBench full-FT runs train on all 45 photos and val labels are hidden, so they
+# have no labelled holdout. This gives the presentation's top-1/2/3/5 and error causes
+# (scripts/error_causes.py) for the model we actually submit, at 448.
+#
+# Training as in the final: 144 training minutes with the cosine fitted to them. Prototypes are
+# rebuilt at 448 from the 40 fit photos per class, so the head never saw the holdout.
+# Launcher: notebooks/van_colab_launcher_allclass_ft448.ipynb.
+base: full_ft_448px_proto-cosine_llrd0.75_task1-final_fused-adamw_compile_2.4h.yaml         # relative to this file
+base_prototypes: /content/drive/MyDrive/CS604_RUNS/prototypes_448.pt
+pilot:
+  num_classes_subset: 10000             # all classes
+  holdout_per_class: 5
+  subset_seed: 0
+arms:
+  A_all_classes_144min: {}

@@ -1,4 +1,4 @@
-# Van's full FT recipe (configs/van_full_ft_proto_llrd.yaml, CodaBench 0.757 at 224)
+# Van's full FT recipe (configs/full_ft_224px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml, CodaBench 0.757 at 224)
 # run at 336, to test whether resolution adds on top of it.
 # Needs Van's trainer options from `van-dev` (layer_decay, drop_path_rate,
 # clip_grad_norm, schedule_fit_time).

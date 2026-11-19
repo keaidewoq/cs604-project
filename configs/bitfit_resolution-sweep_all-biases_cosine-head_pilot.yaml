@@ -1,0 +1,7 @@
+# Original filename: bitfit_resolution_ablation.yaml
+# Brought onto main from origin/qq_bitfit_ablation for the final report.
+# The filename states the config. inherits: paths point at the renamed files.
+# Equal-epoch comparison; the notebook sets img_size independently per arm.
+inherits: bitfit_336px_all-biases_linear-vs-cosine-head_1k-class-pilot.yaml
+head_type: cosine
+cosine_scale: 20.0

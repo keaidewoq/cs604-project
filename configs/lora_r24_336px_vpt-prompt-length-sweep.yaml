@@ -1,0 +1,14 @@
+# Original filename: lora_vpt_ablation.yaml
+# Brought onto main from origin/qq_lora_vpt_ablation for the final report.
+# The filename states the config. inherits: paths point at the renamed files.
+# The runner overrides split paths, fit-only prototypes, seed and prompt arm.
+inherits: lora_r24_336_recipe.yaml
+prompt_mode: none
+prompt_length: 0
+prompt_lr: 0.001
+max_adaptation_pct: 5.0
+epochs: 5
+warmup: 0.25
+max_train_minutes: null
+schedule_fit_time: false
+evaluate_before_training: false

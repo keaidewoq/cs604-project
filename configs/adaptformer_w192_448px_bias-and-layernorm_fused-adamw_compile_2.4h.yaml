@@ -1,0 +1,27 @@
+# Original filename: van_adaptformer_bias_448_fast.yaml
+# Brought onto main from origin/van-448-finals for the final report.
+# The filename states the config. inherits: paths point at the renamed files.
+# Van's AdaptFormer (Task 2) + trainable biases and LayerNorm weights at 448 px:
+# adaptformer_w192_336px_bias-and-layernorm_fused-adamw_compile_2.4h.yaml with img_size 448, the shared prototypes_448.pt (all 45
+# images/class; the file full_ft_448px_proto-cosine_llrd0.75_fused-adamw_compile_2.4h.yaml used, sha256 5abf68ac...), and batch 64 x 4
+# (same effective batch 256) for memory headroom, as in the full FT at 448. Nothing else changes
+# (adapters width 192, CosFace 0.1, lr 1e-3, head lr 4e-3, speed options). Backbone trainable
+# share is unchanged (the position embedding stays frozen): about 4.27%, under the 5% limit.
+#
+# Why: on Van's laptop screen at equal compute (10 images/class, same time budget per arm,
+# fixed 5/class holdout, crop 0.9), 336 / 384 / 448 scored 59.63 / 61.18 / 62.72%: +1.55 then
+# +1.54, so AdaptFormer has not flattened (full FT: +0.86 then +0.73, flat by 512). The 384
+# step became +0.5 on CodaBench with zoom (0.802 -> 0.807), so expect a smaller gain than the
+# screen's. Compare with adaptformer_w192_384px_bias-and-layernorm_fused-adamw_compile_2.4h.yaml: 0.794 plain, 0.807 crop 0.75 + zoom.
+#
+# Cost: ~1.3x per training image of 384 (laptop 96 vs 127 img/s), so expect about 6.5 epochs in
+# 144 minutes instead of 8.6. Peak memory: 384 used 19.9 GB at batch 128; 448 at batch 64 should
+# need well under 40 GB.
+#
+# Colab: METHOD = "van_adaptformer_bias_448_fast", PROTO_PT = f"{DRIVE_OUT}/prototypes_448.pt",
+# TTA_CROP = 0.75.
+inherits: adaptformer_w192_336px_bias-and-layernorm_fused-adamw_compile_2.4h.yaml
+img_size: 448
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_448.pt
+batch_size: 64
+grad_accum_steps: 4   # effective batch 256, as in the 336 and 384 runs

@@ -1,3 +1,4 @@
+# Original filename: van_full_ft_proto_llrd.yaml
 # Van's prototype-initialized full FT with layer-wise lr decay, for the
 # 2.4 h budget on a 40 GB A100 (Colab: METHOD = "van_full_ft_proto_llrd").
 # Tuned on a laptop on a fixed 5-image/class holdout: 72.98% after 3 epochs,

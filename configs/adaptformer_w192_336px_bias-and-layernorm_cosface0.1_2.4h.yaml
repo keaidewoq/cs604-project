@@ -1,0 +1,15 @@
+# Original filename: van_adaptformer_bias_final.yaml
+# Brought onto main from origin/van-448-finals for the final report.
+# The filename states the config. inherits: paths point at the renamed files.
+# Van's AdaptFormer (Task 2) + trainable biases and LayerNorm weights, for the 2.4 h budget on
+# a 40 GB A100 (Colab: notebooks/van_colab_launcher.ipynb, METHOD = "van_adaptformer_bias_final").
+# Same as adaptformer_w192_336px_norm-input_pca-init_learned-scale_cosface0.1_2.4h.yaml plus adapter_train_bias / adapter_train_norm.
+# Laptop holdout (5 images/class, 336 px, report/progress_log.md, Van, 2026-10-11):
+# 76.76% after 3 epochs vs 76.26% without them (+0.50); 78.48% vs 77.95% with crop 0.75 + zoom.
+# Trainable backbone: 12 adapters, width 192, learned scales (3,550,476) + 102,912 biases +
+# 19,200 LayerNorm weights = 3,672,588 = 4.27% of the backbone, head excluded.
+# About 10% slower per step on the laptop. Trains on all 45 images/class; the cosine is fitted
+# to the time limit, `epochs` is a ceiling.
+inherits: adaptformer_w192_336px_norm-input_pca-init_learned-scale_cosface0.1_2.4h.yaml
+adapter_train_bias: true        # every pretrained bias (+0.44 at 1 epoch)
+adapter_train_norm: true        # every LayerNorm weight (+0.13 more at 1 epoch)

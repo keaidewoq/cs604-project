@@ -36,7 +36,7 @@ SUBSET = [
 FULL_FT = {336: (63.20, 7.7), 384: (64.06, 5.5), 448: (64.79, 4.1), 512: (64.98, 2.9)}
 ADAPTFORMER = {336: (59.63, None), 384: (61.18, None), 448: (62.72, None)}
 # CodaBench plain, full FT with Van's tuned recipe, all data, 144 min A100: 224 Van
-# (van_full_ft_proto_llrd), 336 Anastasia (full_ft_336_llrd), 384 / 448 Van (_fast configs)
+# (full_ft_224px_proto-cosine_llrd0.75_top-lr4e-4_2.4h), 336 Anastasia (full_ft_336_llrd), 384 / 448 Van (fused AdamW + compile)
 CODABENCH = {224: 75.7, 336: 80.7, 384: 81.7, 448: 82.5}
 SUBSET_LINE = {224: 81.03, 336: 84.72}
 

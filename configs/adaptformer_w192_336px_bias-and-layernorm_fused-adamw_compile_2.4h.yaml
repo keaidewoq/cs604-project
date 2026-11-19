@@ -1,0 +1,24 @@
+# Original filename: van_adaptformer_bias_fast.yaml
+# Brought onto main from origin/van-448-finals for the final report.
+# The filename states the config. inherits: paths point at the renamed files.
+# Van's AdaptFormer (Task 2) + trainable biases and LayerNorm weights
+# (adaptformer_w192_336px_bias-and-layernorm_cosface0.1_2.4h.yaml, CodaBench 0.802 with crop 0.75 + zoom) with
+# speed-only options, so more epochs fit in the 144-minute limit. The training
+# math is unchanged; the cosine is fitted to the time limit, `epochs` is a ceiling.
+#
+#   fused_adamw: true    fused CUDA AdamW kernel (same update rule)
+#   torch_compile: true  torch.compile on the training forward/backward; the first
+#                        steps compile (about a minute), counted as training time
+#   num_workers: 12      all 12 CPUs of the Colab A100 runtime load data
+#
+# Speed check on the A100 40 GB (scripts/van_speed_check.py, 2026-10-15), img/s:
+# as configured 467 (the 0.802 run: ~462, 8.9 epochs); compile lifts the GPU step
+# from 500 to 670, 12 workers lift the loader from 568 to 938; together 622 (+33%),
+# about 11.9 epochs.
+#
+# Colab: METHOD = "van_adaptformer_bias_fast", PROTO_PT = f"{DRIVE_OUT}/prototypes_336.pt",
+# TTA_CROP = 0.75.
+inherits: adaptformer_w192_336px_bias-and-layernorm_cosface0.1_2.4h.yaml
+fused_adamw: true
+torch_compile: true
+num_workers: 12

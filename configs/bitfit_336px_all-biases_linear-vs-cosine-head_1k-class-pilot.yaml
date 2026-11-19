@@ -1,0 +1,8 @@
+# Original filename: bitfit_head_ablation_336.yaml
+# Brought onto main from origin/qq_bitfit_ablation for the final report.
+# The filename states the config. inherits: paths point at the renamed files.
+# Compare prototype linear and cosine heads; all backbone biases remain trainable.
+inherits: bitfit_336px_all-biases_linear-proto-head_1k-class-pilot.yaml
+lr: 1.0e-3
+head_lr: 1.0e-3
+cosine_scale: 20.0

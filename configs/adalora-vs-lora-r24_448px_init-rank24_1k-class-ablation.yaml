@@ -1,0 +1,14 @@
+# Original filename: qq_adalora_ablation.yaml
+# Brought onto main from origin/qq_lora_ablation for the final report.
+# The filename states the config. inherits: paths point at the renamed files.
+# Four equal-time arms: LoRA r24 and AdaLoRA init24 -> target8/16/20.
+inherits: lora-vs-dora_448px_25pct-full-image_1k-class-ablation.yaml
+adalora_init_rank: 24
+adalora_target_ranks: [8, 16, 20]
+adalora_target_rank: 16
+adalora_initial_fraction: 0.10
+adalora_final_fraction: 0.20
+adalora_mask_interval: 10
+adalora_beta1: 0.85
+adalora_beta2: 0.85
+adalora_orth_reg_weight: 0.5

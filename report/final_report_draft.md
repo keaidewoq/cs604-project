@@ -688,7 +688,7 @@ they don't replace it. Deadline: all runs finished by **2026-10-30**.
    so run them in Van's laptop holdout setup (336, 40/5 split, 3 epochs, same recipe), next
    to the existing 76.76 (AF + biases/norms, 4.27%) and 77.33 (AF + LoRA r16, 4.96%):
    - **AF width 224 + biases/norms, no LoRA:** `adapter_dim: 224` on
-     `van_adaptformer_bias_final.yaml`. 12 × (2·768·224 + 224 + 768) + 12 scales + 122,112
+     `adaptformer_w192_336px_bias-and-layernorm_cosface0.1_2.4h.yaml`. 12 × (2·768·224 + 224 + 768) + 12 scales + 122,112
      = 4,262,796, the same as AF + LoRA (4,262,412).
    - **LoRA r28 on qkv/proj/fc1/fc2 + biases/norms, no AF:** 28 × 147,456 + 122,112 =
      4,250,880, same budget. Van's recipe (CosFace 0.1, head lr 4e-3); check that Van's

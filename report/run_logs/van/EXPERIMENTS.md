@@ -1,5 +1,7 @@
 # Experiment record
 
+Folders beside this file were renamed so the name states the config. This file still uses the original short ids. The table in `README.md` maps each id to its folder.
+
 The machine-readable source is `report/experiment_index.csv`. For each
 leaderboard candidate, copy the following information into this file:
 
@@ -227,7 +229,7 @@ trainable biases + LN weights (the wrapped `qkv.base.bias` still trains). `af_lo
   fewer steps; at 3 epochs the control gains +1.33 from epoch 2 to 3, so 9% fewer steps
   should cost well under the +0.57. Ported to the team trainer (van-dev 1022022, same logits).
 - **CodaBench (2026-10-21)**: run `CS604_RUNS/van_adaptformer_20261021_083823`
-  (`configs/van_adaptformer_lora_448_fast.yaml`), A100 40 GB, 144 min, 5.5 epochs (6.1 without
+  (`configs/adaptformer_w192_lora-r16-qkv_448px_bias-and-layernorm_cosface0.1_2.4h.yaml`), A100 40 GB, 144 min, 5.5 epochs (6.1 without
   LoRA), 14.66 GB peak, all 45/class. **0.812 plain** (ID 1008585) and **0.822 crop 0.9 + zoom**
   (ID 1008590) vs 0.804 / 0.814 without LoRA: **+0.8 on both**, more than the screen's +0.57
   despite 10% fewer epochs. Task 2 best. Latency 12.4 ms at batch 1 on the A100.
@@ -472,7 +474,7 @@ with `eval_tta.py`. Configs `af_res_screen_336/384.yaml`, commit fb9e693, both a
   request, largest gap between log rows 177 s, 0.480 normalized 48 GB-hours, stopped by the
   clock with the lr at zero. PCA init used 16 batches of 32 (half the images of the 384 arm).
   Scored with `eval_tta.py --crop-pct 0.75 0.9 1.0` (`analysis/eval_tta.json`).
-- **CodaBench at 448 (2026-10-18)**: team trainer, `configs/van_adaptformer_bias_448_fast.yaml`
+- **CodaBench at 448 (2026-10-18)**: team trainer, `configs/adaptformer_w192_448px_bias-and-layernorm_fused-adamw_compile_2.4h.yaml`
   (cs604-main van-dev d65cbc3), run `CS604_RUNS/van_adaptformer_20261018_073912`, A100 40 GB,
   144 min, 6.1 epochs, ~317 img/s, batch 64 x 4, 13.76 GB peak, Qian's `prototypes_448.pt`.
   **0.804 plain** (ID 1000827; 384: 0.794, +1.0), **0.806 crop 0.75 + flip** (ID 1000837),
@@ -485,7 +487,7 @@ with `eval_tta.py`. Configs `af_res_screen_336/384.yaml`, commit fb9e693, both a
   18:53-19:44 during it (Windows Kernel-Power 42/107), the clock-fitted budget kept counting, so
   it trained 2.7 epochs (58.25% at crop 0.9). The rerun held a keep-awake request
   (SetThreadExecutionState) from 5 minutes in; its largest gap between log rows was 133 s.
-- Next: Colab run of `configs/van_adaptformer_bias_384_fast.yaml` (cs604-main van-dev 2bd8e78),
+- Next: Colab run of `configs/adaptformer_w192_384px_bias-and-layernorm_fused-adamw_compile_2.4h.yaml` (cs604-main van-dev 2bd8e78),
   against 0.802 (336, crop 0.75 + zoom).
 - **CodaBench (2026-10-17)**: run `CS604_RUNS/van_adaptformer_20261016_142837`, A100 40 GB, 144 min,
   8.6 epochs, 19.87 GB peak, all 45/class. **0.794 plain** (ID 994764), **0.807 crop 0.75 + zoom**
@@ -575,13 +577,13 @@ Plain single-view accuracy unless noted. Trainable: 93.67M at 336, 93.77M at 384
   +0.73, +0.19. No log gaps over 300 s. Returns flatten between 448 and 512 on this screen. The
   screen (10 images/class) tolerates few epochs better than a 45/class final, which argues for 448
   over 512 on Colab.
-- **CodaBench at 448 (2026-10-17)**: team trainer, `configs/van_full_ft_448_fast.yaml` (cs604-main
+- **CodaBench at 448 (2026-10-17)**: team trainer, `configs/full_ft_448px_proto-cosine_llrd0.75_fused-adamw_compile_2.4h.yaml` (cs604-main
   `van-dev` 2013466), run `CS604_RUNS/full_ft_20261017_122237`, A100 40 GB, 144 min, 5.5 epochs,
   batch 64 x 4, 17.80 GB peak, Qian's `prototypes_448.pt`. **0.825 plain** (ID 995914; 384: 0.817,
   +0.8, the screen predicted +0.73), 0.827 crop 0.75 + flip (ID 995918, uploaded under a 384 file
   name but it is this run's prediction), **0.828 crop 0.75 + zoom** (ID 995951; 384: 0.824).
   Latency 7.16 ms at batch 1. Task 1 final. The screen tracked CodaBench plain at both steps.
-- **CodaBench confirmation (2026-10-16)**: team trainer, `configs/van_full_ft_384_fast.yaml`
+- **CodaBench confirmation (2026-10-16)**: team trainer, `configs/full_ft_384px_proto-cosine_llrd0.75_fused-adamw_compile_2.4h.yaml`
   (cs604-main `van-dev` 7e05162), run `CS604_RUNS/full_ft_20261016_052544`, A100 40 GB, 144 min,
   7.9 epochs, 25.34 GB peak, all 45/class, prototypes from all 45/class (team script). **0.817
   plain** (ID 992465) vs 0.807 at 336 (+1.0, the screen predicted +0.86); 0.821 crop 0.75 + flip
@@ -664,7 +666,7 @@ accuracy is unaffected.
   the adapter rate. The team trainer needs no `bias_lr`.
 - One rate of 3e-3 for everything also ties (-0.11, loss equal). Both arms tie, so the
   recipe keeps lr 1e-3 (tie rule: the lower rate). The learning rate is settled for this
-  recipe; `configs/van_adaptformer_bias_final.yaml` (group repo) stays at 1e-3.
+  recipe; `configs/adaptformer_w192_336px_bias-and-layernorm_cosface0.1_2.4h.yaml` (group repo) stays at 1e-3.
 
 ## Task 2 AdaptFormer + trainable biases and LayerNorms: phase 2, 3 epochs (2026-10-11)
 
@@ -701,7 +703,7 @@ images against the control's `eval_zoom_images.pt`:
 - **CodaBench (2026-10-12): 0.802** with crop 0.75 + zoom (ID 980309), +0.5 over the final
   without biases/norms (0.797, ID 972126), as the holdout predicted (+0.53); **0.794** with crop 0.75 + flip (ID 980317; 0.790
   without), so zoom beats flip by +0.8 (holdout +0.79). Final run:
-  `CS604_RUNS/van_adaptformer_20261012_060248`, group repo `configs/van_adaptformer_bias_final.yaml`
+  `CS604_RUNS/van_adaptformer_20261012_060248`, group repo `configs/adaptformer_w192_336px_bias-and-layernorm_cosface0.1_2.4h.yaml`
   (van-dev), A100 40 GB, 144 training minutes, batch 128 x 2, ~462 img/s, 8.9 epochs (the
   personal-pipeline final `af_final_45` did ~515 img/s, ~10 epochs, at batch 256 x 1); peak
   15.61 GB; A100 batch-1 latency 10.28 ms. Training loss rose over epochs 2-6, then fell to 4.57
@@ -1134,7 +1136,7 @@ epochs, and the optimum stays at 0.65 to 0.7. Averaging the six crops with
 flips: 77.430%.
 
 **Confirmed on CodaBench (2026-10-06).** The final A100 run of the group
-repo's `configs/van_full_ft_proto_llrd.yaml` (all 45 images/class, 144 training
+repo's `configs/full_ft_224px_proto-cosine_llrd0.75_top-lr4e-4_2.4h.yaml` (all 45 images/class, 144 training
 minutes): plain center crop 0.9 **0.757** (ID 963899); the same `last.pt`
 re-predicted with `--crop_pct 0.7 --tta_flip` **0.773** (ID 964799), +1.6
 points, in line with the holdout estimate (+1.51 at 12 epochs).

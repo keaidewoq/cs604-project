@@ -1,0 +1,22 @@
+# Original filename: van_adaptformer_lora_448_fast.yaml
+# Brought onto main from origin/van-448-finals for the final report.
+# The filename states the config. inherits: paths point at the renamed files.
+# Van's AdaptFormer (Task 2) + trainable biases/LayerNorm weights + LoRA rank 16 on qkv, 448 px:
+# adaptformer_w192_448px_bias-and-layernorm_fused-adamw_compile_2.4h.yaml plus adapter_lora (rank 16, alpha 32, every block's qkv;
+# 589,824 params). Nothing else changes. Backbone trainable 4,262,412 = 4.96% at 336 px (lower
+# at 448, where the frozen position embedding is larger), under the 5% limit.
+#
+# Why: on Van's laptop holdout (336 px, 40/5 split, same recipe, seed and split), LoRA beside
+# the adapters + biases/norms gave 1 epoch: rank 8 73.544, rank 16 73.744 vs 72.966 (+0.78);
+# 3 epochs: rank 16 77.330 vs 76.756 (+0.57). Compare with adaptformer_w192_448px_bias-and-layernorm_fused-adamw_compile_2.4h.yaml:
+# 0.804 plain, 0.814 crop 0.9 + zoom.
+#
+# Cost: 9% lower training throughput on the laptop (169 vs 187 img/s), so about 9% fewer steps
+# in the same 144 minutes; peak memory +0.5 GB.
+#
+# Colab: METHOD = "van_adaptformer_lora_448_fast", PROTO_PT = f"{DRIVE_OUT}/prototypes_448.pt".
+inherits: adaptformer_w192_448px_bias-and-layernorm_fused-adamw_compile_2.4h.yaml
+adapter_lora: true
+lora_rank: 16
+lora_alpha: 32
+lora_dropout: 0.0

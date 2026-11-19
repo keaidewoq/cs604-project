@@ -1,0 +1,23 @@
+# Original filename: van_full_ft_448_fast.yaml
+# Brought onto main from origin/van-448-finals for the final report.
+# The filename states the config. inherits: paths point at the renamed files.
+# Van's full FT at 448: full_ft_336px_proto-cosine_llrd0.75_fused-adamw_compile_2.4h.yaml with img_size 448, the shared prototypes_448.pt
+# (all 45 images/class; built for Qian's BitFit at 448, sha256 5abf68ac...), and batch 64 x 4 so it
+# fits a 40 GB A100 (same effective batch 256). Recipe and speed options otherwise unchanged.
+#
+# Why: on Van's laptop screen at equal compute (10 images/class, same time budget per arm, fixed
+# 5/class holdout, crop 0.9), 336 / 384 / 448 / 512 scored 63.20 / 64.06 / 64.79 / 64.98%: +0.73
+# for 384 -> 448, then flat. The same screen predicted 384's CodaBench gain (+0.86 vs +1.0 plain).
+# Compare with full_ft_384px_proto-cosine_llrd0.75_fused-adamw_compile_2.4h.yaml: 0.817 plain, 0.824 crop 0.75 + zoom.
+#
+# Cost: ~1.4x per training image of 384 (laptop 80 vs 108 img/s), so expect about 6 epochs in
+# 144 minutes instead of 7.9. Peak memory: 384 used 25.3 GB at batch 128; 448 at batch 64 should
+# need well under 40 GB.
+#
+# Colab: METHOD = "van_full_ft_448_fast", PROTO_PT = f"{DRIVE_OUT}/prototypes_448.pt",
+# TTA_CROP = 0.75.
+inherits: full_ft_336px_proto-cosine_llrd0.75_fused-adamw_compile_2.4h.yaml
+img_size: 448
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_448.pt
+batch_size: 64
+grad_accum_steps: 4   # effective batch 256, as in the 336 and 384 runs
