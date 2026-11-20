@@ -1,0 +1,2 @@
+arm,changes,final_val_acc,delta_vs_A_points,final_val_acc_near5,best_val_acc,best_epoch,final_val_loss,early_dip,backbone_pct,peak_vram_gb,training_min,wall_min,run_dir
+A_all_classes_144min,{},0.7778,0.0,0.8533,0.7779,8,2.3701,False,4.12,19.3,144.0,156.2,/content/drive/MyDrive/CS604_RUNS/ablation_allclass_holdout_lora_no_extras/runs/A_all_classes_144min/lora_20261026_123804

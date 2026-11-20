@@ -1,0 +1,23 @@
+{
+  "checkpoint": "/content/drive/MyDrive/CS604_RUNS/van_adaptformer_20261021_083823/last.pt",
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "gpu_capacity_GiB": 39.4935302734375,
+  "torch_version": "2.11.0+cu130",
+  "precision": "bf16",
+  "img_size": 448,
+  "warmup_iterations": 30,
+  "timed_iterations": 200,
+  "scope": "Forward pass on synthetic inputs; excludes loading, preprocessing and transfers",
+  "measurements": [
+    {
+      "batch_size": 1,
+      "ms_per_image": 12.382746494995445,
+      "ms_per_batch": 12.382746494995445
+    },
+    {
+      "batch_size": 64,
+      "ms_per_image": 1.5555227695313079,
+      "ms_per_batch": 99.5534572500037
+    }
+  ]
+}

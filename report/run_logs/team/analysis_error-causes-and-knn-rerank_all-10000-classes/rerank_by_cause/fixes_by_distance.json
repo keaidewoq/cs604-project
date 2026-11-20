@@ -1,0 +1,36 @@
+{
+  "K": 5,
+  "m": 3,
+  "beta": 20.0,
+  "sibling_ids": 5,
+  "errors_before": 11111,
+  "fixes": 1376,
+  "breaks": 732,
+  "sibling_share_of_errors": 0.3397,
+  "sibling_share_of_fixes": 0.3234,
+  "fix_rate_sibling_errors": 0.1179,
+  "fix_rate_far_errors": 0.1269,
+  "breaks_onto_sibling_share": 0.403,
+  "fixes_by_truth_rank": {
+    "2": 1089,
+    "3-5": 287
+  },
+  "within_ids": {
+    "1": {
+      "share_of_errors": 0.1491,
+      "share_of_fixes": 0.1403
+    },
+    "5": {
+      "share_of_errors": 0.3397,
+      "share_of_fixes": 0.3234
+    },
+    "10": {
+      "share_of_errors": 0.4266,
+      "share_of_fixes": 0.4172
+    },
+    "50": {
+      "share_of_errors": 0.5913,
+      "share_of_fixes": 0.5799
+    }
+  }
+}

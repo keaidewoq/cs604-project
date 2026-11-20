@@ -1,0 +1,13 @@
+tag=end
+trainable=11944705
+total=97469185
+trainable_pct=12.254852649070575
+wall_s=775.7140382689995
+gpu_hours=0.21547612174138875
+peak_vram_gb=17.285276412963867
+training_seconds=720.02
+training_minutes=12.0
+time_limit_reached=True
+adaptation_parameters=4264704
+original_backbone_parameters=86250240
+adaptation_pct=4.9445705890209695

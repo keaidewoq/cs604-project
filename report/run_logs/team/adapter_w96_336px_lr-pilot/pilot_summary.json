@@ -1,0 +1,53 @@
+{
+  "chosen": {
+    "lr": 0.0003
+  },
+  "reason": "within 0.003 of the best final holdout acc; lowest lr among those",
+  "pilot_data": {
+    "classes": 1000,
+    "fit_images": 40000,
+    "holdout_images": 5000
+  },
+  "pilot_overrides": {
+    "epochs": 3,
+    "warmup": 0.15
+  },
+  "results": [
+    {
+      "lr": 0.0003,
+      "best_val_acc": 0.8938,
+      "best_epoch": 3,
+      "final_val_acc": 0.8938,
+      "final_val_loss": 1.7672,
+      "early_dip": false,
+      "trainable_pct": 12.036,
+      "peak_vram_gb": 15.54,
+      "wall_min": 5.1,
+      "run_dir": "/content/drive/MyDrive/CS604_RUNS/pilot_adapter_336_20261009_125653/adapter_20261009_125654"
+    },
+    {
+      "lr": 0.001,
+      "best_val_acc": 0.8958,
+      "best_epoch": 3,
+      "final_val_acc": 0.8958,
+      "final_val_loss": 1.7433,
+      "early_dip": false,
+      "trainable_pct": 12.036,
+      "peak_vram_gb": 15.54,
+      "wall_min": 4.8,
+      "run_dir": "/content/drive/MyDrive/CS604_RUNS/pilot_adapter_336_20261009_125653/adapter_20261009_130158"
+    },
+    {
+      "lr": 0.003,
+      "best_val_acc": 0.884,
+      "best_epoch": 3,
+      "final_val_acc": 0.884,
+      "final_val_loss": 1.768,
+      "early_dip": false,
+      "trainable_pct": 12.036,
+      "peak_vram_gb": 15.54,
+      "wall_min": 4.8,
+      "run_dir": "/content/drive/MyDrive/CS604_RUNS/pilot_adapter_336_20261009_125653/adapter_20261009_130649"
+    }
+  ]
+}

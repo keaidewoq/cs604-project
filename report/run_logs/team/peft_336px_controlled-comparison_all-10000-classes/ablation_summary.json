@@ -1,0 +1,66 @@
+{
+  "spec": "/content/repo/configs/ablation_peft_controlled.yaml",
+  "base": "/content/repo/configs/peft_controlled_336.yaml",
+  "pilot_data": {
+    "classes": 10000,
+    "fit_images": 400000,
+    "holdout_images": 50000
+  },
+  "heads": {
+    "prototype_file": "/content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/prototypes_pilot_fit.pt"
+  },
+  "pilot_overrides": {},
+  "results": [
+    {
+      "arm": "G_prefix_p50",
+      "changes": "{\"method\": \"prefix\", \"prefix_length\": 50, \"prefix_placement\": \"all\", \"prefix_init_std\": 0.02, \"lr\": 0.001}",
+      "best_val_acc": 0.682,
+      "best_epoch": 2,
+      "final_val_acc": 0.682,
+      "final_val_acc_near5": 0.7771,
+      "final_val_loss": 2.7216,
+      "early_dip": false,
+      "trainable_pct": 9.094,
+      "peak_vram_gb": 15.31,
+      "wall_min": 22.9,
+      "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/G_prefix_p50/prefix_20261029_143847",
+      "backbone_pct": 1.07,
+      "training_min": 20.0,
+      "delta_vs_A_points": -5.87
+    },
+    {
+      "arm": "A_seed2",
+      "changes": "{\"seed\": 2}",
+      "best_val_acc": 0.7407,
+      "best_epoch": 2,
+      "final_val_acc": 0.7407,
+      "final_val_acc_near5": 0.8294,
+      "final_val_loss": 2.4103,
+      "early_dip": false,
+      "trainable_pct": 11.541,
+      "peak_vram_gb": 19.3,
+      "wall_min": 22.8,
+      "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/A_seed2/lora_20261029_150154",
+      "backbone_pct": 4.12,
+      "training_min": 20.01,
+      "delta_vs_A_points": 0.0
+    },
+    {
+      "arm": "C_seed2",
+      "changes": "{\"method\": \"adaptformer\", \"adapter_dim\": 192, \"adaptformer_scale\": 0.1, \"adapter_dropout\": 0.0, \"lr\": 0.001, \"seed\": 2}",
+      "best_val_acc": 0.7408,
+      "best_epoch": 2,
+      "final_val_acc": 0.7408,
+      "final_val_acc_near5": 0.8276,
+      "final_val_loss": 2.4239,
+      "early_dip": false,
+      "trainable_pct": 11.552,
+      "peak_vram_gb": 13.64,
+      "wall_min": 22.7,
+      "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/C_seed2/adaptformer_20261029_152448",
+      "backbone_pct": 4.13,
+      "training_min": 20.0,
+      "delta_vs_A_points": 0.01
+    }
+  ]
+}

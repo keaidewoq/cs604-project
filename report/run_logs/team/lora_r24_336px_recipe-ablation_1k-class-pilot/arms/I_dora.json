@@ -1,0 +1,1 @@
+{"arm": "I_dora", "changes": "{\"lora_dora\": true}", "best_val_acc": 0.8996, "best_epoch": 3, "final_val_acc": 0.8996, "final_val_loss": 1.7464, "early_dip": false, "trainable_pct": 12.092, "peak_vram_gb": 28.06, "wall_min": 7.7, "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261012_124027", "backbone_pct": 4.75}

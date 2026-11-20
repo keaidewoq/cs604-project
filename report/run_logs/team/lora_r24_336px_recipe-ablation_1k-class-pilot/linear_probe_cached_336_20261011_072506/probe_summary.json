@@ -1,0 +1,13 @@
+{
+  "model_name": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+  "img_size": 336,
+  "best_lr": 0.01,
+  "holdout_top1": 0.789,
+  "holdout_top5": 0.9228,
+  "feature_minutes": 1.2,
+  "probe_minutes": 0.2,
+  "trainable_params": 7690000,
+  "wall_s": 87.3,
+  "gpu_hours": 0.0243,
+  "peak_vram_gb": 3.599
+}

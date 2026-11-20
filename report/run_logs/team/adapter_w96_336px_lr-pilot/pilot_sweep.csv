@@ -1,0 +1,4 @@
+lr,best_val_acc,best_epoch,final_val_acc,final_val_loss,early_dip,trainable_pct,peak_vram_gb,wall_min,run_dir
+0.0003,0.8938,3,0.8938,1.7672,False,12.036,15.54,5.1,/content/drive/MyDrive/CS604_RUNS/pilot_adapter_336_20261009_125653/adapter_20261009_125654
+0.001,0.8958,3,0.8958,1.7433,False,12.036,15.54,4.8,/content/drive/MyDrive/CS604_RUNS/pilot_adapter_336_20261009_125653/adapter_20261009_130158
+0.003,0.884,3,0.884,1.768,False,12.036,15.54,4.8,/content/drive/MyDrive/CS604_RUNS/pilot_adapter_336_20261009_125653/adapter_20261009_130649

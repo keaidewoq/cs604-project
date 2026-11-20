@@ -10,3 +10,6 @@ wandb/
 .env
 *.pyc
 .DS_Store
+
+# Raw Drive downloads (checkpoints inside); the extracted logs live in report/run_logs/team/
+report/run_logs/*.zip

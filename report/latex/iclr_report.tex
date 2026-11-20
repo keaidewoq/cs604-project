@@ -1,0 +1,68 @@
+\documentclass{article}
+\usepackage{iclr2026_conference,times}
+\raggedbottom
+
+\input{math_commands.tex}
+
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{xcolor}
+
+\title{Full Fine-Tuning Versus Parameter-Efficient Adaptation of a Vision
+Transformer for 10,000-Class Fine-Grained Classification}
+
+\author{Anastasia Frances Frederica, Le Thi Hong Van, Liu Wenqi \& Xu Qianqian \\
+CS604 Team 08 \\
+Singapore Management University}
+
+\iclrfinalcopy
+
+% \iclrfinalcopy keeps the author names. The style then writes
+% "Published as a conference paper at ICLR 2026" from inside \maketitle,
+% and a later \pagestyle{fancy} would put that line back. Install the
+% course header whenever the fancy page style is applied.
+\makeatletter
+\let\course@origfancy\ps@@fancy
+\def\ps@@fancy{%
+  \course@origfancy
+  \def\@oddhead{\hfill CS604 Course Project Report\hfill}%
+  \def\@evenhead{\hfill CS604 Course Project Report\hfill}%
+}
+\pagestyle{fancy}
+\let\course@origtitle\maketitle
+\def\maketitle{\course@origtitle\fancyhead{}\pagestyle{fancy}}
+\makeatother
+
+% Keep figures and tables in source order. A normal float can jump
+% above its section or into the reference list.
+\newcommand{\stayfig}[3]{%
+  \par\vspace{0.35em}%
+  \noindent\begin{minipage}{\textwidth}%
+  \centering
+  #1\par\vspace{0.2em}%
+  \refstepcounter{figure}\label{#3}%
+  {\small Figure~\thefigure: #2\par}%
+  \end{minipage}%
+  \par\vspace{0.15em}%
+}
+\newcommand{\staytable}[3]{%
+  \par\vspace{0.45em}%
+  \noindent\begin{minipage}{\textwidth}%
+  \centering
+  \refstepcounter{table}\label{#3}%
+  {\small Table~\thetable: #2\par}%
+  \vspace{0.2em}%
+  #1%
+  \end{minipage}%
+  \par\vspace{0.2em}%
+}
+\setlength{\bibsep}{1.5pt plus 0.5pt minus 0.5pt}
+
+\begin{document}
+\maketitle
+\input{content.tex}
+\end{document}

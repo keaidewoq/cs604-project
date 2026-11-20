@@ -1,0 +1,6 @@
+{
+  "original_backbone_parameters": 85986816,
+  "trainable_backbone_parameters": 102912,
+  "trainable_backbone_pct": 0.11968346403243958,
+  "trainable_classifier_parameters": 7690000
+}

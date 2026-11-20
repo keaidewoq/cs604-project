@@ -1,0 +1,67 @@
+{
+  "errors_before": 11111,
+  "errors_unmatched": 0,
+  "fixed": 1376,
+  "broken": 732,
+  "net_points_on_all_photos": 1.29,
+  "all_errors": {
+    "errors": 11111,
+    "truth_in_top5": 7128,
+    "fixed": 1376,
+    "fix_rate": 0.1238,
+    "fix_rate_when_truth_in_top5": 0.193
+  },
+  "by_flag": {
+    "sibling": {
+      "errors": 5539,
+      "truth_in_top5": 4538,
+      "fixed": 699,
+      "fix_rate": 0.1262,
+      "fix_rate_when_truth_in_top5": 0.154
+    },
+    "unseen_look": {
+      "errors": 5763,
+      "truth_in_top5": 2457,
+      "fixed": 452,
+      "fix_rate": 0.0784,
+      "fix_rate_when_truth_in_top5": 0.184
+    },
+    "two_looks": {
+      "errors": 538,
+      "truth_in_top5": 294,
+      "fixed": 62,
+      "fix_rate": 0.1152,
+      "fix_rate_when_truth_in_top5": 0.2109
+    },
+    "messy_class": {
+      "errors": 8537,
+      "truth_in_top5": 5590,
+      "fixed": 983,
+      "fix_rate": 0.1151,
+      "fix_rate_when_truth_in_top5": 0.1758
+    },
+    "sibling_only": {
+      "errors": 3921,
+      "truth_in_top5": 3573,
+      "fixed": 578,
+      "fix_rate": 0.1474,
+      "fix_rate_when_truth_in_top5": 0.1618
+    },
+    "unseen_look_only": {
+      "errors": 4145,
+      "truth_in_top5": 1492,
+      "fixed": 331,
+      "fix_rate": 0.0799,
+      "fix_rate_when_truth_in_top5": 0.2218
+    },
+    "no_flag": {
+      "errors": 436,
+      "truth_in_top5": 338,
+      "fixed": 123,
+      "fix_rate": 0.2821,
+      "fix_rate_when_truth_in_top5": 0.3639
+    }
+  },
+  "broken_in_messy_classes": 621,
+  "fixed_in_messy_classes": 983
+}

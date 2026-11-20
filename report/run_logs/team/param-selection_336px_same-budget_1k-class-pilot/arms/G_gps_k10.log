@@ -1,0 +1,22 @@
+# progress-bar lines removed on import; everything else as written by the run
+[train] device=cuda method=selected model=vit_base_patch16_224.augreg2_in21k_ft_in1k
+[train] run_dir=/content/drive/MyDrive/CS604_RUNS/ablation_ablation_param_selection/runs/selected_20261017_043438
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[unfreeze_extra] norm, bias, pos_embed, cls_token: 462,336 params
+[selected] sparse training 837,120 masked entries in 49 weights (/content/drive/MyDrive/CS604_RUNS/ablation_ablation_param_selection/gps_mask_k10.pt)
+[params] backbone trainable 1.30M/85.99M (1.51%, head excluded)
+[head] loaded prototypes from /content/drive/MyDrive/CS604_RUNS/ablation_ablation_param_selection/prototypes_pilot_fit.pt  shape=(10000, 768)
+[optim] backbone lr=0.0003  head_lr=0.003  unfreeze_lr=0.0001 (49 tensors)
+[train] images=40000, batches_per_epoch=312, batch_size=128, workers=8
+[train] GPU=NVIDIA A100-SXM4-40GB
+[train] stopping=epoch ceiling or time budget
+[start] trainable=8.98M/93.67M (9.59%) wall_s=2.3 gpu_hours=0.0006 peak_vram_gb=0.698
+[train] training-only time limit=144 minutes
+[epoch 1] train_loss=2.7256 val_loss=1.9182 val_acc=0.8482
+[epoch 1] new best val_acc=0.8482
+[epoch 2] train_loss=1.9106 val_loss=1.8060 val_acc=0.8790
+[epoch 2] new best val_acc=0.8790
+[epoch 3] train_loss=1.7457 val_loss=1.7918 val_acc=0.8892
+[epoch 3] new best val_acc=0.8892
+[end] trainable=8.98M/93.67M (9.59%) wall_s=312.7 gpu_hours=0.0869 peak_vram_gb=20.372
+[train] done. checkpoints in /content/drive/MyDrive/CS604_RUNS/ablation_ablation_param_selection/runs/selected_20261017_043438

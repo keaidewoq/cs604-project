@@ -1,0 +1,1 @@
+{"arm": "E_head_lr_1e-4", "changes": "{\"head_lr\": 0.0001}", "best_val_acc": 0.837, "best_epoch": 3, "final_val_acc": 0.837, "final_val_loss": 2.2641, "early_dip": false, "trainable_pct": 12.017, "peak_vram_gb": 19.4, "wall_min": 6.3, "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261011_075159", "backbone_pct": 4.65}

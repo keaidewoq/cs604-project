@@ -28,6 +28,23 @@ Singapore Management University
 }
 
 \iclrfinalcopy % Show author names (course report, not an anonymous submission).
+
+% \iclrfinalcopy keeps the author names. The style then writes
+% "Published as a conference paper at ICLR 2026" from inside \maketitle,
+% and a later \pagestyle{fancy} would put that line back. Install the
+% course header whenever the fancy page style is applied.
+\makeatletter
+\let\course@origfancy\ps@@fancy
+\def\ps@@fancy{%
+  \course@origfancy
+  \def\@oddhead{\hfill CS604 Course Project Report\hfill}%
+  \def\@evenhead{\hfill CS604 Course Project Report\hfill}%
+}
+\pagestyle{fancy}
+\let\course@origtitle\maketitle
+\def\maketitle{\course@origtitle\fancyhead{}\pagestyle{fancy}}
+\makeatother
+
 \begin{document}
 
 \maketitle

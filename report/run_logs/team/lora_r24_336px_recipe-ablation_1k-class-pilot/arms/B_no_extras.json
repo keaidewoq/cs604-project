@@ -1,0 +1,1 @@
+{"arm": "B_no_extras", "changes": "{\"unfreeze_extra\": []}", "best_val_acc": 0.897, "best_epoch": 3, "final_val_acc": 0.897, "final_val_loss": 1.7534, "early_dip": false, "trainable_pct": 11.541, "peak_vram_gb": 19.3, "wall_min": 5.9, "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261011_073307", "backbone_pct": 4.12}

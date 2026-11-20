@@ -1,0 +1,43 @@
+{
+  "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_allclass_holdout_lora_no_extras/runs/A_all_classes_144min/lora_20261026_123804",
+  "holdout_photos": 50000,
+  "errors": 11111,
+  "share_of_errors": {
+    "sibling": 0.4985,
+    "unseen_look": 0.5187,
+    "two_looks": 0.0484,
+    "messy_class": 0.7683
+  },
+  "same_flag_among_correct_photos": {
+    "unseen_look": 0.1,
+    "two_looks": 0.0225,
+    "messy_class": 0.5304
+  },
+  "share_of_errors_with_no_flag": 0.0392,
+  "overlaps": {
+    "sibling+unseen_look": 0.1456,
+    "sibling+two_looks": 0.0158,
+    "sibling+messy_class": 0.408,
+    "unseen_look+two_looks": 0.0311,
+    "unseen_look+messy_class": 0.3948,
+    "two_looks+messy_class": 0.0426
+  },
+  "thresholds": {
+    "unseen_look_best_cosine_below": 0.5667,
+    "two_looks_split_at_least": 0.0973,
+    "messy_class_share_at_least": 0.2
+  },
+  "classes": {
+    "total": 10000,
+    "two_look_classes": 1229,
+    "messy_classes": 5833,
+    "accuracy_all": 0.7778,
+    "accuracy_two_look_classes": 0.7541,
+    "accuracy_messy_classes": 0.7073,
+    "spearman_with_class_accuracy": {
+      "consistency": 0.325,
+      "messy_share": -0.446,
+      "split": 0.073
+    }
+  }
+}

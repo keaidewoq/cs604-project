@@ -1,0 +1,17 @@
+# progress-bar lines removed on import; everything else as written by the run
+[probe] run_dir=/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/linear_probe_cached_336_20261011_072506
+[probe] feature dim 768, extraction 1.2 min
+[probe] train 40,000 (35,000 fit, 5,000 holdout)
+[probe] {'lr': 0.001, 'top1': 0.7724, 'top5': 0.9278, 'train_loss': 1.621, 'holdout_loss': 2.234, 'peak_top1': 0.7726, 'peak_epoch': 24, 'seconds': 3}
+[probe] {'lr': 0.003, 'top1': 0.7866, 'top5': 0.932, 'train_loss': 1.373, 'holdout_loss': 2.194, 'peak_top1': 0.7874, 'peak_epoch': 17, 'seconds': 3}
+[probe] {'lr': 0.01, 'top1': 0.789, 'top5': 0.9228, 'train_loss': 1.297, 'holdout_loss': 2.307, 'peak_top1': 0.7902, 'peak_epoch': 22, 'seconds': 3}
+[probe] {'lr': 0.03, 'top1': 0.7816, 'top5': 0.896, 'train_loss': 1.274, 'holdout_loss': 2.63, 'peak_top1': 0.7826, 'peak_epoch': 26, 'seconds': 3}
+   lr   top1   top5  train_loss  holdout_loss  peak_top1  peak_epoch  seconds
+0.001 0.7724 0.9278       1.621         2.234     0.7726          24        3
+0.003 0.7866 0.9320       1.373         2.194     0.7874          17        3
+0.010 0.7890 0.9228       1.297         2.307     0.7902          22        3
+0.030 0.7816 0.8960       1.274         2.630     0.7826          26        3
+[probe] best lr=0.01  holdout top-1 0.7890
+[probe] wrote /content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/linear_probe_cached_336_20261011_072506/val_team_pilot.txt + .zip (5000 lines)
+[probe] {'model_name': 'vit_base_patch16_224.augreg2_in21k_ft_in1k', 'img_size': 336, 'best_lr': 0.01, 'holdout_top1': 0.789, 'holdout_top5': 0.9228, 'feature_minutes': 1.2, 'probe_minutes': 0.2, 'trainable_params': 7690000, 'wall_s': 87.3, 'gpu_hours': 0.0243, 'peak_vram_gb': 3.599}
+[probe] saved head: /content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/linear_probe_cached_336_20261011_072506/probe_head.pt

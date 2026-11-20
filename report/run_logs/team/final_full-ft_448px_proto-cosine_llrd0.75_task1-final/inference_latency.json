@@ -1,0 +1,23 @@
+{
+  "checkpoint": "/content/drive/MyDrive/CS604_RUNS/full_ft_20261017_122237/last.pt",
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "gpu_capacity_GiB": 39.4935302734375,
+  "torch_version": "2.11.0+cu130",
+  "precision": "bf16",
+  "img_size": 448,
+  "warmup_iterations": 30,
+  "timed_iterations": 200,
+  "scope": "Forward pass on synthetic inputs; excludes loading, preprocessing and transfers",
+  "measurements": [
+    {
+      "batch_size": 1,
+      "ms_per_image": 7.160916165003073,
+      "ms_per_batch": 7.160916165003073
+    },
+    {
+      "batch_size": 64,
+      "ms_per_image": 1.170143128906318,
+      "ms_per_batch": 74.88916025000435
+    }
+  ]
+}

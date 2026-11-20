@@ -1,0 +1,10 @@
+tag=end
+trainable=11352589
+total=97217293
+trainable_pct=11.677540743702872
+wall_s=8650.085703164
+gpu_hours=2.4028015842122223
+peak_vram_gb=15.606669902801514
+training_seconds=8640.22
+training_minutes=144.0
+time_limit_reached=True

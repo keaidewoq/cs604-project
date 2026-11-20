@@ -1,0 +1,27 @@
+[
+  {
+    "arm": "head_only",
+    "bitfit_scope": "none",
+    "method": "linear_probe"
+  },
+  {
+    "arm": "all_biases",
+    "bitfit_scope": "all",
+    "method": "bitfit"
+  },
+  {
+    "arm": "attention_biases",
+    "bitfit_scope": "attention",
+    "method": "bitfit"
+  },
+  {
+    "arm": "mlp_biases",
+    "bitfit_scope": "mlp",
+    "method": "bitfit"
+  },
+  {
+    "arm": "layernorm_biases",
+    "bitfit_scope": "layernorm",
+    "method": "bitfit"
+  }
+]

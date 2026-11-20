@@ -1,0 +1,4 @@
+{
+  "lr": 0.001,
+  "reason": "within 0.003 of the best final holdout acc; lowest lr among those"
+}

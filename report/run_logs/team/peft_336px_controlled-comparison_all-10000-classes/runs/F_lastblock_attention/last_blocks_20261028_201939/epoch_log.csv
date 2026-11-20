@@ -1,0 +1,2 @@
+epoch,train_loss,val_loss,val_acc,val_acc_near5,epoch_time_s,batches_processed,batches_total,images_processed,epoch_complete,img_size
+1,3.7883058207702636,2.8483300898742674,0.6308,0.74136,772.44,3125,3125,400000,1,336

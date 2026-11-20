@@ -1,0 +1,48 @@
+{
+  "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_allclass_holdout_lora_no_extras/runs/A_all_classes_144min/lora_20261026_123804",
+  "pilot_root": "/content/pilot_data/c10000_h5_s0",
+  "holdout_photos": 50000,
+  "before": {
+    "top1": 0.7778,
+    "top2": 0.8602,
+    "top3": 0.8923,
+    "top5": 0.9203,
+    "errors": 11111,
+    "errors_truth_rank2": 0.3711,
+    "errors_truth_rank3to5": 0.2705,
+    "errors_truth_beyond5": 0.3585
+  },
+  "cross_validated": [
+    {
+      "tuned_on_half": 0,
+      "K": 5,
+      "m": 3,
+      "beta": 20.0,
+      "test_half_before": 0.7782,
+      "test_half_after": 0.7915,
+      "fixes": 693,
+      "breaks": 361
+    },
+    {
+      "tuned_on_half": 1,
+      "K": 5,
+      "m": 3,
+      "beta": 20.0,
+      "test_half_before": 0.7773,
+      "test_half_after": 0.7898,
+      "fixes": 683,
+      "breaks": 371
+    }
+  ],
+  "held_out_gain_points": 1.29,
+  "best_on_all_photos_optimistic": {
+    "K": 5,
+    "m": 3,
+    "beta": 20.0,
+    "acc_half0": 0.7898,
+    "acc_half1": 0.7915,
+    "acc_all": 0.7907,
+    "fixes": 1376,
+    "breaks": 732
+  }
+}

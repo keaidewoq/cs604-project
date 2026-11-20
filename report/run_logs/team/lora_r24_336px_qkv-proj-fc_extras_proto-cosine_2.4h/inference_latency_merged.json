@@ -1,0 +1,54 @@
+{
+  "run_dir": "/content/drive/MyDrive/CS604_RUNS/lora_20261007_051926",
+  "checkpoint": "/content/drive/MyDrive/CS604_RUNS/lora_20261007_051926/last.pt",
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "torch_version": "2.11.0+cu130",
+  "precision": "bf16",
+  "img_size": 336,
+  "warmup_iterations": 30,
+  "timed_iterations": 200,
+  "scope": "Forward pass on synthetic inputs; excludes loading, preprocessing and transfers",
+  "equivalence_check": {
+    "images": 256,
+    "lora_layers_left_after_merge": 0,
+    "fp32_max_abs_logit_diff": 1.4662742614746094e-05,
+    "fp32_top1_agreement": 1.0,
+    "bf16_top1_agreement": 0.96484375
+  },
+  "unmerged": [
+    {
+      "batch_size": 1,
+      "ms_per_image": 14.237297010000134,
+      "ms_per_batch": 14.237297010000134
+    },
+    {
+      "batch_size": 64,
+      "ms_per_image": 1.0658715214843761,
+      "ms_per_batch": 68.21577737500007
+    }
+  ],
+  "merged": [
+    {
+      "batch_size": 1,
+      "ms_per_image": 7.781259749999947,
+      "ms_per_batch": 7.781259749999947
+    },
+    {
+      "batch_size": 64,
+      "ms_per_image": 0.6466673049218752,
+      "ms_per_batch": 41.38670751500001
+    }
+  ],
+  "plain_vit_same_head": [
+    {
+      "batch_size": 1,
+      "ms_per_image": 7.7761079100000075,
+      "ms_per_batch": 7.7761079100000075
+    },
+    {
+      "batch_size": 64,
+      "ms_per_image": 0.6483390824999979,
+      "ms_per_batch": 41.49370127999987
+    }
+  ]
+}

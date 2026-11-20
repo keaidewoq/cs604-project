@@ -1,0 +1,68 @@
+{
+  "code_sha256": {
+    "scripts/build_prototypes.py": "665fc1ec0e9fd56fa17723fa666108178a196367c6466ec79826b27a7a907164",
+    "src/data.py": "1f6c0bf630d52d4cffba9ad72dfe572089eec4d9efda966a2715b3a0817acd60",
+    "src/heads.py": "72f27b4931b4c922d7a6f5a023c7b90eb2d4e32ff43527bc6140a7dee9a5e06a",
+    "src/model.py": "43bc0ce97de3741c65b7f8c5b439cae060d0e3d79157cfe04972c5e3b1c0f274",
+    "src/peft/prefix.py": "4bca1628489632d5cd859e717c535828853f37076a04e7c0d5e10bc3191498c6",
+    "src/peft/prefix_ablation.py": "53800a2324e6a39d1ea97c2d291b41c56b4134d8b20f5c3bacd18d8bbf02b5aa",
+    "src/train.py": "8595c54653bc1df986b37b5eda8c8e48fdbb7e347405bef015fa79f5a5b783be"
+  },
+  "config": {
+    "ablation": {
+      "holdout_per_class": 5,
+      "lengths": [
+        5,
+        20,
+        50
+      ],
+      "pilot_classes": 1000,
+      "pilot_epochs": 3,
+      "pilot_lrs": [
+        0.0001,
+        0.0003,
+        0.001
+      ],
+      "placements": [
+        "last1",
+        "last4",
+        "all"
+      ],
+      "split_seed": 42,
+      "tie_tolerance": 0.003
+    },
+    "arm": "all_p5",
+    "batch_size": 64,
+    "bf16": true,
+    "data_root": "/content/qq_prefix_ablation_336_seed42_v1_splits/full",
+    "epochs": 5,
+    "evaluate_before_training": false,
+    "grad_accum_steps": 1,
+    "head_init": "prototype",
+    "head_lr": 0.001,
+    "head_type": "linear",
+    "img_size": 336,
+    "label_smoothing": 0.0,
+    "lr": 0.001,
+    "max_adaptation_pct": 5.0,
+    "max_train_minutes": null,
+    "method": "prefix",
+    "model_name": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+    "num_classes": 10000,
+    "num_workers": 8,
+    "output_dir": "/content/drive/MyDrive/CS604_RUNS/qq_prefix_ablation_336_seed42_v1/runs/screen/all_p5/seed42",
+    "prefix_init_std": 0.02,
+    "prefix_length": 5,
+    "prefix_placement": "all",
+    "pretrained": true,
+    "prototype_file": "/content/drive/MyDrive/CS604_RUNS/qq_prefix_ablation_336_seed42_v1/prototypes_full_336.pt",
+    "seed": 42,
+    "warmup": 0.25,
+    "weight_decay": 0.0
+  },
+  "fit_sha256": "2728695b0d77d66dfc52932266368dc17cd2eb07e08cfa8cc90ff7f8f424919a",
+  "holdout_sha256": "8b30399706da5144fbbfd335ccbade86737d5d86dadc7c1d9f533606c877f27e",
+  "prototype_sha256": "66d2c37652cb5cc2e9dd639b922a3acefe61f85fb6e012c364cfe25a753606f3",
+  "timm_version": "1.0.30",
+  "torch_version": "2.11.0+cu130"
+}

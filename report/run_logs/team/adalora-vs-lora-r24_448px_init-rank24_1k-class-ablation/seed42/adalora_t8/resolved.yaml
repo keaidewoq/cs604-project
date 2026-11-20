@@ -1,0 +1,75 @@
+data_root: /content/qq_adalora_data/be1bcbb19267/split
+model_name: vit_base_patch16_224.augreg2_in21k_ft_in1k
+pretrained: true
+num_classes: 10000
+img_size: 448
+batch_size: 64
+grad_accum_steps: 4
+epochs: null
+lr: 0.0003
+weight_decay: 0.05
+warmup: 0.0
+bf16: true
+num_workers: 8
+seed: 42
+output_dir: /content/drive/.shortcut-targets-by-id/107nc4GKekmaKe38GR_8VBn3Bh_xH-ZtR/CS604_RUNS/qq_adalora_448_c1000_seed42_v1/seed42/adalora_t8
+label_smoothing: 0.1
+method: adalora
+head_type: cosine
+head_init: prototype
+lora_targets:
+- qkv
+- proj
+- fc1
+- fc2
+lora_rank: 24
+lora_alpha: 24
+lora_dropout: 0.0
+unfreeze_extra:
+- norm
+- bias
+- pos_embed
+- cls_token
+prototype_file: /content/drive/.shortcut-targets-by-id/107nc4GKekmaKe38GR_8VBn3Bh_xH-ZtR/CS604_RUNS/qq_adalora_448_c1000_seed42_v1/seed42/prototypes_fit_448.pt
+head_lr: 0.003
+clip_grad_norm: 1.0
+max_train_minutes: 12.0
+schedule_fit_time: false
+max_adaptation_pct: 5.0
+prompt_mode: none
+prompt_length: 0
+time_warmup_fraction: 0.05
+eval_crop_pct: 0.9
+full_image_probability: 0.25
+ablation_classes: 1000
+ablation_holdout: 5
+ablation_min_gain: 0.003
+cosine_scale: 20.0
+lora_dora: false
+split_seed: 42
+prototype_seed: 42
+adalora_init_rank: 24
+adalora_target_ranks:
+- 8
+- 16
+- 20
+adalora_target_rank: 8
+adalora_initial_fraction: 0.1
+adalora_final_fraction: 0.2
+adalora_mask_interval: 10
+adalora_beta1: 0.85
+adalora_beta2: 0.85
+adalora_orth_reg_weight: 0.5
+comparison_versions:
+  torch: 2.11.0+cu130
+  timm: 1.0.30
+  peft: 0.21.2
+  transformers: 5.20.1
+comparison_hardware:
+  gpu: NVIDIA A100-SXM4-40GB
+  memory: 42405855232
+  cuda: '13.0'
+  torch: 2.11.0+cu130
+  timm: 1.0.30
+  peft: 0.21.2
+  transformers: 5.20.1

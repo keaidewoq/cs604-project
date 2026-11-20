@@ -1,0 +1,31 @@
+{
+  "run_dir": "/content/drive/MyDrive/CS604_RUNS/last_blocks_20261010_022115",
+  "checkpoint": "/content/drive/MyDrive/CS604_RUNS/last_blocks_20261010_022115/last.pt",
+  "measured_at_utc": "2026-11-05T05:49:57.348778+00:00",
+  "repo_commit": "15b23282a6d6b9107ea3b0041b64c2fcb9f8bafa",
+  "method": "last_blocks",
+  "train_scope": "attention",
+  "last_n_blocks": 1,
+  "head_type": "linear",
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "gpu_capacity_GiB": 39.4935302734375,
+  "torch_version": "2.11.0+cu130",
+  "cuda_version": "13.0",
+  "precision": "bf16",
+  "img_size": 336,
+  "warmup_iterations": 30,
+  "timed_iterations": 200,
+  "scope": "Single-view forward pass on synthetic inputs; excludes checkpoint loading, preprocessing, transfers, flip TTA and zoom",
+  "measurements": [
+    {
+      "batch_size": 1,
+      "ms_per_image": 7.756306954999843,
+      "ms_per_batch": 7.756306954999843
+    },
+    {
+      "batch_size": 64,
+      "ms_per_image": 0.6412790939062507,
+      "ms_per_batch": 41.041862010000045
+    }
+  ]
+}

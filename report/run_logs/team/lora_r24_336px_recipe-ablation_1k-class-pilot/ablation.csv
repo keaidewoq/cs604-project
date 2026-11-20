@@ -1,0 +1,10 @@
+arm,changes,final_val_acc,delta_vs_A_points,best_val_acc,best_epoch,final_val_loss,early_dip,backbone_pct,peak_vram_gb,wall_min,run_dir
+A_full_recipe,{},0.8984,0.0,0.8984,3,1.7482,False,4.65,19.4,6.3,/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261011_072640
+B_no_extras,"{""unfreeze_extra"": []}",0.897,-0.14,0.897,3,1.7534,False,4.12,19.3,5.9,/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261011_073307
+C_rank16,"{""lora_rank"": 16, ""lora_alpha"": 16}",0.8918,-0.66,0.8918,3,1.7581,False,3.28,19.34,6.3,/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261011_073912
+D_probe_head,"{""head_type"": ""linear"", ""head_init"": ""probe""}",0.8692,-2.92,0.8692,3,1.9072,False,4.65,19.39,6.3,/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261011_074537
+E_head_lr_1e-4,"{""head_lr"": 0.0001}",0.837,-6.14,0.837,3,2.2641,False,4.65,19.4,6.3,/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261011_075159
+F_all_four_off,"{""unfreeze_extra"": [], ""lora_rank"": 16, ""lora_alpha"": 16, ""head_type"": ""linear"", ""head_init"": ""probe"", ""head_lr"": 0.0001}",0.8538,-4.46,0.8538,3,1.9938,False,2.74,19.24,6.0,/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261011_075824
+G_probe_head_slow_lr,"{""head_type"": ""linear"", ""head_init"": ""probe"", ""head_lr"": 0.0001}",0.8572,-4.12,0.8588,2,1.9735,False,4.65,19.4,6.5,/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261012_122718
+H_linear_prototype_head,"{""head_type"": ""linear"", ""head_init"": ""prototype""}",0.8892,-0.92,0.8892,3,1.786,False,4.65,19.4,6.3,/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261012_123357
+I_dora,"{""lora_dora"": true}",0.8996,0.12,0.8996,3,1.7464,False,4.75,28.06,7.7,/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261012_124027

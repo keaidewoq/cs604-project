@@ -1,0 +1,21 @@
+# progress-bar lines removed on import; everything else as written by the run
+[train] device=cuda method=lora model=vit_base_patch16_224.augreg2_in21k_ft_in1k
+[train] run_dir=/content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/B_lora_r40_blocks4_11/lora_20261028_174852
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[lora] wrapped 32 layers (qkv, proj, fc1, fc2 in blocks 4-11), rank=40, alpha=40.0, dropout=0.0: 3,932,160 params
+[frozen] embeddings and blocks 0-3 frozen; backward stops at block 4
+[params] backbone trainable 3.93M/85.99M (4.57%, head excluded)
+[head] loaded prototypes from /content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/prototypes_pilot_fit.pt  shape=(10000, 768)
+[optim] backbone lr=0.0003  head_lr=0.003
+[train] images=400000, batches_per_epoch=3125, batch_size=128, workers=8
+[train] GPU=NVIDIA A100-SXM4-40GB
+[train] stopping=training-time budget only
+[start] trainable=11.61M/97.60M (11.90%) wall_s=3.7 gpu_hours=0.0010 peak_vram_gb=0.394
+[train] training-only time limit=20 minutes
+[epoch 1] train_loss=3.3694 val_loss=2.4522 val_acc=0.7226 near5=0.8160
+[epoch 1] new best val_acc=0.7226
+[epoch 2] train_loss=2.3928 val_loss=2.4176 val_acc=0.7378 near5=0.8246
+[epoch 2] new best val_acc=0.7378
+[train] time limit reached after 20.00 training minutes
+[end] trainable=11.61M/97.60M (11.90%) wall_s=1367.1 gpu_hours=0.3798 peak_vram_gb=13.421
+[train] done. checkpoints in /content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/B_lora_r40_blocks4_11/lora_20261028_174852

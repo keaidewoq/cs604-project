@@ -1,0 +1,8 @@
+{
+  "model_name": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+  "img_size": 448,
+  "num_classes": 10000,
+  "fit_sha256": "f015f557b4f091288a52411f7cb53c96d3871350bc8554eaaeab36b7487beaaf",
+  "seed": 42,
+  "eval_crop_pct": 0.9
+}

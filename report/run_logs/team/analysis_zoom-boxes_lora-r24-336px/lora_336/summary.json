@@ -1,0 +1,19 @@
+{
+  "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_allclass_holdout_lora_no_extras/runs/A_all_classes_144min/lora_20261026_123804",
+  "photos": 50000,
+  "crop_pct": 0.75,
+  "zoom_mass": 0.7,
+  "grid": 21,
+  "top1_plain": 0.7831,
+  "top1_zoom": 0.7904,
+  "gain_points": 0.73,
+  "fixed": 1212,
+  "broken": 846,
+  "answer_changed": 3634,
+  "box_side_patches": {
+    "p10": 14,
+    "median": 16,
+    "p90": 18,
+    "whole_view": 0
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "holdout_per_class": 5,
+  "img_size": 336,
+  "model_name": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+  "num_classes": 10000,
+  "pilot_classes": 1000,
+  "source_manifest_sha256": "d7c7ebd0a10e6e7ae337cedbf2915a3fdbb7c33e8ca0ac893e1165b64c985002",
+  "split_seed": 42
+}

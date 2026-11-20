@@ -1,0 +1,1 @@
+{"arm": "A_full_recipe", "changes": "{}", "best_val_acc": 0.8996, "best_epoch": 3, "final_val_acc": 0.8996, "final_val_loss": 1.7483, "early_dip": false, "trainable_pct": 12.017, "peak_vram_gb": 19.4, "wall_min": 6.4, "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_ablation_param_selection/runs/lora_20261017_034027", "backbone_pct": 4.65, "training_min": 5.86}

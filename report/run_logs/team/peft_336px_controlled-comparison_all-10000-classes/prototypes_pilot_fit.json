@@ -1,0 +1,9 @@
+{
+  "model_name": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+  "img_size": 336,
+  "train_images": 400000,
+  "classes": 10000,
+  "empty_classes": 0,
+  "base_prototypes": "/content/drive/MyDrive/CS604_RUNS/prototypes_336.pt",
+  "output": "/content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/prototypes_pilot_fit.pt"
+}

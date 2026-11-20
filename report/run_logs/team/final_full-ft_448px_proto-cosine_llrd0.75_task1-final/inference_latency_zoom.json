@@ -1,0 +1,40 @@
+{
+  "run_dir": "/content/drive/MyDrive/CS604_RUNS/full_ft_20261017_122237",
+  "checkpoint": "/content/drive/MyDrive/CS604_RUNS/full_ft_20261017_122237/last.pt",
+  "method": "full_ft",
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "gpu_capacity_GiB": 39.4935302734375,
+  "torch_version": "2.11.0+cu130",
+  "precision": "bf16",
+  "img_size": 448,
+  "zoom_mass": 0.7,
+  "tta_flip": false,
+  "warmup_iterations": 30,
+  "timed_iterations": 200,
+  "scope": "Synthetic views already on GPU. 'single' = one forward pass; 'zoom' = src.predict's _predict_zoom (plain pass, box selection, crop from the 2x copy, second pass, softmax average). Excludes image loading, initial resize/crop and CPU-to-GPU transfers.",
+  "lora_layers": 0,
+  "single": [
+    {
+      "batch_size": 1,
+      "ms_per_batch": 8.472404659999881,
+      "ms_per_image": 8.472404659999881
+    },
+    {
+      "batch_size": 64,
+      "ms_per_batch": 74.9212668749999,
+      "ms_per_image": 1.1706447949218735
+    }
+  ],
+  "zoom": [
+    {
+      "batch_size": 1,
+      "ms_per_batch": 23.433123565000074,
+      "ms_per_image": 23.433123565000074
+    },
+    {
+      "batch_size": 64,
+      "ms_per_batch": 162.78068558,
+      "ms_per_image": 2.5434482121875
+    }
+  ]
+}

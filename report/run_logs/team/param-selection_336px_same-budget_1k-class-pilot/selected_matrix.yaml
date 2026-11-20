@@ -1,0 +1,4 @@
+- blocks.11.attn.qkv
+- blocks.0.attn.proj
+- blocks.9.attn.proj
+- blocks.10.attn.proj

@@ -1,0 +1,20 @@
+# progress-bar lines removed on import; everything else as written by the run
+[train] device=cuda method=bitfit model=vit_base_patch16_224.augreg2_in21k_ft_in1k
+[train] run_dir=/content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/E_bitfit/bitfit_20261028_195632
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[bitfit] unfroze 74 bias tensors
+[params] backbone trainable 102.91K/85.99M (0.12%, head excluded)
+[head] loaded prototypes from /content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/prototypes_pilot_fit.pt  shape=(10000, 768)
+[optim] backbone lr=0.001  head_lr=0.003
+[train] images=400000, batches_per_epoch=3125, batch_size=128, workers=8
+[train] GPU=NVIDIA A100-SXM4-40GB
+[train] stopping=training-time budget only
+[start] trainable=7.78M/93.67M (8.31%) wall_s=8.4 gpu_hours=0.0023 peak_vram_gb=0.380
+[train] training-only time limit=20 minutes
+[epoch 1] train_loss=3.5096 val_loss=2.6076 val_acc=0.7001 near5=0.7970
+[epoch 1] new best val_acc=0.7001
+[epoch 2] train_loss=2.4818 val_loss=2.5601 val_acc=0.7186 near5=0.8082
+[epoch 2] new best val_acc=0.7186
+[train] time limit reached after 20.00 training minutes
+[end] trainable=7.78M/93.67M (8.31%) wall_s=1375.3 gpu_hours=0.3820 peak_vram_gb=13.383
+[train] done. checkpoints in /content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/E_bitfit/bitfit_20261028_195632

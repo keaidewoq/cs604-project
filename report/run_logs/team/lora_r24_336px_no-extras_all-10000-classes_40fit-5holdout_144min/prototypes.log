@@ -1,0 +1,3 @@
+# progress-bar lines removed on import; everything else as written by the run
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[prototypes] saved /content/drive/MyDrive/CS604_RUNS/ablation_allclass_holdout_lora_no_extras/prototypes_pilot_fit.pt  shape=(10000, 768)

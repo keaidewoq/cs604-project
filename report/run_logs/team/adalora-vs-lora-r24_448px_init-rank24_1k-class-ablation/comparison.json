@@ -1,0 +1,49 @@
+{
+  "baseline": "lora_r24",
+  "metric": "final holdout accuracy after equal training minutes",
+  "comparisons": [
+    {
+      "arm": "adalora_t8",
+      "target_rank": 8,
+      "final_val_acc": 0.8792,
+      "delta_pp": -2.839999999999998,
+      "speed_ratio": 0.6031865375855406,
+      "allocation_frozen": true,
+      "final_average_rank": 8.0,
+      "final_active_pct": 2.1561818262766574
+    },
+    {
+      "arm": "adalora_t16",
+      "target_rank": 16,
+      "final_val_acc": 0.8794,
+      "delta_pp": -2.8200000000000003,
+      "speed_ratio": 0.6042726110899133,
+      "allocation_frozen": true,
+      "final_average_rank": 16.0,
+      "final_active_pct": 3.453096478340234
+    },
+    {
+      "arm": "adalora_t20",
+      "target_rank": 20,
+      "final_val_acc": 0.8804,
+      "delta_pp": -2.72,
+      "speed_ratio": 0.6057692902849964,
+      "allocation_frozen": true,
+      "final_average_rank": 20.0,
+      "final_active_pct": 4.143404122701572
+    }
+  ],
+  "complete": true,
+  "allocation_complete": true,
+  "best_adalora": {
+    "arm": "adalora_t20",
+    "target_rank": 20,
+    "final_val_acc": 0.8804,
+    "delta_pp": -2.72,
+    "speed_ratio": 0.6057692902849964,
+    "allocation_frozen": true,
+    "final_average_rank": 20.0,
+    "final_active_pct": 4.143404122701572
+  },
+  "note": "Seed42 subset screen, not CodaBench. Final active parameter counts include extras; allocated trainable tensors retain initial rank 24. Close scores are inconclusive."
+}

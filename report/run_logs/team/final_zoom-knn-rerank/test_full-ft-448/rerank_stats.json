@@ -1,0 +1,27 @@
+{
+  "run_dir": "/content/drive/MyDrive/CS604_RUNS/full_ft_20261017_122237",
+  "split": "test",
+  "photos": 100000,
+  "K": 5,
+  "m": 3,
+  "betas": [
+    20.0,
+    10.0,
+    40.0
+  ],
+  "zoom": true,
+  "crop_pct": 0.9,
+  "bank_photos": 450000,
+  "main_submission": "test_team_08.txt = zoom_knn_b20",
+  "changed_vs_zoom": {
+    "plain": 5402,
+    "knn_b20": 7012,
+    "knn_b10": 5966,
+    "knn_b40": 8816,
+    "zoom_knn_b20": 5219,
+    "zoom_knn_b10": 3232,
+    "zoom_knn_b40": 7675
+  },
+  "rerank_ms_per_photo": 0.0639,
+  "note": "rerank time per variant, excludes the forward passes; batch size 64"
+}

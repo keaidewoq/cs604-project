@@ -1,0 +1,20 @@
+# progress-bar lines removed on import; everything else as written by the run
+[train] device=cuda method=adapter model=vit_base_patch16_224.augreg2_in21k_ft_in1k
+[train] run_dir=/content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/D_adapter_w96/adapter_20261028_183436
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[adapter] 24 serial adapters, width 96: 3,559,680 params
+[params] backbone trainable 3.56M/85.99M (4.14%, head excluded)
+[head] loaded prototypes from /content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/prototypes_pilot_fit.pt  shape=(10000, 768)
+[optim] backbone lr=0.0003  head_lr=0.003
+[train] images=400000, batches_per_epoch=3125, batch_size=128, workers=8
+[train] GPU=NVIDIA A100-SXM4-40GB
+[train] stopping=training-time budget only
+[start] trainable=11.24M/97.23M (11.56%) wall_s=3.3 gpu_hours=0.0009 peak_vram_gb=0.393
+[train] training-only time limit=20 minutes
+[epoch 1] train_loss=3.3954 val_loss=2.4905 val_acc=0.7168 near5=0.8114
+[epoch 1] new best val_acc=0.7168
+[epoch 2] train_loss=2.3980 val_loss=2.4378 val_acc=0.7366 near5=0.8235
+[epoch 2] new best val_acc=0.7366
+[train] time limit reached after 20.00 training minutes
+[end] trainable=11.24M/97.23M (11.56%) wall_s=1364.1 gpu_hours=0.3789 peak_vram_gb=14.957
+[train] done. checkpoints in /content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/D_adapter_w96/adapter_20261028_183436

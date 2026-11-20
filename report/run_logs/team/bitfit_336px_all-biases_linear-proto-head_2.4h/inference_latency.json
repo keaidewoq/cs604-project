@@ -1,0 +1,23 @@
+{
+  "checkpoint": "/content/drive/MyDrive/CS604_RUNS/bitfit_20261011_024724/last.pt",
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "gpu_capacity_GiB": 39.4935302734375,
+  "torch_version": "2.11.0+cu130",
+  "precision": "bf16",
+  "img_size": 336,
+  "warmup_iterations": 30,
+  "timed_iterations": 200,
+  "scope": "Forward pass on synthetic inputs; excludes loading, preprocessing and transfers",
+  "measurements": [
+    {
+      "batch_size": 1,
+      "ms_per_image": 7.402510005003933,
+      "ms_per_batch": 7.402510005003933
+    },
+    {
+      "batch_size": 64,
+      "ms_per_image": 0.6405689687500171,
+      "ms_per_batch": 40.996414000001096
+    }
+  ]
+}

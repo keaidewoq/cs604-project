@@ -1,0 +1,71 @@
+{
+  "run_dir": "/content/drive/MyDrive/CS604_RUNS/van_adaptformer_20261021_083823",
+  "checkpoint": "/content/drive/MyDrive/CS604_RUNS/van_adaptformer_20261021_083823/last.pt",
+  "method": "van_adaptformer",
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "gpu_capacity_GiB": 39.4935302734375,
+  "torch_version": "2.11.0+cu130",
+  "precision": "bf16",
+  "img_size": 448,
+  "zoom_mass": 0.7,
+  "tta_flip": false,
+  "warmup_iterations": 30,
+  "timed_iterations": 200,
+  "scope": "Synthetic views already on GPU. 'single' = one forward pass; 'zoom' = src.predict's _predict_zoom (plain pass, box selection, crop from the 2x copy, second pass, softmax average). Excludes image loading, initial resize/crop and CPU-to-GPU transfers.",
+  "lora_layers": 12,
+  "single": [
+    {
+      "batch_size": 1,
+      "ms_per_batch": 13.453990530000226,
+      "ms_per_image": 13.453990530000226
+    },
+    {
+      "batch_size": 64,
+      "ms_per_batch": 99.65885151999998,
+      "ms_per_image": 1.5571695549999998
+    }
+  ],
+  "zoom": [
+    {
+      "batch_size": 1,
+      "ms_per_batch": 33.775911884999914,
+      "ms_per_image": 33.775911884999914
+    },
+    {
+      "batch_size": 64,
+      "ms_per_batch": 212.63449671000018,
+      "ms_per_image": 3.322414011093753
+    }
+  ],
+  "merge_check": {
+    "lora_layers_merged": 12,
+    "lora_layers_left": 0,
+    "images": 128,
+    "fp32_max_abs_logit_diff": 7.867813110351562e-06,
+    "fp32_top1_agreement": 1.0
+  },
+  "merged_single": [
+    {
+      "batch_size": 1,
+      "ms_per_batch": 11.267506875000208,
+      "ms_per_image": 11.267506875000208
+    },
+    {
+      "batch_size": 64,
+      "ms_per_batch": 85.01415207500031,
+      "ms_per_image": 1.3283461261718799
+    }
+  ],
+  "merged_zoom": [
+    {
+      "batch_size": 1,
+      "ms_per_batch": 29.883155270000543,
+      "ms_per_image": 29.883155270000543
+    },
+    {
+      "batch_size": 64,
+      "ms_per_batch": 182.82959980499982,
+      "ms_per_image": 2.856712496953122
+    }
+  ]
+}

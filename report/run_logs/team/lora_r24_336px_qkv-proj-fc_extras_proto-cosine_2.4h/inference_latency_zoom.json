@@ -1,0 +1,14 @@
+{
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "scope": "crop 0.75 zoom: two forwards plus the zoom crop, synthetic bf16, 30 warmup, 200 iters",
+  "latency": [
+    {
+      "batch_size": 1,
+      "ms_per_image": 36.79250564
+    },
+    {
+      "batch_size": 64,
+      "ms_per_image": 2.285737952812501
+    }
+  ]
+}

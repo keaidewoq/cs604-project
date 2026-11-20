@@ -1,0 +1,3 @@
+# progress-bar lines removed on import; everything else as written by the run
+[prototypes] rebuilt 1000 classes; kept 9000 rows from /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+[prototypes] saved /content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_depth_control/prototypes_pilot_fit.pt  shape=(10000, 768)

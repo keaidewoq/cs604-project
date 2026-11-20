@@ -1,0 +1,62 @@
+[
+  {
+    "arm": "classifier_only",
+    "method": "linear_probe",
+    "prefix_length": 0,
+    "prefix_placement": "none"
+  },
+  {
+    "arm": "last1_p5",
+    "method": "prefix",
+    "prefix_length": 5,
+    "prefix_placement": "last1"
+  },
+  {
+    "arm": "last1_p20",
+    "method": "prefix",
+    "prefix_length": 20,
+    "prefix_placement": "last1"
+  },
+  {
+    "arm": "last1_p50",
+    "method": "prefix",
+    "prefix_length": 50,
+    "prefix_placement": "last1"
+  },
+  {
+    "arm": "last4_p5",
+    "method": "prefix",
+    "prefix_length": 5,
+    "prefix_placement": "last4"
+  },
+  {
+    "arm": "last4_p20",
+    "method": "prefix",
+    "prefix_length": 20,
+    "prefix_placement": "last4"
+  },
+  {
+    "arm": "last4_p50",
+    "method": "prefix",
+    "prefix_length": 50,
+    "prefix_placement": "last4"
+  },
+  {
+    "arm": "all_p5",
+    "method": "prefix",
+    "prefix_length": 5,
+    "prefix_placement": "all"
+  },
+  {
+    "arm": "all_p20",
+    "method": "prefix",
+    "prefix_length": 20,
+    "prefix_placement": "all"
+  },
+  {
+    "arm": "all_p50",
+    "method": "prefix",
+    "prefix_length": 50,
+    "prefix_placement": "all"
+  }
+]

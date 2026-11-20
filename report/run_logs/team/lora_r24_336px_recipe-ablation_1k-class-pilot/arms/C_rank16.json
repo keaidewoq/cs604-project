@@ -1,0 +1,1 @@
+{"arm": "C_rank16", "changes": "{\"lora_rank\": 16, \"lora_alpha\": 16}", "best_val_acc": 0.8918, "best_epoch": 3, "final_val_acc": 0.8918, "final_val_loss": 1.7581, "early_dip": false, "trainable_pct": 10.936, "peak_vram_gb": 19.34, "wall_min": 6.3, "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_r24/runs/lora_20261011_073912", "backbone_pct": 3.28}

@@ -1,0 +1,39 @@
+{
+  "lora_all": {
+    "run_dir": "/content/drive/MyDrive/CS604_RUNS/ablation_allclass_holdout_lora_no_extras/runs/A_all_classes_144min/lora_20261026_123804",
+    "photos": 50000,
+    "top_k": {
+      "top1": 0.7778,
+      "top2": 0.8602,
+      "top3": 0.8923,
+      "top4": 0.9087,
+      "top5": 0.9203,
+      "top6": 0.928,
+      "top7": 0.9336,
+      "top8": 0.938,
+      "top9": 0.9418,
+      "top10": 0.9443
+    },
+    "share_whose_answer_was_guess_k": {
+      "rank1": 0.7778,
+      "rank2": 0.0825,
+      "rank3": 0.0321,
+      "rank4": 0.0164,
+      "rank5": 0.0116,
+      "rank6": 0.0076,
+      "rank7": 0.0057,
+      "rank8": 0.0044,
+      "rank9": 0.0038,
+      "rank10": 0.0025
+    },
+    "share_answer_beyond_top10": 0.0557,
+    "median_rank_when_wrong": 3.0,
+    "near5_accuracy": 0.8533,
+    "errors": 11111,
+    "errors_guess_is_relative_within_5_ids": 0.3397,
+    "errors_answer_was_second_guess": 0.3711,
+    "errors_answer_in_top5": 0.6415,
+    "correct_runner_up_is_relative": 0.3677,
+    "errors_guess_outside_pilot_classes": 0.0
+  }
+}

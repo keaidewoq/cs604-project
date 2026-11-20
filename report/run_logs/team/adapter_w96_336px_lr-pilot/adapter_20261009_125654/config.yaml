@@ -1,0 +1,42 @@
+data_root: /content/pilot_data/c1000_h5_s0
+model_name: vit_base_patch16_224.augreg2_in21k_ft_in1k
+pretrained: true
+num_classes: 10000
+img_size: 336
+batch_size: 128
+grad_accum_steps: 2
+epochs: 3
+lr: 0.0003
+weight_decay: 0.05
+warmup: 0.15
+bf16: true
+num_workers: 8
+seed: 42
+output_dir: /content/drive/MyDrive/CS604_RUNS/pilot_adapter_336_20261009_125653
+label_smoothing: 0.1
+method: adapter
+head_type: cosine
+head_init: prototype
+adapter_dim: 96
+adapter_dropout: 0.0
+unfreeze_extra:
+- norm
+- bias
+- pos_embed
+- cls_token
+prototype_file: /content/drive/MyDrive/CS604_RUNS/prototypes_336.pt
+head_lr: 0.003
+clip_grad_norm: 1.0
+max_train_minutes: 144
+schedule_fit_time: true
+pilot:
+  num_classes_subset: 1000
+  holdout_per_class: 5
+  tie_tolerance: 0.003
+  sweep:
+    lr:
+    - 0.0003
+    - 0.001
+    - 0.003
+  epochs: 3
+  warmup: 0.15

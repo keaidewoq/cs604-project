@@ -1,0 +1,19 @@
+# progress-bar lines removed on import; everything else as written by the run
+[train] device=cuda method=full_ft model=vit_base_patch16_224.augreg2_in21k_ft_in1k
+[train] run_dir=/content/drive/MyDrive/CS604_RUNS/ablation_ablation_param_selection/runs/full_ft_20261017_034657
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[head] loaded prototypes from /content/drive/MyDrive/CS604_RUNS/ablation_ablation_param_selection/prototypes_pilot_fit.pt  shape=(10000, 768)
+[optim] layer_decay=0.75 top lr=0.0004 bottom lr=9.50e-06 head_lr=0.004
+[train] images=40000, batches_per_epoch=312, batch_size=128, workers=8
+[train] GPU=NVIDIA A100-SXM4-40GB
+[train] stopping=epoch ceiling or time budget
+[start] trainable=93.67M/93.67M (100.00%) wall_s=2.1 gpu_hours=0.0006 peak_vram_gb=0.380
+[train] training-only time limit=144 minutes
+[epoch 1] train_loss=2.8643 val_loss=1.9253 val_acc=0.8340
+[epoch 1] new best val_acc=0.8340
+[epoch 2] train_loss=2.0328 val_loss=1.7512 val_acc=0.8782
+[epoch 2] new best val_acc=0.8782
+[epoch 3] train_loss=1.7808 val_loss=1.7044 val_acc=0.8960
+[epoch 3] new best val_acc=0.8960
+[end] trainable=93.67M/93.67M (100.00%) wall_s=321.8 gpu_hours=0.0894 peak_vram_gb=20.052
+[train] done. checkpoints in /content/drive/MyDrive/CS604_RUNS/ablation_ablation_param_selection/runs/full_ft_20261017_034657

@@ -1,0 +1,15 @@
+{
+  "DATA_DIR": "/content/data",
+  "CONFIG": "configs/bitfit_cosine_448.yaml",
+  "SEED": 42,
+  "SCAN_PER_SPLIT": 5000,
+  "HOLDOUT_PER_CLASS": 5,
+  "HASH_EXACT": true,
+  "NEAR_DISTANCE": 4,
+  "MAX_NEAR_PAIRS": 200,
+  "commit": "716c5abadfd7a7528f12ac8c0f472bc10dd43ed8",
+  "manifest_sha256": {
+    "train": "d7c7ebd0a10e6e7ae337cedbf2915a3fdbb7c33e8ca0ac893e1165b64c985002",
+    "val": "c63fe003cf54d37b63d810447931ff50154efa9d6c13f1792a3e5c763f559cb5"
+  }
+}

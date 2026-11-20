@@ -1,0 +1,23 @@
+{
+  "adaptation_parameters": 19200,
+  "adaptation_pct": 0.0223290044836641,
+  "arm": "layernorm_biases",
+  "before_val_acc": 0.6896,
+  "best_epoch": 3,
+  "best_val_acc": 0.8724,
+  "bitfit_scope": "layernorm",
+  "early_dip": false,
+  "final_val_acc": 0.8724,
+  "final_val_loss": 0.5395797127723694,
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "lr": 0.001,
+  "original_backbone_parameters": 85986816,
+  "peak_vram_gb": 6.965710639953613,
+  "run_dir": "/content/drive/MyDrive/CS604_RUNS/qq_bitfit_ablation_336_subset_seed42_v2/runs/screen/layernorm_biases/seed42/bitfit_20261011_020310",
+  "seed": 42,
+  "timm_version": "1.0.30",
+  "torch_version": "2.11.0+cu130",
+  "training_images_per_second": 513.4129123347452,
+  "training_minutes": 3.9,
+  "wall_gpu_hours": 0.07242409404027765
+}

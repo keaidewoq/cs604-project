@@ -1,0 +1,19 @@
+# progress-bar lines removed on import; everything else as written by the run
+[train] device=cuda method=prefix model=vit_base_patch16_224.augreg2_in21k_ft_in1k
+[train] run_dir=/content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/G_prefix_p50/prefix_20261029_143847
+[prefix] placement=all, length=50, backbone trainable=1.071792%
+[params] backbone trainable 921.60K/85.99M (1.07%, head excluded)
+[head] loaded prototypes from /content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/prototypes_pilot_fit.pt  shape=(10000, 768)
+[optim] backbone lr=0.001  head_lr=0.003
+[train] images=400000, batches_per_epoch=3125, batch_size=128, workers=8
+[train] GPU=NVIDIA A100-SXM4-40GB
+[train] stopping=training-time budget only
+[start] trainable=8.60M/94.59M (9.09%) wall_s=8.6 gpu_hours=0.0024 peak_vram_gb=0.383
+[train] training-only time limit=20 minutes
+[epoch 1] train_loss=3.8169 val_loss=2.7909 val_acc=0.6592 near5=0.7632
+[epoch 1] new best val_acc=0.6592
+[epoch 2] train_loss=2.6517 val_loss=2.7216 val_acc=0.6820 near5=0.7771
+[epoch 2] new best val_acc=0.6820
+[train] time limit reached after 20.00 training minutes
+[end] trainable=8.60M/94.59M (9.09%) wall_s=1374.6 gpu_hours=0.3818 peak_vram_gb=15.305
+[train] done. checkpoints in /content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/G_prefix_p50/prefix_20261029_143847

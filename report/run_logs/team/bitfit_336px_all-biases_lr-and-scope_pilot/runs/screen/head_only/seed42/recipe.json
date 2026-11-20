@@ -1,0 +1,56 @@
+{
+  "code_sha256": {
+    "scripts/build_prototypes.py": "665fc1ec0e9fd56fa17723fa666108178a196367c6466ec79826b27a7a907164",
+    "src/data.py": "1f6c0bf630d52d4cffba9ad72dfe572089eec4d9efda966a2715b3a0817acd60",
+    "src/heads.py": "72f27b4931b4c922d7a6f5a023c7b90eb2d4e32ff43527bc6140a7dee9a5e06a",
+    "src/model.py": "43bc0ce97de3741c65b7f8c5b439cae060d0e3d79157cfe04972c5e3b1c0f274",
+    "src/peft/bitfit.py": "8091196aeb51dfc25922220758a122d24c53078ee01d51f48763da55cf1d5288",
+    "src/peft/bitfit_ablation.py": "ed205e96d774a37826047defec2de847e8db87ddd35d8acfae84bcc84fd87b48",
+    "src/train.py": "8595c54653bc1df986b37b5eda8c8e48fdbb7e347405bef015fa79f5a5b783be"
+  },
+  "config": {
+    "ablation": {
+      "holdout_per_class": 5,
+      "pilot_classes": 1000,
+      "pilot_epochs": 3,
+      "pilot_lrs": [
+        0.0001,
+        0.0003,
+        0.001
+      ],
+      "split_seed": 42,
+      "tie_tolerance": 0.003
+    },
+    "arm": "head_only",
+    "batch_size": 64,
+    "bf16": true,
+    "bitfit_scope": "none",
+    "data_root": "/content/qq_bitfit_ablation_336_subset_seed42_v2_splits/pilot",
+    "epochs": 3,
+    "evaluate_before_training": false,
+    "grad_accum_steps": 1,
+    "head_init": "prototype",
+    "head_lr": 0.001,
+    "head_type": "linear",
+    "img_size": 336,
+    "label_smoothing": 0.0,
+    "lr": 0.001,
+    "max_adaptation_pct": 5.0,
+    "max_train_minutes": null,
+    "method": "linear_probe",
+    "model_name": "vit_base_patch16_224.augreg2_in21k_ft_in1k",
+    "num_classes": 10000,
+    "num_workers": 8,
+    "output_dir": "/content/drive/MyDrive/CS604_RUNS/qq_bitfit_ablation_336_subset_seed42_v2/runs/screen/head_only/seed42",
+    "pretrained": true,
+    "prototype_file": "/content/drive/MyDrive/CS604_RUNS/qq_bitfit_ablation_336_subset_seed42_v2/prototypes_pilot_336.pt",
+    "seed": 42,
+    "warmup": 0.15000000000000002,
+    "weight_decay": 0.0
+  },
+  "fit_sha256": "d409ed577ef192a5840dfc517756eed8019975ad94718ca03cba8a7271f54f89",
+  "holdout_sha256": "66b39a0eba160b29f47e241d57637cdf094971e468c4dd207fc86e89a667181f",
+  "prototype_sha256": "a77a476c634d306f4d8fce58fc74c9b27a67ee515ecb7f642a39500d016355f2",
+  "timm_version": "1.0.30",
+  "torch_version": "2.11.0+cu130"
+}

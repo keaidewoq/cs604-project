@@ -1,0 +1,21 @@
+# progress-bar lines removed on import; everything else as written by the run
+[train] device=cuda method=lora model=vit_base_patch16_224.augreg2_in21k_ft_in1k
+[train] run_dir=/content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_depth_control/runs/lora_20261019_062046
+[lora] wrapped 32 layers (qkv, proj, fc1, fc2 in blocks 4-11), rank=24, alpha=24.0, dropout=0.0: 2,359,296 params
+[unfreeze_extra] norm, bias, pos_embed, cls_token: 421,632 params (blocks 4+ only; embeddings trainable)
+[frozen] blocks 0-3 frozen; pos_embed/cls_token train, so backward runs through every block
+[params] backbone trainable 2.78M/85.99M (3.23%, head excluded)
+[head] loaded prototypes from /content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_depth_control/prototypes_pilot_fit.pt  shape=(10000, 768)
+[optim] backbone lr=0.0003  head_lr=0.003
+[train] images=40000, batches_per_epoch=312, batch_size=128, workers=8
+[train] GPU=NVIDIA A100-SXM4-40GB
+[train] stopping=epoch ceiling or time budget
+[start] trainable=10.46M/96.03M (10.89%) wall_s=1.9 gpu_hours=0.0005 peak_vram_gb=0.388
+[train] training-only time limit=144 minutes
+[epoch 1] train_loss=2.7406 val_loss=1.8873 val_acc=0.8546
+[epoch 1] new best val_acc=0.8546
+[epoch 2] train_loss=1.9040 val_loss=1.7841 val_acc=0.8860
+[epoch 2] new best val_acc=0.8860
+[epoch 3] train_loss=1.7343 val_loss=1.7755 val_acc=0.8856
+[end] trainable=10.46M/96.03M (10.89%) wall_s=332.3 gpu_hours=0.0923 peak_vram_gb=17.310
+[train] done. checkpoints in /content/drive/MyDrive/CS604_RUNS/ablation_ablation_lora_depth_control/runs/lora_20261019_062046

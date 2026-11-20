@@ -1,0 +1,19 @@
+# progress-bar lines removed on import; everything else as written by the run
+[train] device=cuda method=last_blocks model=vit_base_patch16_224.augreg2_in21k_ft_in1k
+[train] run_dir=/content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/F_lastblock_attention/last_blocks_20261029_055027
+[last_blocks] last 1/12, scope=attention, final norm trained=False (head already trainable)
+[params] backbone trainable 2.36M/85.99M (2.75%, head excluded)
+[head] loaded prototypes from /content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/prototypes_pilot_fit.pt  shape=(10000, 768)
+[optim] backbone lr=0.0001  head_lr=0.003
+[train] images=400000, batches_per_epoch=3125, batch_size=128, workers=8
+[train] GPU=NVIDIA A100-SXM4-40GB
+[train] stopping=training-time budget only
+[start] trainable=10.04M/93.67M (10.72%) wall_s=13.0 gpu_hours=0.0036 peak_vram_gb=0.380
+[train] training-only time limit=20 minutes
+[epoch 1] train_loss=3.7779 val_loss=2.8420 val_acc=0.6327 near5=0.7420
+[epoch 1] new best val_acc=0.6327
+[epoch 2] train_loss=2.7075 val_loss=2.7833 val_acc=0.6547 near5=0.7551
+[epoch 2] new best val_acc=0.6547
+[train] time limit reached after 20.00 training minutes
+[end] trainable=10.04M/93.67M (10.72%) wall_s=1379.3 gpu_hours=0.3831 peak_vram_gb=2.447
+[train] done. checkpoints in /content/drive/MyDrive/CS604_RUNS/ablation_ablation_peft_controlled/runs/F_lastblock_attention/last_blocks_20261029_055027

@@ -1,0 +1,36 @@
+data_root: /content/qq_bitfit_ablation_336_subset_seed42_v2_splits/pilot
+model_name: vit_base_patch16_224.augreg2_in21k_ft_in1k
+pretrained: true
+num_classes: 10000
+img_size: 336
+batch_size: 64
+grad_accum_steps: 1
+epochs: 3
+lr: 0.0001
+weight_decay: 0.0
+warmup: 0.15000000000000002
+bf16: true
+num_workers: 8
+seed: 42
+output_dir: /content/drive/MyDrive/CS604_RUNS/qq_bitfit_ablation_336_subset_seed42_v2/runs/pilot/all_biases_lr0.0001/seed42
+label_smoothing: 0.0
+method: bitfit
+head_type: linear
+head_init: prototype
+bitfit_scope: all
+evaluate_before_training: false
+max_adaptation_pct: 5.0
+head_lr: 0.001
+max_train_minutes: null
+ablation:
+  split_seed: 42
+  holdout_per_class: 5
+  pilot_classes: 1000
+  pilot_epochs: 3
+  pilot_lrs:
+  - 0.0001
+  - 0.0003
+  - 0.001
+  tie_tolerance: 0.003
+arm: all_biases_lr0.0001
+prototype_file: /content/drive/MyDrive/CS604_RUNS/qq_bitfit_ablation_336_subset_seed42_v2/prototypes_pilot_336.pt
